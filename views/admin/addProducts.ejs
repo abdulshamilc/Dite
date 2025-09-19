@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Product</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link href="https://unpkg.com/cropperjs/dist/cropper.css" rel="stylesheet" />
+  <script src="https://unpkg.com/cropperjs/dist/cropper.js"></script>
+  <style>
+    .bg-brand { background-color: #C5A987; }
+    .text-brand { color: #C5A987; }
+    .border-brand { border-color: #C5A987; }
+    aside {
+      border-right: 2px solid transparent;
+      border-image: linear-gradient(to bottom, #C5A987, transparent) 1;
+    }
+    .nav-btn {
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .nav-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    .nav-btn.active {
+      box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+    }
+    .logout-btn {
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .logout-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    .image-container {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+    }
+    .image-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .image-placeholder {
+      width: 6rem;
+      height: 8rem;
+      background-color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #888;
+      border-radius: 0.25rem;
+      overflow: hidden;
+    }
+    .form-container {
+      width: 100%;
+      padding-left: 1.5rem;
+      padding-right: 1.5rem;
+    }
+    .sidebar {
+      transition: transform 0.3s ease-in-out;
+    }
+    .sidebar-hidden {
+      transform: translateX(-100%);
+    }
+    @media (min-width: 640px) {
+      .form-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .form-container {
+        padding-left: 3rem;
+        padding-right: 3rem;
+      }
+    }
+    .variant-group {
+      position: relative;
+    }
+    .selected-categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .selected-category {
+      display: flex;
+      align-items: center;
+      background-color: #4a4a4a;
+      padding: 0.5rem;
+      border-radius: 0.25rem;
+    }
+    .remove-category {
+      margin-left: 0.5rem;
+      cursor: pointer;
+      color: #ff5555;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-black">
+
+  <!-- Header Partial -->
+  <%- include("../partials/admin/admin-header") %>
+
+  <div class="flex">
+    <!-- Sidebar Partial -->
+    <%- include("../partials/admin/admin-sidebar") %>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6 text-white">
+      <button
+        id="toggle-sidebar-mobile"
+        class="lg:hidden fixed top-4 left-4 text-white focus:outline-none"
+      >
+        <i data-lucide="menu"></i>
+      </button>
+
+      <div class="form-container">
+        <h2 class="text-2xl font-bold text-center mb-6">Add Products</h2>
+        <form
+          action="/admin/products/add-product"
+          method="POST"
+          enctype="multipart/form-data"
+          class="space-y-6"
+        >
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">Product Name</label>
+              <input
+                type="text"
+                name="name"
+                placeholder="Enter product name..."
+                class="w-full p-3 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Product Description</label>
+              <textarea
+                name="description"
+                placeholder="Enter product description..."
+                class="w-full p-3 bg-gray-800 border-none rounded text-white h-24 focus:outline-none focus:ring-2 focus:ring-brand"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Notes</label>
+              <textarea
+                name="notes"
+                placeholder="Enter additional notes..."
+                class="w-full p-3 bg-gray-800 border-none rounded text-white h-24 focus:outline-none focus:ring-2 focus:ring-brand"
+              ></textarea>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Brand Name</label>
+              <input
+                type="text"
+                name="brand"
+                placeholder="Enter brand name..."
+                class="w-full p-3 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+              />
+            </div>
+
+            <!-- Categories -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Categories</label>
+              <div id="selected-categories" class="selected-categories"></div>
+              <select
+                id="category-select"
+                class="w-full p-3 h-12 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+              >
+                <option value="">Select a category</option>
+                <% categories.forEach(category => { %>
+                  <option value="<%= category._id %>" data-name="<%= category.name %>"><%= category.name %></option>
+                <% }) %>
+              </select>
+              <input type="hidden" name="categories" id="categories-input" />
+              <p class="text-sm text-gray-400 mt-1">Select categories to add them to the product.</p>
+            </div>
+
+            <!-- Images -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Edit Photos</label>
+              <div class="image-container mb-4">
+                <% for (let i = 0; i < 4; i++) { %>
+                <div class="image-group">
+                  <div class="image-placeholder">
+                    <img
+                      id="preview-<%= i %>"
+                      class="hidden w-24 h-32 object-cover"
+                    />
+                    <span id="placeholder-<%= i %>">Image</span>
+                  </div>
+                  <input
+                    type="file"
+                    name="images"
+                    accept="image/*"
+                    class="hidden"
+                    id="file-<%= i %>"
+                    onchange="handleFileChange(event, <%= i %>)"
+                  />
+                  <button
+                    type="button"
+                    onclick="document.getElementById('file-<%= i %>').click()"
+                    class="nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800"
+                  >
+                    Add Image
+                  </button>
+                </div>
+                <% } %>
+              </div>
+            </div>
+
+            <!-- Gender + Concentration -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-sm font-medium mb-2">Gender</label>
+                <select
+                  name="gender"
+                  class="w-full p-3 h-12 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="MEN">MEN</option>
+                  <option value="WOMEN">WOMEN</option>
+                  <option value="UNISEX">UNISEX</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-2">Concentration</label>
+                <select
+                  name="concentration"
+                  class="w-full p-3 h-12 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                >
+                  <option value="">Select Concentration</option>
+                  <option value="Parfum">Parfum</option>
+                  <option value="Eau de Parfum">Eau de Parfum</option>
+                  <option value="Eau de Toilette">Eau de Toilette</option>
+                  <option value="Eau de Cologne">Eau de Cologne</option>
+                  <option value="Eau Fraiche">Eau Fraiche</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Variants -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Variants</label>
+              <div id="variants-container" class="space-y-4">
+                <div class="variant-group grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-gray-800 rounded">
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Size (ml)</label>
+                    <input
+                      type="number"
+                      name="variants[0][mlSize]"
+                      placeholder="e.g., 50"
+                      class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Stock</label>
+                    <input
+                      type="number"
+                      name="variants[0][stock]"
+                      placeholder="e.g., 100"
+                      class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Base Price</label>
+                    <input
+                      type="number"
+                      name="variants[0][basePrice]"
+                      placeholder="e.g., 100"
+                      class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-sm font-medium mb-2">Discounted Price</label>
+                    <input
+                      type="number"
+                      name="variants[0][discountedPrice]"
+                      placeholder="e.g., 80"
+                      class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                      required
+                    />
+                    <button
+                      type="button"
+                      id="add-variant"
+                      class="nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full"
+                    >
+                      Add Variant
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Buttons -->
+            <div class="flex justify-center space-x-4">
+              <button
+                type="button"
+                id="cancel"
+                class="logout-btn bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                id="save"
+                class="bg-brand text-white px-4 py-2 rounded hover:bg-yellow-700"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    let croppers = {};
+    let variantCount = 1;
+
+    // Category selection handling
+    const categorySelect = document.getElementById('category-select');
+    const selectedCategoriesContainer = document.getElementById('selected-categories');
+    const categoriesInput = document.getElementById('categories-input');
+    let selectedCategories = [];
+
+    function updateCategoriesInput() {
+      categoriesInput.value = selectedCategories.join(',');
+    }
+
+    function addCategory(id, name) {
+      if (!selectedCategories.includes(id)) {
+        selectedCategories.push(id);
+        updateCategoriesInput();
+
+        // Add selected category to display
+        const categoryElement = document.createElement('div');
+        categoryElement.className = 'selected-category';
+        categoryElement.dataset.id = id;
+        categoryElement.innerHTML = `
+          <span>${name}</span>
+          <span class="remove-category" data-id="${id}">-</span>
+        `;
+        selectedCategoriesContainer.appendChild(categoryElement);
+
+        // Remove from dropdown
+        const option = categorySelect.querySelector(`option[value="${id}"]`);
+        if (option) option.remove();
+
+        // Add event listener for remove button
+        categoryElement.querySelector('.remove-category').addEventListener('click', () => {
+          removeCategory(id, name);
+        });
+      }
+    }
+
+    function removeCategory(id, name) {
+      selectedCategories = selectedCategories.filter(catId => catId !== id);
+      updateCategoriesInput();
+
+      // Remove from display
+      const categoryElement = selectedCategoriesContainer.querySelector(`[data-id="${id}"]`);
+      if (categoryElement) categoryElement.remove();
+
+      // Add back to dropdown
+      const option = document.createElement('option');
+      option.value = id;
+      option.dataset.name = name;
+      option.textContent = name;
+      categorySelect.appendChild(option);
+
+      // Sort dropdown options alphabetically
+      const options = Array.from(categorySelect.options).slice(1); // Skip placeholder
+      options.sort((a, b) => a.textContent.localeCompare(b.textContent));
+      while (categorySelect.options.length > 1) categorySelect.remove(1);
+      options.forEach(opt => categorySelect.appendChild(opt));
+    }
+
+    categorySelect.addEventListener('change', () => {
+      const selectedOption = categorySelect.selectedOptions[0];
+      if (selectedOption && selectedOption.value) {
+        addCategory(selectedOption.value, selectedOption.dataset.name);
+        categorySelect.value = ''; // Reset to placeholder
+      }
+    });
+
+    function handleFileChange(event, index) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = document.getElementById("preview-" + index);
+          const placeholder = document.getElementById("placeholder-" + index);
+
+          img.src = e.target.result;
+          img.classList.remove("hidden");
+          placeholder.classList.add("hidden");
+
+          if (croppers[index]) croppers[index].destroy();
+
+          croppers[index] = new Cropper(img, {
+            aspectRatio: 3 / 4,
+            viewMode: 1,
+            scalable: true,
+            zoomable: true,
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    const sidebar = document.getElementById("sidebar");
+    const toggleSidebarButton = document.getElementById("toggle-sidebar");
+    const toggleSidebarMobileButton = document.getElementById("toggle-sidebar-mobile");
+
+    if (toggleSidebarButton) {
+      toggleSidebarButton.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-hidden");
+      });
+    }
+
+    if (toggleSidebarMobileButton) {
+      toggleSidebarMobileButton.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-hidden");
+      });
+    }
+
+    document.getElementById("add-variant").addEventListener("click", () => {
+      const container = document.getElementById("variants-container");
+      const variantDiv = document.createElement("div");
+      variantDiv.className = "variant-group grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-gray-800 rounded";
+      variantDiv.innerHTML = `
+        <div>
+          <label class="block text-sm font-medium mb-2">Size (ml)</label>
+          <input
+            type="number"
+            name="variants[${variantCount}][mlSize]"
+            placeholder="e.g., 50"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            required
+          />
+          <button
+            type="button"
+            class="remove-variant nav-btn bg-red-600 text-white px-4 py-2 mt-2 rounded hover:bg-red-700 w-full"
+          >
+            Remove
+          </button>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Stock</label>
+          <input
+            type="number"
+            name="variants[${variantCount}][stock]"
+            placeholder="e.g., 100"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Base Price</label>
+          <input
+            type="number"
+            name="variants[${variantCount}][basePrice]"
+            placeholder="e.g., 100"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            required
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Discounted Price</label>
+          <input
+            type="number"
+            name="variants[${variantCount}][discountedPrice]"
+            placeholder="e.g., 80"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            required
+          />
+          <button
+            type="button"
+            class="add-variant nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full"
+          >
+            Add Variant
+          </button>
+        </div>
+      `;
+      container.appendChild(variantDiv);
+      variantCount++;
+
+      const removeButton = variantDiv.querySelector(".remove-variant");
+      if (removeButton) {
+        removeButton.addEventListener("click", () => {
+          variantDiv.remove();
+        });
+      }
+
+      const newAddButton = variantDiv.querySelector(".add-variant");
+      if (newAddButton) {
+        newAddButton.addEventListener("click", () => {
+          document.getElementById("add-variant").click();
+        });
+      }
+
+      const previousAddButton = container.querySelector(".variant-group:last-child .add-variant");
+      if (previousAddButton && previousAddButton !== newAddButton) {
+        previousAddButton.remove();
+      }
+    });
+
+    document.querySelector("form").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+
+      const cropperKeys = Object.keys(croppers);
+      if (cropperKeys.length === 0) {
+        form.submit();
+        return;
+      }
+
+      Promise.all(
+        cropperKeys.map(
+          (index) =>
+            new Promise((resolve) => {
+              croppers[index].getCroppedCanvas().toBlob((blob) => {
+                formData.append("images", blob, `image-${index}.jpg`);
+                resolve();
+              }, "image/jpeg");
+            })
+        )
+      ).then(() => {
+        fetch(form.action, {
+          method: "POST",
+          body: formData,
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            alert("Uploaded successfully!");
+            console.log(data);
+          })
+          .catch((err) => console.error(err));
+      });
+    });
+  </script>
+</body>
+</html>

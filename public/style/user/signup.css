@@ -1,0 +1,144 @@
+* {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #000; /* pure black */
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .signup-container {
+      background-color: #d4c4b0;
+      border-radius: 20px;    /* smaller */
+      padding: 24px;          /* smaller */
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 32px;              /* smaller */
+      align-items: center;
+      justify-content: center;
+    }
+
+    .signup-form {
+      background-color: #c4b49d;
+      border-radius: 14px;    /* smaller */
+      padding: 32px;          /* smaller */
+      width: 100%;
+      max-width: 380px;       /* smaller */
+      text-align: center;
+    }
+
+    .logo {
+      margin-bottom: 24px;    /* tighter spacing */
+    }
+
+    .logo img {
+      width: 130px;           /* smaller logo */
+      height: auto;
+      max-width: 100%;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .form-group {
+      margin-bottom: 14px;    /* tighter spacing */
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;     /* smaller */
+      border: none;
+      border-radius: 8px;
+      background-color: #f5f5f5;
+      font-size: 13px;        /* smaller */
+      color: #333;
+    }
+
+    .form-input::placeholder {
+      color: #777;
+    }
+
+    .login-link-container {
+      margin: 16px 0;         /* smaller spacing */
+      font-size: 13px;        /* smaller */
+      color: #333;
+    }
+
+    .login-link {
+      color: #4285f4;
+      text-decoration: none;
+    }
+
+    .signup-btn {
+      background-color: #000;
+      color: white;
+      border: none;
+      padding: 10px 28px;     /* smaller */
+      border-radius: 8px;
+      font-size: 13px;        /* smaller */
+      font-weight: 500;
+      cursor: pointer;
+      margin: 18px 0;
+      letter-spacing: 1px;
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      margin: 18px 0;         /* tighter */
+      color: #666;
+      font-size: 13px;        /* smaller */
+    }
+
+    .divider::before,
+    .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background-color: #999;
+      margin: 0 10px;
+    }
+
+    .social-login {
+      background-color: #f5f5f5;
+      border-radius: 12px;
+      padding: 14px;          /* smaller */
+      margin-top: 10px;
+    }
+
+    .social-login-title {
+      color: #333;
+      font-size: 13px;        /* smaller */
+      margin-bottom: 10px;
+    }
+
+    .social-icons {
+      display: flex;
+      justify-content: center;
+      gap: 14px;              /* closer logos */
+    }
+
+    .social-icon {
+      width: 26px;            /* smaller */
+      height: 26px;
+      cursor: pointer;
+    }
+    .error{
+        color: red;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .signup-container {
+        flex-direction: column;
+        gap: 20px;
+      }
+    }

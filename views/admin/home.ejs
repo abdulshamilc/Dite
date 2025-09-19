@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .bg-brand { background-color: #C5A987; }
+        .text-brand { color: #C5A987; }
+        .border-brand { border-color: #C5A987; }
+    </style>
+</head>
+<body class="min-h-screen bg-black">
+    <%
+        // Sample data - in a real app, this would come from your database/API
+        const stats = [
+            { title: "Total Revenue", value: "$45,231.89", change: "+20.1%", icon: "dollar-sign" },
+            { title: "Orders", value: "2,350", change: "+180.1%", icon: "shopping-cart" },
+            { title: "Products", value: "12,234", change: "+19%", icon: "package" },
+            { title: "Active Users", value: "573", change: "+201", icon: "users" }
+        ];
+
+        const recentOrders = [
+            { id: "#3210", customer: "Olivia Martin", status: "Completed", amount: "$42.25", date: "2024-01-15", email: "olivia@example.com" },
+            { id: "#3209", customer: "Jackson Lee", status: "Processing", amount: "$74.99", date: "2024-01-14", email: "jackson@example.com" },
+            { id: "#3208", customer: "Isabella Nguyen", status: "Shipped", amount: "$99.99", date: "2024-01-14", email: "isabella@example.com" },
+            { id: "#3207", customer: "William Kim", status: "Pending", amount: "$39.95", date: "2024-01-13", email: "william@example.com" },
+            { id: "#3206", customer: "Sofia Davis", status: "Completed", amount: "$19.99", date: "2024-01-13", email: "sofia@example.com" },
+            { id: "#3205", customer: "Michael Chen", status: "Cancelled", amount: "$129.99", date: "2024-01-12", email: "michael@example.com" },
+            { id: "#3204", customer: "Emma Wilson", status: "Processing", amount: "$89.50", date: "2024-01-12", email: "emma@example.com" }
+        ];
+
+        const products = [
+            { id: 1, name: "Wireless Headphones", price: "$99.99", stock: 45, status: "Active", category: "Electronics", sku: "WH001", image: "/wireless-headphones.png" },
+            { id: 2, name: "Smart Watch", price: "$199.99", stock: 23, status: "Active", category: "Electronics", sku: "SW002", image: "/smartwatch-lifestyle.png" },
+            { id: 3, name: "Laptop Stand", price: "$49.99", stock: 0, status: "Out of Stock", category: "Accessories", sku: "LS003", image: "/laptop-stand.png" },
+            { id: 4, name: "USB-C Cable", price: "$19.99", stock: 156, status: "Active", category: "Accessories", sku: "UC004", image: "/usb-cable.png" },
+            { id: 5, name: "Bluetooth Speaker", price: "$79.99", stock: 67, status: "Active", category: "Electronics", sku: "BS005", image: "/bluetooth-speaker.png" },
+            { id: 6, name: "Phone Case", price: "$24.99", stock: 234, status: "Active", category: "Accessories", sku: "PC006", image: "/colorful-phone-case-display.png" }
+        ];
+
+        const customers = [
+            { id: 1, name: "Olivia Martin", email: "olivia@example.com", phone: "+1 (555) 123-4567", totalOrders: 12, totalSpent: "$1,245.67", status: "Active", joinDate: "2023-08-15", lastOrder: "2024-01-15", location: "New York, NY" },
+            { id: 2, name: "Jackson Lee", email: "jackson@example.com", phone: "+1 (555) 234-5678", totalOrders: 8, totalSpent: "$892.34", status: "Active", joinDate: "2023-09-22", lastOrder: "2024-01-14", location: "Los Angeles, CA" },
+            { id: 3, name: "Isabella Nguyen", email: "isabella@example.com", phone: "+1 (555) 345-6789", totalOrders: 15, totalSpent: "$2,156.89", status: "VIP", joinDate: "2023-06-10", lastOrder: "2024-01-14", location: "San Francisco, CA" },
+            { id: 4, name: "William Kim", email: "william@example.com", phone: "+1 (555) 456-7890", totalOrders: 3, totalSpent: "$234.56", status: "Active", joinDate: "2023-12-05", lastOrder: "2024-01-13", location: "Chicago, IL" },
+            { id: 5, name: "Sofia Davis", email: "sofia@example.com", phone: "+1 (555) 567-8901", totalOrders: 22, totalSpent: "$3,456.78", status: "VIP", joinDate: "2023-04-18", lastOrder: "2024-01-13", location: "Miami, FL" },
+            { id: 6, name: "Michael Chen", email: "michael@example.com", phone: "+1 (555) 678-9012", totalOrders: 1, totalSpent: "$129.99", status: "Inactive", joinDate: "2023-11-30", lastOrder: "2024-01-12", location: "Seattle, WA" }
+        ];
+
+        const coupons = [
+            { id: 1, code: "WELCOME20", name: "Welcome Discount", type: "Percentage", value: "20%", minOrder: "$50.00", maxDiscount: "$100.00", usageLimit: 1000, usedCount: 245, status: "Active", startDate: "2024-01-01", endDate: "2024-03-31", description: "20% off for new customers" },
+            { id: 2, code: "SAVE50", name: "Fixed Amount Discount", type: "Fixed Amount", value: "$50.00", minOrder: "$200.00", maxDiscount: "$50.00", usageLimit: 500, usedCount: 89, status: "Active", startDate: "2024-01-15", endDate: "2024-02-29", description: "$50 off on orders above $200" },
+            { id: 3, code: "FREESHIP", name: "Free Shipping", type: "Free Shipping", value: "Free", minOrder: "$25.00", maxDiscount: "$15.00", usageLimit: 2000, usedCount: 1456, status: "Active", startDate: "2024-01-01", endDate: "2024-12-31", description: "Free shipping on orders above $25" },
+            { id: 4, code: "EXPIRED10", name: "Expired Coupon", type: "Percentage", value: "10%", minOrder: "$30.00", maxDiscount: "$50.00", usageLimit: 100, usedCount: 67, status: "Expired", startDate: "2023-12-01", endDate: "2023-12-31", description: "10% off holiday discount" },
+            { id: 5, code: "DRAFT25", name: "Draft Coupon", type: "Percentage", value: "25%", minOrder: "$100.00", maxDiscount: "$200.00", usageLimit: 200, usedCount: 0, status: "Draft", startDate: "2024-02-01", endDate: "2024-02-14", description: "Valentine's Day special discount" }
+        ];
+    %>
+
+    <!-- Header -->
+    <header class="border-b border-brand/20 bg-black">
+        <div class="flex h-16 items-center px-6">
+            <div class="flex items-center space-x-4">
+                <h1 class="text-xl font-bold text-brand">E-Commerce Admin</h1>
+            </div>
+            <div class="ml-auto flex items-center space-x-4">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"></i>
+                    <input type="search" placeholder="Search..." class="w-[300px] pl-8 bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 rounded px-3 py-2 border">
+                </div>
+                <button class="text-white hover:bg-gray-800 p-2 rounded">
+                    <i data-lucide="bell" class="h-4 w-4"></i>
+                </button>
+                <button class="text-white hover:bg-gray-800 p-2 rounded">
+                    <i data-lucide="settings" class="h-4 w-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex">
+        <!-- Sidebar -->
+        <aside class="w-64 border-r border-brand/20 bg-black">
+            <nav class="space-y-2 p-4">
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center bg-brand text-black" data-tab="dashboard">
+                    <i data-lucide="bar-chart-3" class="mr-2 h-4 w-4"></i>
+                    Dashboard
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="orders">
+                    <i data-lucide="shopping-cart" class="mr-2 h-4 w-4"></i>
+                    Orders
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="products">
+                    <i data-lucide="package" class="mr-2 h-4 w-4"></i>
+                    Products
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="sales">
+                    <i data-lucide="file-text" class="mr-2 h-4 w-4"></i>
+                    Sales Report
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="customers">
+                    <i data-lucide="users" class="mr-2 h-4 w-4"></i>
+                    Customers
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="coupons">
+                    <i data-lucide="gift" class="mr-2 h-4 w-4"></i>
+                    Coupons
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="categories">
+                    <i data-lucide="tag" class="mr-2 h-4 w-4"></i>
+                    Categories
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="refunds">
+                    <i data-lucide="rotate-ccw" class="mr-2 h-4 w-4"></i>
+                    Refund/Return
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="banners">
+                    <i data-lucide="image" class="mr-2 h-4 w-4"></i>
+                    Banners
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-2 rounded flex items-center text-white hover:bg-gray-800" data-tab="referrals">
+                    <i data-lucide="user-plus" class="mr-2 h-4 w-4"></i>
+                    Referrals
+                </button>
+
+                <div class="pt-4 mt-4 border-t border-brand/20">
+                    <button class="w-full justify-start text-left px-4 py-2 rounded flex items-center text-red-400 hover:bg-red-900/20 hover:text-red-300" onclick="console.log('Logout clicked')">
+                        <i data-lucide="log-out" class="mr-2 h-4 w-4"></i>
+                        Logout
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-6 bg-black">
+            <!-- Dashboard Tab -->
+            <div id="dashboard" class="tab-content space-y-6">
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <% stats.forEach(stat => { %>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                        <div class="flex flex-row items-center justify-between space-y-0 pb-2 p-6">
+                            <h3 class="text-sm font-medium text-white"><%= stat.title %></h3>
+                            <i data-lucide="<%= stat.icon %>" class="h-4 w-4 text-brand"></i>
+                        </div>
+                        <div class="px-6 pb-6">
+                            <div class="text-2xl font-bold text-brand"><%= stat.value %></div>
+                            <p class="text-xs text-gray-400">
+                                <span class="text-brand"><%= stat.change %></span> from last month
+                            </p>
+                        </div>
+                    </div>
+                    <% }); %>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <h3 class="text-white text-lg font-semibold">Recent Orders</h3>
+                        <p class="text-gray-400 text-sm">You have <%= recentOrders.length %> orders this week.</p>
+                    </div>
+                    <div class="p-6 pt-0">
+                        <div class="space-y-4">
+                            <% recentOrders.forEach(order => { %>
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-4">
+                                    <div>
+                                        <p class="text-sm font-medium text-white"><%= order.customer %></p>
+                                        <p class="text-sm text-gray-400"><%= order.id %></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-4">
+                                    <span class="px-2 py-1 text-xs rounded <%= order.status === 'Completed' ? 'bg-brand text-black' : 'bg-gray-700 text-white' %>">
+                                        <%= order.status %>
+                                    </span>
+                                    <p class="text-sm font-medium text-brand"><%= order.amount %></p>
+                                </div>
+                            </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Products Tab -->
+            <div id="products" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Products Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="bg-transparent border border-brand text-brand hover:bg-brand hover:text-black px-4 py-2 rounded">Import Products</button>
+                        <button class="bg-transparent border border-brand text-brand hover:bg-brand hover:text-black px-4 py-2 rounded">Export Products</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            Add Product
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="package" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Products</p>
+                                <p class="text-xl font-bold text-white"><%= products.length %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="eye" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Active</p>
+                                <p class="text-xl font-bold text-white"><%= products.filter(p => p.status === 'Active').length %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="trash-2" class="h-4 w-4 text-red-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Out of Stock</p>
+                                <p class="text-xl font-bold text-white"><%= products.filter(p => p.status === 'Out of Stock').length %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="dollar-sign" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Value</p>
+                                <p class="text-xl font-bold text-white">$12,234</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Products</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Categories</option>
+                                    <option>Electronics</option>
+                                    <option>Accessories</option>
+                                    <option>Clothing</option>
+                                    <option>Home & Garden</option>
+                                </select>
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Out of Stock</option>
+                                    <option>Discontinued</option>
+                                </select>
+                                <input placeholder="Search products..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Product</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">SKU</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Category</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Price</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Stock</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% products.forEach(product => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-3">
+                                            <img src="<%= product.image || '/placeholder.svg' %>" alt="<%= product.name %>" class="h-10 w-10 rounded-lg object-cover border border-brand/20">
+                                            <div>
+                                                <p class="text-sm font-medium text-white"><%= product.name %></p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= product.sku %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= product.category %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= product.price %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm <%= product.stock === 0 ? 'text-red-400' : product.stock < 20 ? 'text-brand' : 'text-white' %>">
+                                        <%= product.stock %>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= product.status === 'Active' ? 'bg-green-600 text-white' : product.status === 'Out of Stock' ? 'bg-red-600 text-white' : 'bg-gray-600 text-white' %>">
+                                            <%= product.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded" title="View Product">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded" title="Edit Product">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-brand hover:bg-brand/20 p-1 rounded" title="Duplicate Product">
+                                                <i data-lucide="plus" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded" title="Delete Product">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" class="rounded border-brand/20 bg-gray-800">
+                        <span class="text-sm text-gray-400">Select all</span>
+                        <button class="border border-brand/20 text-gray-400 ml-4 bg-transparent px-3 py-1 rounded text-sm">Bulk Edit</button>
+                        <button class="border border-red-600/20 text-red-400 bg-transparent px-3 py-1 rounded text-sm">Bulk Delete</button>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <p class="text-sm text-gray-400">Showing 1-6 of <%= products.length %> products</p>
+                        <div class="flex space-x-2">
+                            <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                            <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Tab -->
+            <div id="orders" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Orders Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="bg-transparent border border-brand text-brand hover:bg-brand hover:text-black px-4 py-2 rounded">Export Orders</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            New Order
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="shopping-cart" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Orders</p>
+                                <p class="text-xl font-bold text-white">2,350</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="package" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Completed</p>
+                                <p class="text-xl font-bold text-white">1,890</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="rotate-ccw" class="h-4 w-4 text-blue-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Processing</p>
+                                <p class="text-xl font-bold text-white">320</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="dollar-sign" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Revenue</p>
+                                <p class="text-xl font-bold text-white">$45,231</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Orders</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Pending</option>
+                                    <option>Processing</option>
+                                    <option>Shipped</option>
+                                    <option>Completed</option>
+                                    <option>Cancelled</option>
+                                </select>
+                                <input placeholder="Search orders..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Order ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% recentOrders.forEach(order => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-yellow-400"><%= order.id %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <p class="text-sm font-medium text-white"><%= order.customer %></p>
+                                            <p class="text-xs text-gray-400"><%= order.email %></p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= order.date %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= 
+                                            order.status === 'Completed' ? 'bg-green-600 text-white' :
+                                            order.status === 'Processing' ? 'bg-blue-600 text-white' :
+                                            order.status === 'Shipped' ? 'bg-purple-600 text-white' :
+                                            order.status === 'Pending' ? 'bg-yellow-600 text-black' :
+                                            'bg-red-600 text-white'
+                                        %>">
+                                            <%= order.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-yellow-400"><%= order.amount %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-7 of 2,350 orders</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sales Tab -->
+            <div id="sales" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Sales Reports</h2>
+                    <div class="flex space-x-2">
+                        <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                            <option>Last 30 Days</option>
+                            <option>Last 7 Days</option>
+                            <option>Last 90 Days</option>
+                            <option>This Year</option>
+                            <option>Custom Range</option>
+                        </select>
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Report</button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="dollar-sign" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Revenue</p>
+                                <p class="text-xl font-bold text-white">$45,231.89</p>
+                                <p class="text-xs text-green-400">+12.5% from last month</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="shopping-cart" class="h-4 w-4 text-blue-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Orders</p>
+                                <p class="text-xl font-bold text-white">2,350</p>
+                                <p class="text-xs text-green-400">+8.2% from last month</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="bar-chart-3" class="h-4 w-4 text-purple-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Avg Order Value</p>
+                                <p class="text-xl font-bold text-white">$19.25</p>
+                                <p class="text-xs text-green-400">+3.8% from last month</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="users" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">New Customers</p>
+                                <p class="text-xl font-bold text-white">573</p>
+                                <p class="text-xs text-green-400">+15.3% from last month</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                        <div class="p-6 pb-2">
+                            <h3 class="text-white text-lg font-semibold">Revenue Overview</h3>
+                            <p class="text-gray-400 text-sm">Monthly revenue for the past 6 months</p>
+                        </div>
+                        <div class="p-6 pt-0">
+                            <div class="h-64 flex items-end justify-between space-x-2">
+                                <% [32000, 28000, 35000, 42000, 38000, 45231].forEach((value, index) => { %>
+                                <div class="flex flex-col items-center space-y-2">
+                                    <div class="bg-brand rounded-t w-8 transition-all hover:opacity-90" style="height: <%= (value / 50000) * 200 %>px"></div>
+                                    <span class="text-xs text-gray-400"><%= ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'][index] %></span>
+                                    <span class="text-xs text-brand">$<%= Math.round(value / 1000) %>k</span>
+                                </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                        <div class="p-6 pb-2">
+                            <h3 class="text-white text-lg font-semibold">Top Products</h3>
+                            <p class="text-gray-400 text-sm">Best selling products this month</p>
+                        </div>
+                        <div class="p-6 pt-0">
+                            <div class="space-y-4">
+                                <% [
+                                    { name: "Wireless Headphones", sales: 245, revenue: "$24,255" },
+                                    { name: "Smart Watch", sales: 189, revenue: "$37,611" },
+                                    { name: "Bluetooth Speaker", sales: 156, revenue: "$12,484" },
+                                    { name: "USB-C Cable", sales: 134, revenue: "$2,678" },
+                                    { name: "Phone Case", sales: 98, revenue: "$2,450" }
+                                ].forEach(product => { %>
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-sm font-medium text-white"><%= product.name %></p>
+                                        <p class="text-xs text-gray-400"><%= product.sales %> units sold</p>
+                                    </div>
+                                    <p class="text-sm font-medium text-brand"><%= product.revenue %></p>
+                                </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customers Tab -->
+            <div id="customers" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Customers Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Customers</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            Add Customer
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="users" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Customers</p>
+                                <p class="text-xl font-bold text-white"><%= customers.length %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="user-plus" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">New Customers</p>
+                                <p class="text-xl font-bold text-white">573</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="shopping-cart" class="h-4 w-4 text-blue-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Orders</p>
+                                <p class="text-xl font-bold text-white">2,350</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="dollar-sign" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Spent</p>
+                                <p class="text-xl font-bold text-white">$45,231</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Customers</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Inactive</option>
+                                    <option>VIP</option>
+                                    <option>Banned</option>
+                                </select>
+                                <input placeholder="Search customers..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Phone</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Orders</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Total Spent</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% customers.forEach(customer => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-3">
+                                            <div>
+                                                <p class="text-sm font-medium text-white"><%= customer.name %></p>
+                                                <p class="text-xs text-gray-400"><%= customer.location %></p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= customer.email %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= customer.phone %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white"><%= customer.totalOrders %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= customer.totalSpent %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= 
+                                            customer.status === 'Active' ? 'bg-green-600 text-white' :
+                                            customer.status === 'Inactive' ? 'bg-red-600 text-white' :
+                                            customer.status === 'VIP' ? 'bg-purple-600 text-white' :
+                                            'bg-gray-600 text-white'
+                                        %>">
+                                            <%= customer.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-6 of <%= customers.length %> customers</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coupons Tab -->
+            <div id="coupons" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Coupons Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Coupons</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            Add Coupon
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="gift" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Coupons</p>
+                                <p class="text-xl font-bold text-white"><%= coupons.length %></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="tag" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Active Coupons</p>
+                                <p class="text-xl font-bold text-white">3</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="trash-2" class="h-4 w-4 text-red-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Expired Coupons</p>
+                                <p class="text-xl font-bold text-white">1</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="file-text" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Draft Coupons</p>
+                                <p class="text-xl font-bold text-white">1</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Coupons</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Types</option>
+                                    <option>Percentage</option>
+                                    <option>Fixed Amount</option>
+                                    <option>Free Shipping</option>
+                                </select>
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Draft</option>
+                                    <option>Expired</option>
+                                </select>
+                                <input placeholder="Search coupons..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Code</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Type</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Value</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Usage</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% coupons.forEach(coupon => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= coupon.code %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <p class="text-sm font-medium text-white"><%= coupon.name %></p>
+                                            <p class="text-xs text-gray-400"><%= coupon.description %></p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= coupon.type %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= coupon.value %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white"><%= coupon.usedCount %> / <%= coupon.usageLimit %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= 
+                                            coupon.status === 'Active' ? 'bg-green-600 text-white' :
+                                            coupon.status === 'Expired' ? 'bg-red-600 text-white' :
+                                            'bg-gray-600 text-white'
+                                        %>">
+                                            <%= coupon.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-5 of <%= coupons.length %> coupons</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Tab -->
+            <div id="categories" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Categories Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Categories</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            Add Category
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="tag" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Categories</p>
+                                <p class="text-xl font-bold text-white">12</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="eye" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Active Categories</p>
+                                <p class="text-xl font-bold text-white">10</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="trash-2" class="h-4 w-4 text-red-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Inactive Categories</p>
+                                <p class="text-xl font-bold text-white">2</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="package" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Products</p>
+                                <p class="text-xl font-bold text-white">12,234</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Categories</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Inactive</option>
+                                </select>
+                                <input placeholder="Search categories..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Description</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Products</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% [
+                                    { id: 1, name: "Electronics", description: "Smartphones, laptops, headphones, etc.", products: 3456, status: "Active" },
+                                    { id: 2, name: "Accessories", description: "Cases, chargers, cables, etc.", products: 2890, status: "Active" },
+                                    { id: 3, name: "Clothing", description: "T-shirts, hoodies, jeans, etc.", products: 1567, status: "Active" },
+                                    { id: 4, name: "Home & Garden", description: "Furniture, decor, tools, etc.", products: 2134, status: "Active" },
+                                    { id: 5, name: "Books", description: "Fiction, non-fiction, textbooks, etc.", products: 890, status: "Inactive" }
+                                ].forEach(category => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-3">
+                                            <div>
+                                                <p class="text-sm font-medium text-white"><%= category.name %></p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= category.description %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-white"><%= category.products %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= category.status === 'Active' ? 'bg-green-600 text-white' : 'bg-gray-600 text-white' %>">
+                                            <%= category.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-5 of 12 categories</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Refunds Tab -->
+            <div id="refunds" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Refunds/Returns Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Data</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            New Refund
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="rotate-ccw" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Requests</p>
+                                <p class="text-xl font-bold text-white">345</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="package" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Approved</p>
+                                <p class="text-xl font-bold text-white">289</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="trash-2" class="h-4 w-4 text-red-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Rejected</p>
+                                <p class="text-xl font-bold text-white">56</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="dollar-sign" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Refunded</p>
+                                <p class="text-xl font-bold text-white">$12,345</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Requests</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Pending</option>
+                                    <option>Approved</option>
+                                    <option>Rejected</option>
+                                </select>
+                                <input placeholder="Search requests..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Order ID</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Customer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% [
+                                    { id: "#3210", customer: "Olivia Martin", date: "2024-01-15", amount: "$42.25", status: "Approved" },
+                                    { id: "#3209", customer: "Jackson Lee", date: "2024-01-14", amount: "$74.99", status: "Pending" },
+                                    { id: "#3208", customer: "Isabella Nguyen", date: "2024-01-14", amount: "$99.99", status: "Rejected" },
+                                    { id: "#3207", customer: "William Kim", date: "2024-01-13", amount: "$39.95", status: "Approved" },
+                                    { id: "#3206", customer: "Sofia Davis", date: "2024-01-13", amount: "$19.99", status: "Pending" }
+                                ].forEach(refund => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= refund.id %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <p class="text-sm font-medium text-white"><%= refund.customer %></p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= refund.date %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= refund.amount %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= 
+                                            refund.status === 'Approved' ? 'bg-green-600 text-white' :
+                                            refund.status === 'Rejected' ? 'bg-red-600 text-white' :
+                                            'bg-gray-600 text-white'
+                                        %>">
+                                            <%= refund.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-5 of 345 requests</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Banners Tab -->
+            <div id="banners" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Banners Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Banners</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            Add Banner
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="image" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Banners</p>
+                                <p class="text-xl font-bold text-white">8</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="eye" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Active Banners</p>
+                                <p class="text-xl font-bold text-white">6</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="trash-2" class="h-4 w-4 text-red-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Inactive Banners</p>
+                                <p class="text-xl font-bold text-white">2</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="file-text" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Draft Banners</p>
+                                <p class="text-xl font-bold text-white">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Banners</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Inactive</option>
+                                    <option>Draft</option>
+                                </select>
+                                <input placeholder="Search banners..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Image</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Title</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Link</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% [
+                                    { id: 1, image: "/banner1.jpg", title: "Summer Sale", link: "/summer-sale", status: "Active" },
+                                    { id: 2, image: "/banner2.jpg", title: "New Arrivals", link: "/new-arrivals", status: "Active" },
+                                    { id: 3, image: "/banner3.jpg", title: "Flash Sale", link: "/flash-sale", status: "Inactive" },
+                                    { id: 4, image: "/banner4.jpg", title: "Winter Collection", link: "/winter-collection", status: "Active" },
+                                    { id: 5, image: "/banner5.jpg", title: "Holiday Deals", link: "/holiday-deals", status: "Active" }
+                                ].forEach(banner => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-3">
+                                            <img src="<%= banner.image || '/placeholder.svg' %>" alt="<%= banner.title %>" class="h-10 w-20 object-cover rounded-md">
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white"><%= banner.title %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= banner.link %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= banner.status === 'Active' ? 'bg-green-600 text-white' : 'bg-gray-600 text-white' %>">
+                                            <%= banner.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-5 of 8 banners</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Referrals Tab -->
+            <div id="referrals" class="tab-content space-y-6 hidden">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white">Referrals Management</h2>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand text-brand hover:bg-brand hover:text-black bg-transparent px-4 py-2 rounded">Export Referrals</button>
+                        <button class="bg-brand text-black hover:opacity-90 px-4 py-2 rounded flex items-center">
+                            <i data-lucide="plus" class="mr-2 h-4 w-4"></i>
+                            Add Referral
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid gap-4 md:grid-cols-4">
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="user-plus" class="h-4 w-4 text-brand"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Referrals</p>
+                                <p class="text-xl font-bold text-white">123</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="users" class="h-4 w-4 text-green-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Active Referrals</p>
+                                <p class="text-xl font-bold text-white">100</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="trash-2" class="h-4 w-4 text-red-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Inactive Referrals</p>
+                                <p class="text-xl font-bold text-white">23</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-900 border-brand/20 border rounded-lg p-4">
+                        <div class="flex items-center space-x-2">
+                            <i data-lucide="dollar-sign" class="h-4 w-4 text-yellow-400"></i>
+                            <div>
+                                <p class="text-sm text-gray-400">Total Earned</p>
+                                <p class="text-xl font-bold text-white">$1,234</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-900 border-brand/20 border rounded-lg">
+                    <div class="p-6 pb-2">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-white text-lg font-semibold">All Referrals</h3>
+                            <div class="flex space-x-2">
+                                <select class="bg-gray-800 border border-brand/20 text-white rounded px-3 py-1 text-sm">
+                                    <option>All Status</option>
+                                    <option>Active</option>
+                                    <option>Inactive</option>
+                                </select>
+                                <input placeholder="Search referrals..." class="w-64 bg-gray-800 border-brand/20 text-white placeholder:text-gray-400 border rounded px-3 py-1">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead>
+                                <tr class="border-b border-brand/20">
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Referrer</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Referee</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Amount</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-brand/20">
+                                <% [
+                                    { id: 1, referrer: "Olivia Martin", referee: "Jackson Lee", date: "2024-01-15", amount: "$10.00", status: "Active" },
+                                    { id: 2, referrer: "Isabella Nguyen", referee: "William Kim", date: "2024-01-14", amount: "$10.00", status: "Inactive" },
+                                    { id: 3, referrer: "Sofia Davis", referee: "Michael Chen", date: "2024-01-13", amount: "$10.00", status: "Active" }
+                                ].forEach(referral => { %>
+                                <tr class="hover:bg-gray-800/50">
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center space-x-3">
+                                            <div>
+                                                <p class="text-sm font-medium text-white"><%= referral.referrer %></p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div>
+                                            <p class="text-sm font-medium text-white"><%= referral.referee %></p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><%= referral.date %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-brand"><%= referral.amount %></td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 py-1 text-xs rounded <%= referral.status === 'Active' ? 'bg-green-600 text-white' : 'bg-gray-600 text-white' %>">
+                                            <%= referral.status %>
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <div class="flex space-x-2">
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="eye" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-white hover:bg-gray-800 p-1 rounded">
+                                                <i data-lucide="edit" class="h-4 w-4"></i>
+                                            </button>
+                                            <button class="text-red-400 hover:bg-red-900/20 p-1 rounded">
+                                                <i data-lucide="trash-2" class="h-4 w-4"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <p class="text-sm text-gray-400">Showing 1-3 of 123 referrals</p>
+                    <div class="flex space-x-2">
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Previous</button>
+                        <button class="border border-brand/20 text-gray-400 bg-transparent px-3 py-1 rounded text-sm">Next</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetTab = this.getAttribute('data-tab');
+
+                    // Remove active class from all nav buttons
+                    navButtons.forEach(btn => {
+                        btn.classList.remove('bg-brand', 'text-black');
+                        btn.classList.add('text-white', 'hover:bg-gray-800');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('bg-brand', 'text-black');
+                    this.classList.remove('text-white', 'hover:bg-gray-800');
+
+                    // Hide all tab contents
+                    tabContents.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+
+                    // Show target tab content
+                    const targetContent = document.getElementById(targetTab);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

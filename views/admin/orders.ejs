@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dite - Orders</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="/css/admin.css">
+   <style>
+    .bg-brand { background-color: #C5A987; }
+    .text-brand { color: #C5A987; }
+    .border-brand { border-color: #C5A987; }
+    aside {
+      border-right: 2px solid transparent;
+      border-image: linear-gradient(to bottom, #C5A987, transparent) 1;
+    }
+    .nav-btn {
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .nav-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    .nav-btn.active {
+      box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+    }
+    .logout-btn {
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .logout-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-black">
+
+  <!-- Header Partial -->
+  <%- include("../partials/admin/admin-header") %>
+
+  <div class="flex">
+    <!-- Sidebar Partial -->
+    <%- include("../partials/admin/admin-sidebar") %>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6 text-white">
+      <h2 class="text-2xl font-bold">Orders</h2>
+      <p>Here you can view and manage all orders.</p>
+
+      <!-- Example Orders Table -->
+      <div class="mt-6 overflow-x-auto">
+        <table class="min-w-full text-left border border-gray-700">
+          <thead class="bg-gray-800 text-gray-200">
+            <tr>
+              <th class="px-4 py-2 border-b border-gray-600">Order ID</th>
+              <th class="px-4 py-2 border-b border-gray-600">Customer</th>
+              <th class="px-4 py-2 border-b border-gray-600">Status</th>
+              <th class="px-4 py-2 border-b border-gray-600">Total</th>
+              <th class="px-4 py-2 border-b border-gray-600">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b border-gray-700">
+              <td class="px-4 py-2">#1001</td>
+              <td class="px-4 py-2">John Doe</td>
+              <td class="px-4 py-2">Processing</td>
+              <td class="px-4 py-2">$120.00</td>
+              <td class="px-4 py-2">
+                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
+              </td>
+            </tr>
+            <tr class="border-b border-gray-700">
+              <td class="px-4 py-2">#1002</td>
+              <td class="px-4 py-2">Jane Smith</td>
+              <td class="px-4 py-2">Shipped</td>
+              <td class="px-4 py-2">$75.00</td>
+              <td class="px-4 py-2">
+                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
+              </td>
+            </tr>
+            <tr class="border-b border-gray-700">
+              <td class="px-4 py-2">#1003</td>
+              <td class="px-4 py-2">John mith</td>
+              <td class="px-4 py-2">Shipped</td>
+              <td class="px-4 py-2">$75.00</td>
+              <td class="px-4 py-2">
+                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
+              </td>
+            </tr>
+            <tr class="border-b border-gray-700">
+              <td class="px-4 py-2">#1004</td>
+              <td class="px-4 py-2">Smith</td>
+              <td class="px-4 py-2">Shipped</td>
+              <td class="px-4 py-2">$75.00</td>
+              <td class="px-4 py-2">
+                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
+              </td>
+            </tr>
+            <tr class="border-b border-gray-700">
+              <td class="px-4 py-2">#1005</td>
+              <td class="px-4 py-2">Jane </td>
+              <td class="px-4 py-2">Shipped</td>
+              <td class="px-4 py-2">$75.00</td>
+              <td class="px-4 py-2">
+                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
+              </td>
+            
+            
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

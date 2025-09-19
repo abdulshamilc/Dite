@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dite </title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="/css/admin.css">
+   <style>
+    .bg-brand { background-color: #C5A987; }
+    .text-brand { color: #C5A987; }
+    .border-brand { border-color: #C5A987; }
+    aside {
+      border-right: 2px solid transparent;
+      border-image: linear-gradient(to bottom, #C5A987, transparent) 1;
+    }
+    .nav-btn {
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .nav-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+    .nav-btn.active {
+      box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+    }
+    .logout-btn {
+      transition: all 0.3s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    .logout-btn:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-black">
+
+  <!-- Header Partial -->
+  <%- include("../partials/admin/admin-header") %>
+
+  <div class="flex">
+    <!-- Sidebar Partial -->
+    <%- include("../partials/admin/admin-sidebar") %>
+
+    <!-- Page Content -->
+    <main class="flex-1 p-6 text-white">
+      <h2 class="text-2xl font-bold">Welcome Admin</h2>
+      <p>This is your dashboard content.</p>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

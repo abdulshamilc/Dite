@@ -1,0 +1,102 @@
+<!-- Sidebar -->
+<aside class="w-64 bg-black">
+  <nav class="space-y-3 p-5">
+    <a
+      href="/admin/dashboard"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center bg-brand text-black "
+    >
+      <i data-lucide="bar-chart-3" class="mr-3 h-5 w-5"></i>
+      Dashboard
+    </a>
+    <a
+      href="/admin/orders"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="shopping-cart" class="mr-3 h-5 w-5"></i>
+      Orders
+    </a>
+    <a
+      href="/admin/products"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="package" class="mr-3 h-5 w-5"></i>
+      Products
+    </a>
+    <a
+      href="/admin/sales"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="file-text" class="mr-3 h-5 w-5"></i>
+      Sales Report
+    </a>
+    <a
+      href="/admin/customers"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="users" class="mr-3 h-5 w-5"></i>
+      Customers
+    </a>
+    <a
+      href="/admin/coupons"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="gift" class="mr-3 h-5 w-5"></i>
+      Coupons
+    </a>
+    <a
+      href="/admin/categories"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="tag" class="mr-3 h-5 w-5"></i>
+      Categories
+    </a>
+    <a
+      href="/admin/refunds"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="rotate-ccw" class="mr-3 h-5 w-5"></i>
+      Refund/Return
+    </a>
+    <a
+      href="/admin/banners"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="image" class="mr-3 h-5 w-5"></i>
+      Banners
+    </a>
+    <a
+      href="/admin/referrals"
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
+    >
+      <i data-lucide="user-plus" class="mr-3 h-5 w-5"></i>
+      Referrals
+    </a>
+
+    <div class="pt-5 mt-5 border-t border-brand/20">
+      <a
+        href="/admin/logout"
+        class="logout-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-red-400 hover:bg-red-900/20 hover:text-red-300"
+      >
+        <i data-lucide="log-out" class="mr-3 h-5 w-5"></i>
+        Logout
+      </a>
+    </div>
+  </nav>
+</aside>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const navBtns = document.querySelectorAll(".nav-btn");
+
+    navBtns.forEach((btn) => {
+      const btnPath = new URL(btn.href, window.location.origin).pathname;
+      if (btnPath === window.location.pathname) {
+        btn.classList.add("bg-brand", "text-black");
+        btn.classList.remove("text-white");
+      } else {
+        btn.classList.remove("bg-brand", "text-black");
+        btn.classList.add("text-white");
+      }
+    });
+  });
+</script>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Product</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <link rel="stylesheet" href="/css/admin.css">
+  <link href="https://unpkg.com/cropperjs/dist/cropper.css" rel="stylesheet" />
+  <script src="https://unpkg.com/cropperjs/dist/cropper.js"></script>
+  <style>
+    .bg-brand { background-color: #C5A987; }
+    .text-brand { color: #C5A987; }
+    .border-brand { border-color: #C5A987; }
+    aside { border-right: 2px solid transparent; border-image: linear-gradient(to bottom, #C5A987, transparent) 1; }
+    .nav-btn { transition: all 0.3s ease-in-out; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
+    .nav-btn:hover { transform: translateX(4px); box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); }
+    .nav-btn.active { box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5); }
+    .selected-categories { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .selected-category { display: flex; align-items: center; background-color: #4a4a4a; padding: 0.5rem; border-radius: 0.25rem; }
+    .remove-category { margin-left: 0.5rem; cursor: pointer; color: #ff5555; font-weight: bold; }
+  </style>
+</head>
+<body class="min-h-screen bg-black text-white">
+
+  <!-- Header -->
+  <%- include("../partials/admin/admin-header") %>
+
+  <div class="flex">
+    <!-- Sidebar -->
+    <%- include("../partials/admin/admin-sidebar") %>
+
+    <main class="flex-1 p-6">
+      <h2 class="text-2xl font-bold text-center mb-6">Edit Product</h2>
+
+      <form
+        action="/admin/products/edit-product/<%= product._id %>"
+        method="POST"
+        enctype="multipart/form-data"
+        class="space-y-6"
+      >
+        <!-- Product Name -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Product Name</label>
+          <input type="text" name="name" value="<%= product.name || '' %>" class="w-full p-3 bg-gray-800 rounded focus:ring-2 focus:ring-brand" />
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Description</label>
+          <textarea name="description" class="w-full p-3 bg-gray-800 rounded focus:ring-2 focus:ring-brand h-24"><%= product.description || '' %></textarea>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Notes</label>
+          <textarea name="notes" class="w-full p-3 bg-gray-800 rounded focus:ring-2 focus:ring-brand h-24"><%= product.notes || '' %></textarea>
+        </div>
+
+        <!-- Brand -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Brand</label>
+          <input type="text" name="brand" value="<%= product.brand || '' %>" class="w-full p-3 bg-gray-800 rounded focus:ring-2 focus:ring-brand" />
+        </div>
+
+        <!-- Categories -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Categories</label>
+          <div id="selected-categories" class="selected-categories">
+            <% product.category.forEach(cat => { %>
+              <div class="selected-category" data-id="<%= cat._id %>">
+                <span><%= cat.name %></span>
+                <span class="remove-category" data-id="<%= cat._id %>">-</span>
+              </div>
+            <% }) %>
+          </div>
+          <select id="category-select" class="w-full p-3 h-12 bg-gray-800 rounded focus:ring-2 focus:ring-brand">
+            <option value="">Select a category</option>
+            <% categories.forEach(category => { %>
+              <% if (!product.category.some(cat => cat._id.toString() === category._id.toString())) { %>
+                <option value="<%= category._id %>" data-name="<%= category.name %>"><%= category.name %></option>
+              <% } %>
+            <% }) %>
+          </select>
+          <input type="hidden" name="categories" id="categories-input" value="<%= product.category.map(cat => cat._id).join(',') %>" />
+        </div>
+
+        <!-- Images -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Edit Images</label>
+          <div class="flex gap-4">
+            <% for (let i = 0; i < 4; i++) { %>
+              <div class="flex flex-col items-center">
+                <div class="w-24 h-32 bg-gray-700 rounded flex items-center justify-center overflow-hidden">
+                  <% if (product.images[i]) { %>
+                    <img id="preview-<%= i %>" src="<%= product.images[i] %>" class="w-24 h-32 object-cover"/>
+                  <% } else { %>
+                    <img id="preview-<%= i %>" class="hidden w-24 h-32 object-cover"/>
+                    <span id="placeholder-<%= i %>" class="text-gray-400">Image</span>
+                  <% } %>
+                </div>
+                <input type="file" name="images[]" accept="image/*" class="hidden" id="file-<%= i %>" onchange="handleFileChange(event, <%= i %>)" />
+                <button type="button" onclick="document.getElementById('file-<%= i %>').click()" class="nav-btn bg-gray-700 text-white px-3 py-1 mt-2 rounded hover:bg-gray-800">Change</button>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Gender + Concentration -->
+        <div class="grid grid-cols-2 gap-6">
+          <div>
+            <label class="block text-sm font-medium mb-2">Gender</label>
+            <select name="gender" class="w-full p-3 bg-gray-800 rounded">
+              <option value="MEN" <%= product.gender==="MEN"?"selected":"" %>>MEN</option>
+              <option value="WOMEN" <%= product.gender==="WOMEN"?"selected":"" %>>WOMEN</option>
+              <option value="UNISEX" <%= product.gender==="UNISEX"?"selected":"" %>>UNISEX</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-2">Concentration</label>
+            <select name="concentration" class="w-full p-3 bg-gray-800 rounded">
+              <option value="Parfum" <%= product.concentration==="Parfum"?"selected":"" %>>Parfum</option>
+              <option value="Eau de Parfum" <%= product.concentration==="Eau de Parfum"?"selected":"" %>>Eau de Parfum</option>
+              <option value="Eau de Toilette" <%= product.concentration==="Eau de Toilette"?"selected":"" %>>Eau de Toilette</option>
+              <option value="Eau de Cologne" <%= product.concentration==="Eau de Cologne"?"selected":"" %>>Eau de Cologne</option>
+              <option value="Eau Fraiche" <%= product.concentration==="Eau Fraiche"?"selected":"" %>>Eau Fraiche</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Variants -->
+        <div>
+          <label class="block text-sm font-medium mb-2">Variants</label>
+          <div id="variants-container" class="space-y-4">
+            <% product.variants.forEach((variant, idx) => { %>
+              <div class="variant-group grid grid-cols-4 gap-4 p-4 bg-gray-800 rounded">
+                <div>
+                  <label class="block text-sm mb-2">Size (ml)</label>
+                  <input type="number" name="variants[<%= idx %>][mlSize]" value="<%= variant.mlSize || '' %>" class="w-full p-3 bg-gray-700 rounded"/>
+                  <% if (idx > 0 || product.variants.length > 1) { %>
+                    <button type="button" class="remove-variant nav-btn bg-red-600 text-white px-4 py-2 mt-2 rounded hover:bg-red-700 w-full">Remove</button>
+                  <% } %>
+                </div>
+                <div>
+                  <label class="block text-sm mb-2">Stock</label>
+                  <input type="number" name="variants[<%= idx %>][stock]" value="<%= variant.stock || '' %>" class="w-full p-3 bg-gray-700 rounded"/>
+                </div>
+                <div>
+                  <label class="block text-sm mb-2">Base Price</label>
+                  <input type="number" name="variants[<%= idx %>][basePrice]" value="<%= variant.basePrice || '' %>" class="w-full p-3 bg-gray-700 rounded"/>
+                </div>
+                <div>
+                  <label class="block text-sm mb-2">Discounted Price</label>
+                  <input type="number" name="variants[<%= idx %>][discountedPrice]" value="<%= variant.discountedPrice || '' %>" class="w-full p-3 bg-gray-700 rounded"/>
+                  <% if (idx === product.variants.length - 1) { %>
+                    <button type="button" class="add-variant nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full">Add Variant</button>
+                  <% } %>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-center space-x-4">
+          <a href="/admin/products" class="bg-gray-600 px-4 py-2 rounded">Cancel</a>
+          <button type="submit" class="bg-brand px-4 py-2 rounded">Update</button>
+        </div>
+      </form>
+    </main>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    let croppers = {};
+    let variantCount = <%= product.variants.length %>;
+    const variantsContainer = document.getElementById("variants-container");
+
+    // Categories
+    const categorySelect = document.getElementById('category-select');
+    const selectedCategoriesContainer = document.getElementById('selected-categories');
+    const categoriesInput = document.getElementById('categories-input');
+    let selectedCategories = <%= JSON.stringify(product.category.map(cat => cat._id.toString())) %>;
+
+    const updateCategoriesInput = () => categoriesInput.value = selectedCategories.join(',');
+
+    const addCategory = (id, name) => {
+      if (!selectedCategories.includes(id)) {
+        selectedCategories.push(id);
+        updateCategoriesInput();
+        const div = document.createElement('div');
+        div.className = 'selected-category';
+        div.dataset.id = id;
+        div.innerHTML = `<span>${name}</span><span class="remove-category" data-id="${id}">-</span>`;
+        selectedCategoriesContainer.appendChild(div);
+        div.querySelector('.remove-category').addEventListener('click', () => removeCategory(id, name));
+        const option = categorySelect.querySelector(`option[value="${id}"]`);
+        if (option) option.remove();
+      }
+    }
+
+    const removeCategory = (id, name) => {
+      selectedCategories = selectedCategories.filter(cat => cat !== id);
+      updateCategoriesInput();
+      const div = selectedCategoriesContainer.querySelector(`[data-id="${id}"]`);
+      if (div) div.remove();
+      const option = document.createElement('option');
+      option.value = id;
+      option.dataset.name = name;
+      option.textContent = name;
+      categorySelect.appendChild(option);
+    }
+
+    categorySelect.addEventListener('change', () => {
+      const selected = categorySelect.selectedOptions[0];
+      if (selected.value) addCategory(selected.value, selected.dataset.name);
+      categorySelect.value = '';
+    });
+
+    document.querySelectorAll('.selected-category .remove-category').forEach(span => {
+      const id = span.dataset.id;
+      const nameSpan = span.previousElementSibling;
+      const name = nameSpan ? nameSpan.textContent : '';
+      span.addEventListener('click', () => removeCategory(id, name));
+    });
+
+    // Image cropping
+    function handleFileChange(event, index) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        const img = document.getElementById(`preview-${index}`);
+        img.src = e.target.result;
+        img.classList.remove('hidden');
+        document.getElementById(`placeholder-${index}`).classList.add('hidden');
+        if (croppers[index]) croppers[index].destroy();
+        croppers[index] = new Cropper(img, { aspectRatio: 3/4, viewMode: 1 });
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Variants
+    function addVariantHandler() {
+      // Create new variant group
+      const div = document.createElement("div");
+      div.className = "variant-group grid grid-cols-4 gap-4 p-4 bg-gray-800 rounded";
+      div.innerHTML = `
+        <div>
+          <label class="block text-sm mb-2">Size (ml)</label>
+          <input type="number" name="variants[${variantCount}][mlSize]" placeholder="50" class="w-full p-3 bg-gray-700 rounded"/>
+          <button type="button" class="remove-variant nav-btn bg-red-600 text-white px-4 py-2 mt-2 rounded hover:bg-red-700 w-full">Remove</button>
+        </div>
+        <div>
+          <label class="block text-sm mb-2">Stock</label>
+          <input type="number" name="variants[${variantCount}][stock]" placeholder="100" class="w-full p-3 bg-gray-700 rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-2">Base Price</label>
+          <input type="number" name="variants[${variantCount}][basePrice]" placeholder="100" class="w-full p-3 bg-gray-700 rounded"/>
+        </div>
+        <div>
+          <label class="block text-sm mb-2">Discounted Price</label>
+          <input type="number" name="variants[${variantCount}][discountedPrice]" placeholder="80" class="w-full p-3 bg-gray-700 rounded"/>
+          <button type="button" class="add-variant nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full">Add Variant</button>
+        </div>
+      `;
+
+      // Remove existing "Add Variant" buttons
+      document.querySelectorAll(".add-variant").forEach(btn => btn.remove());
+
+      // Append new variant group
+      variantsContainer.appendChild(div);
+
+      // Attach event listeners to new buttons
+      div.querySelector(".add-variant").addEventListener("click", addVariantHandler);
+      div.querySelector(".remove-variant").addEventListener("click", removeVariantHandler);
+
+      variantCount++;
+    }
+
+    function removeVariantHandler() {
+      const variantGroup = this.closest(".variant-group");
+      variantGroup.remove();
+
+      // Ensure the last variant group has an "Add Variant" button
+      const allGroups = variantsContainer.querySelectorAll(".variant-group");
+      if (allGroups.length > 0) {
+        const lastGroup = allGroups[allGroups.length - 1];
+        if (!lastGroup.querySelector(".add-variant")) {
+          const addBtn = document.createElement("button");
+          addBtn.type = "button";
+          addBtn.className = "add-variant nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full";
+          addBtn.textContent = "Add Variant";
+          addBtn.addEventListener("click", addVariantHandler);
+          lastGroup.querySelector("div:last-child").appendChild(addBtn);
+        }
+      }
+    }
+
+    // Attach event listeners to existing buttons
+    document.querySelectorAll(".add-variant").forEach(btn => btn.addEventListener("click", addVariantHandler));
+    document.querySelectorAll(".remove-variant").forEach(btn => btn.addEventListener("click", removeVariantHandler));
+
+    // Form submission with cropped images
+    document.querySelector("form").addEventListener("submit", function(e){
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const cropKeys = Object.keys(croppers);
+      if(cropKeys.length === 0){ form.submit(); return; }
+
+      Promise.all(cropKeys.map(idx => new Promise(resolve => {
+        croppers[idx].getCroppedCanvas().toBlob(blob => {
+          formData.append("images[]", blob, `image-${idx}.jpg`);
+          resolve();
+        }, "image/jpeg");
+      }))).then(()=> form.submit());
+    });
+  </script>
+</body>
+</html>

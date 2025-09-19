@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dité - Login</title>
+    <link rel="stylesheet" href="/style/admin/login.css">
+  </head>
+  <body>
+    <div class="login-container">
+      <div class="logo">
+        <img src="/images/logo/Dite White Logo.png" alt="Dité Logo" />
+      </div>
+      <!-- Messages -->
+      <p id="errorMsg"></p>
+      <p id="successMsg"></p>
+
+      <!-- Login Form -->
+      <form id="loginForm">
+        <input
+          type="text"
+          id="email"
+          name="email"
+          placeholder="Email Address"
+        />
+
+        <div class="password-container">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="Password"
+          />
+          <span class="toggle-password" onclick="togglePassword()">👁️</span>
+        </div>
+
+        <div class="forgot">
+          <a href="/admin/forgot-password">Forget password</a>
+        </div>
+
+        <button type="submit">Login</button>
+      </form>
+    </div>
+
+    <!-- Axios -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+      // Toggle password visibility
+      function togglePassword() {
+        const pass = document.getElementById("password");
+        pass.type = pass.type === "password" ? "text" : "password";
+      }
+
+      // Handle form submit with Axios
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault(); // stop reload
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+
+          try {
+            const res = await axios.post("/admin", {
+              email,
+              password,
+            });
+
+            // Show success
+            document.getElementById("successMsg").innerText = res.data.message;
+            document.getElementById("errorMsg").innerText = "";
+
+            if (res.data.redirect) {
+              window.location.href = res.data.redirect;
+            }
+          } catch (err) {
+            // Show error
+            console.log(err);
+            const msg = err.response?.data?.message || "Something went wrong!";
+            document.getElementById("errorMsg").innerText = msg;
+            document.getElementById("successMsg").innerText = "";
+          }
+        });
+    </script>
+  </body>
+</html>

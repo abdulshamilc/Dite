@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dite Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+        .bg-brand { background-color: #C5A987; }
+        .text-brand { color: #C5A987; }
+        .border-brand { border-color: #C5A987; }
+        aside {
+            border-right: 2px solid transparent;
+            border-image: linear-gradient(to bottom, #C5A987, transparent) 1;
+        }
+        .nav-btn {
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .nav-btn:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .nav-btn.active {
+            box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+        }
+        .logout-btn {
+            transition: all 0.3s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .logout-btn:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-black">
+    <!-- Header -->
+    <header class="border-b border-brand/20 bg-black sticky top-0 z-50">
+        <div class="flex h-16 items-center px-6">
+            <div class="flex items-center space-x-4">
+                <img src="/images/logo/Dite White Logo.png" alt="Dite Logo" class="h-8 w-auto">
+            </div>
+            <div class="ml-auto flex items-center space-x-4">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"></i>
+                    <input type="search" placeholder="Search..." class="w-[300px] pl-8 bg-gray-900 border-gray-700 text-white placeholder:text-gray-400 rounded px-3 py-2 border">
+                </div>
+                <button class="text-white hover:bg-gray-800 p-2 rounded">
+                    <i data-lucide="bell" class="h-4 w-4"></i>
+                </button>
+                <button class="text-white hover:bg-gray-800 p-2 rounded">
+                    <i data-lucide="user" class="h-4 w-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <div class="flex">
+        <aside class="w-64 bg-black h-screen">
+            <nav class="space-y-3 p-5">
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center bg-brand text-black active" data-tab="dashboard">
+                    <i data-lucide="bar-chart-3" class="mr-3 h-5 w-5"></i>
+                    Dashboard
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="orders">
+                    <i data-lucide="shopping-cart" class="mr-3 h-5 w-5"></i>
+                    Orders
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="products">
+                    <i data-lucide="package" class="mr-3 h-5 w-5"></i>
+                    Products
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="sales">
+                    <i data-lucide="file-text" class="mr-3 h-5 w-5"></i>
+                    Sales Report
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="customers">
+                    <i data-lucide="users" class="mr-3 h-5 w-5"></i>
+                    Customers
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="coupons">
+                    <i data-lucide="gift" class="mr-3 h-5 w-5"></i>
+                    Coupons
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="categories">
+                    <i data-lucide="tag" class="mr-3 h-5 w-5"></i>
+                    Categories
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="refunds">
+                    <i data-lucide="rotate-ccw" class="mr-3 h-5 w-5"></i>
+                    Refund/Return
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="banners">
+                    <i data-lucide="image" class="mr-3 h-5 w-5"></i>
+                    Banners
+                </button>
+                <button class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800" data-tab="referrals">
+                    <i data-lucide="user-plus" class="mr-3 h-5 w-5"></i>
+                    Referrals
+                </button>
+
+                <div class="pt-5 mt-5 border-t border-brand/20">
+                    <button class="logout-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-red-400 hover:bg-red-900/20 hover:text-red-300">
+                        <i data-lucide="log-out" class="mr-3 h-5 w-5"></i>
+                        Logout
+                    </button>
+                </div>
+            </nav>
+        </aside>
+    </div>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        // Tab switching functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+
+            navButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Remove active class from all nav buttons
+                    navButtons.forEach(btn => {
+                        btn.classList.remove('bg-brand', 'text-black', 'active');
+                        btn.classList.add('text-white', 'hover:bg-gray-800');
+                    });
+
+                    // Add active class to clicked button
+                    this.classList.add('bg-brand', 'text-black', 'active');
+                    this.classList.remove('text-white', 'hover:bg-gray-800');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

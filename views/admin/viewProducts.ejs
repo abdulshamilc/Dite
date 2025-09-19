@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= product.name %> | Product Details</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    .bg-brand { background-color: #C5A987; }
+    .text-brand { color: #C5A987; }
+    .border-brand { border-color: #C5A987; }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen">
+
+  <!-- Header -->
+  <header class="p-6 bg-gray-800 shadow flex items-center justify-between">
+    <h1 class="text-2xl font-bold flex items-center gap-2">
+      <i data-lucide="package"></i> Product Details
+    </h1>
+    <a href="/admin/products" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center gap-2">
+      <i data-lucide="arrow-left"></i> Back to Products
+    </a>
+  </header>
+
+  <!-- Main Content -->
+  <main class="p-6 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8">
+
+    <!-- Left: Images -->
+    <section class="space-y-4">
+      <div class="border border-gray-700 rounded-xl overflow-hidden">
+        <% if (product.images && product.images.length > 0) { %>
+          <img src="<%= product.images[0] %>" alt="<%= product.name %>" class="w-full h-96 object-cover">
+        <% } else { %>
+          <div class="w-full h-96 flex items-center justify-center bg-gray-800 text-gray-400">
+            No Image Available
+          </div>
+        <% } %>
+      </div>
+
+      <!-- Thumbnails -->
+      <div class="flex gap-3">
+        <% if (product.images && product.images.length > 1) { %>
+          <% product.images.forEach(img => { %>
+            <img src="<%= img %>" class="w-20 h-20 object-cover rounded-lg border border-gray-700 hover:scale-105 transition">
+          <% }) %>
+        <% } %>
+      </div>
+    </section>
+
+    <!-- Right: Details -->
+    <section class="space-y-6">
+      <h2 class="text-3xl font-bold"><%= product.name %></h2>
+      <p class="text-gray-300"><%= product.description %></p>
+
+      <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <span class="font-semibold text-gray-400">Brand:</span>
+          <p><%= product.brand %></p>
+        </div>
+        <div>
+          <span class="font-semibold text-gray-400">Gender:</span>
+          <p><%= product.gender %></p>
+        </div>
+        <div>
+          <span class="font-semibold text-gray-400">Concentration:</span>
+          <p><%= product.concentration %></p>
+        </div>
+        <div>
+          <span class="font-semibold text-gray-400">Notes:</span>
+          <p><%= product.notes %></p>
+        </div>
+      </div>
+
+      <!-- Variants -->
+      <div>
+        <h3 class="text-xl font-semibold mb-2 flex items-center gap-2">
+          <i data-lucide="layers"></i> Variants
+        </h3>
+        <% if (product.variants && product.variants.length > 0) { %>
+          <table class="min-w-full text-sm border border-gray-700 rounded">
+            <thead>
+              <tr class="bg-gray-800">
+                <th class="px-3 py-2 border-b border-gray-700 text-left">Size (ml)</th>
+                <th class="px-3 py-2 border-b border-gray-700 text-left">Base Price</th>
+                <th class="px-3 py-2 border-b border-gray-700 text-left">Discounted Price</th>
+                <th class="px-3 py-2 border-b border-gray-700 text-left">Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% product.variants.forEach(variant => { %>
+                <tr class="hover:bg-gray-900">
+                  <td class="px-3 py-2 border-b border-gray-700"><%= variant.size %></td>
+                  <td class="px-3 py-2 border-b border-gray-700">₹<%= variant.basePrice %></td>
+                  <td class="px-3 py-2 border-b border-gray-700 text-brand">₹<%= variant.discountedPrice %></td>
+                  <td class="px-3 py-2 border-b border-gray-700"><%= variant.stock %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <p class="text-gray-400">No variants available.</p>
+        <% } %>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Products Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .logout-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .logout-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .status-active {
+        color: #10b981;
+      }
+      .status-blocked {
+        color: #ef4444;
+      }
+      .product-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+      }
+      /* Enhanced View Modal Styles */
+      .view-modal {
+        background: linear-gradient(145deg, #1f2937, #111827);
+        border: 2px solid #c5a987;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+      }
+      .view-modal-title {
+        background: #c5a987;
+        color: #1f2937;
+        padding: 1rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        text-align: center;
+        font-size: 1.75rem;
+        font-weight: bold;
+      }
+      .view-modal-images {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
+        background: #1f2937;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+      }
+      .view-modal-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        border: 2px solid #c5a987;
+        transition: transform 0.3s ease;
+      }
+      .view-modal-image:hover {
+        transform: scale(1.05);
+      }
+      .view-modal-details {
+        background: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+      }
+      .view-modal-details p {
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid #374151;
+        padding-bottom: 0.5rem;
+      }
+      .view-modal-details strong {
+        color: #c5a987;
+        flex: 1;
+      }
+      .view-modal-details span {
+        flex: 2;
+        text-align: right;
+      }
+      .view-modal-variants table {
+        background: #1a202c;
+        border: 1px solid #c5a987;
+      }
+      .view-modal-variants th {
+        background: #c5a987;
+        color: #1f2937;
+        font-weight: bold;
+      }
+      .view-modal-variants tr:hover {
+        background: #2d3748;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../partials/admin/admin-header") %>
+
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../partials/admin/admin-sidebar") %>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <!-- Heading + Add Button -->
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold">Products Management</h1>
+          <a href="/admin/products/add-product">
+            <button class="bg-yellow-600 px-4 py-2 rounded">
+              + Add Product
+            </button>
+          </a>
+        </div>
+
+        <!-- Counts -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="count-box">
+            <p class="text-gray-400">Total Products</p>
+            <p class="text-xl font-bold"><%= products.length %></p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">New Products</p>
+            <p class="text-xl font-bold text-green-400">
+              <%= newProductsCount %>
+            </p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Active Products</p>
+            <p class="text-xl font-bold"><%= activeProductsCount %></p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Out Of Stock</p>
+            <p class="text-xl font-bold"><%= outOfStockProducts.length %></p>
+          </div>
+        </div>
+
+        <!-- Filter + Search -->
+        <div class="flex justify-between mb-4">
+          <span>All Products</span>
+          <div class="flex space-x-4">
+            <select id="statusFilter" class="bg-gray-800 p-2 rounded">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="blocked">Blocked</option>
+            </select>
+            <div class="flex space-x-2">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search Products"
+                class="bg-gray-800 p-2 rounded"
+              />
+              <button
+                id="clearSearch"
+                class="bg-gray-600 px-3 py-2 rounded hover:bg-gray-700"
+                title="Clear Search"
+              >
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-800">
+                <th class="px-4 py-2 text-left">IMAGE</th>
+                <th class="px-4 py-2 text-left">NAME</th>
+                <th class="px-4 py-2 text-left">VARIANTS</th>
+                <th class="px-4 py-2 text-left">STOCK</th>
+                <th class="px-4 py-2 text-left">CATEGORY</th>
+                <th class="px-4 py-2 text-left">STATUS</th>
+                <th class="px-4 py-2 text-left">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% products.forEach(product => { %>
+              <tr class="border-b border-gray-700 hover:bg-gray-900">
+                <td class="px-4 py-2">
+                  <% if (product.images && product.images.length) { %>
+                  <img
+                    src="<%= product.images[0] %>"
+                    alt="<%= product.name %>"
+                    class="product-image"
+                  />
+                  <% } else { %>
+                  <span>No Image</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2"><%= product.name %></td>
+                <td class="px-4 py-2">
+                  <% if (product.variants && product.variants.length > 0) { %>
+                  <% product.variants.forEach((v) => { %>
+                  <div><%= v.mlSize %>ml</div>
+                  <% }) %>
+                  <% } else { %>
+                  <span>No Variants</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2">
+                  <% if (product.variants && product.variants.length > 0) { %>
+                  <% product.variants.forEach((v) => { %>
+                  <%= v.stock > 0 ? v.stock + " pcs" : "Out Of Stock" %>
+                  <br />
+                  <% }) %>
+                  <% } else { %>
+                  <span>No Stock</span>
+                  <% } %>
+                </td>
+                 <td class="px-4 py-2">
+  <% if (product.category && product.category.length > 0) { %>
+    <% product.category.forEach(cat => { %>
+      <%= cat.name %><br />
+    <% }) %>
+  <% } else { %>
+    N/A
+  <% } %>
+</td>
+
+                <td class="px-4 py-2">
+                  <% if (product.isListed) { %>
+                  <span class="status-active">Listed</span>
+                  <% } else { %>
+                  <span class="status-blocked">NotListed</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 flex space-x-2">
+                  <button
+                    type="button"
+                    class="text-yellow-500 hover:text-yellow-600 open-view-modal"
+                    title="View Details"
+                    data-product='<%- JSON.stringify(product) %>'
+                  >
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                  <a
+                    href="/admin/products/edit-product/<%= product._id %>"
+                    class="text-blue-500 hover:text-blue-600"
+                    title="Edit"
+                  >
+                    <i data-lucide="edit-3" class="w-5 h-5"></i>
+                  </a>
+                  <% if (product.isListed) { %>
+                  <button
+                    type="button"
+                    class="text-red-500 hover:text-red-600 open-block-modal"
+                    data-id="<%= product._id %>"
+                    data-name="<%= product.name %>"
+                    title="Deactivate"
+                  >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                  </button>
+                  <% } else { %>
+                  <button
+                    type="button"
+                    class="text-green-500 hover:text-green-600 open-block-modal"
+                    data-id="<%= product._id %>"
+                    data-name="<%= product.name %>"
+                    title="Activate"
+                  >
+                    <i data-lucide="check" class="w-5 h-5"></i>
+                  </button>
+                  <% } %>
+                  <button
+                    type="button"
+                    class="text-red-500 hover:text-red-600 open-delete-modal"
+                    data-id="<%= product._id %>"
+                    data-name="<%= product.name %>"
+                    title="Delete"
+                  >
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <!-- BLOCK / ACTIVATE MODAL -->
+    <div
+      id="blockModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-lg font-bold mb-4">Confirm Action</h2>
+        <p id="blockMessage" class="mb-6 text-gray-300"></p>
+        <div class="flex justify-end space-x-4">
+          <button
+            id="cancelBlock"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <form id="blockForm" method="POST">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+            >
+              Confirm
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- DELETE MODAL -->
+    <div
+      id="deleteModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-lg font-bold mb-4">Confirm Deletion</h2>
+        <p id="deleteMessage" class="mb-6 text-gray-300"></p>
+        <div class="flex justify-end space-x-4">
+          <button
+            id="cancelDelete"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <form id="deleteForm" method="POST">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+            >
+              Delete
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW PRODUCT MODAL -->
+    <div
+      id="viewProductModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="view-modal p-6 rounded-lg w-[700px] max-h-[90vh] overflow-y-auto">
+        <h2 id="viewProductTitle" class="view-modal-title"></h2>
+        <div id="viewProductContent" class="space-y-4 text-gray-300"></div>
+        <div class="flex justify-end mt-6">
+          <button
+            id="closeViewModal"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JS for actions -->
+    <script>
+      lucide.createIcons();
+
+      // BLOCK / ACTIVATE MODAL
+      const blockButtons = document.querySelectorAll(".open-block-modal");
+      const blockModal = document.getElementById("blockModal");
+      const blockMessage = document.getElementById("blockMessage");
+      const blockForm = document.getElementById("blockForm");
+      const cancelBlock = document.getElementById("cancelBlock");
+
+      blockButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          const name = btn.dataset.name;
+          const action = btn.title;
+          blockMessage.textContent = `${action} product "${name}"?`;
+          blockForm.action = `/admin/products/unlist/${id}`;
+          blockModal.classList.remove("hidden");
+        });
+      });
+
+      cancelBlock.addEventListener("click", () =>
+        blockModal.classList.add("hidden")
+      );
+
+      // DELETE MODAL
+      const deleteButtons = document.querySelectorAll(".open-delete-modal");
+      const deleteModal = document.getElementById("deleteModal");
+      const deleteMessage = document.getElementById("deleteMessage");
+      const deleteForm = document.getElementById("deleteForm");
+      const cancelDelete = document.getElementById("cancelDelete");
+
+      deleteButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.id;
+          const name = btn.dataset.name;
+          deleteMessage.textContent = `Delete product "${name}"?`;
+          deleteForm.action = `/admin/products/delete/${id}`;
+          deleteModal.classList.remove("hidden");
+        });
+      });
+
+      cancelDelete.addEventListener("click", () =>
+        deleteModal.classList.add("hidden")
+      );
+
+      // VIEW MODAL
+      const viewButtons = document.querySelectorAll(".open-view-modal");
+      const viewModal = document.getElementById("viewProductModal");
+      const viewTitle = document.getElementById("viewProductTitle");
+      const viewContent = document.getElementById("viewProductContent");
+      const closeViewModal = document.getElementById("closeViewModal");
+
+      viewButtons.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const product = JSON.parse(btn.dataset.product);
+          viewTitle.textContent = product.name;
+
+          // Map categories to their names
+          const categoryNames = product.category.map(catId => {
+            const cat = <%- JSON.stringify(categories) %>.find(c => c._id.toString() === catId.toString());
+            return cat ? cat.name : "N/A";
+          }).join(", ");
+
+          viewContent.innerHTML = `
+            <div class="view-modal-images">
+              ${
+                product.images && product.images.length
+                  ? product.images
+                      .map(
+                        (img) =>
+                          `<img src="${img}" class="view-modal-image" alt="Product Image" />`
+                      )
+                      .join("")
+                  : "<p class='text-center'>No Images Available</p>"
+              }
+            </div>
+            <div class="view-modal-details">
+              <p><strong>Description:</strong> <span>${
+                product.description || "N/A"
+              }</span></p>
+              <p><strong>Notes:</strong> <span>${
+                product.notes || "N/A"
+              }</span></p>
+              <p><strong>Brand:</strong> <span>${
+                product.brand || "N/A"
+              }</span></p>
+              <p><strong>Gender:</strong> <span>${
+                product.gender || "N/A"
+              }</span></p>
+              <p><strong>Concentration:</strong> <span>${
+                product.concentration || "N/A"
+              }</span></p>
+              <p><strong>Category:</strong> <span>${
+                product.categorys || "N/A"
+              }</span></p>
+            </div>
+            <div class="view-modal-variants">
+              <h4 class="text-lg font-semibold mt-4 mb-2">Variants</h4>
+              ${
+                product.variants && product.variants.length
+                  ? `
+                    <table class="w-full text-left border border-gray-700">
+                      <thead>
+                        <tr class="bg-gray-800">
+                          <th class="px-2 py-1">Size (ml)</th>
+                          <th class="px-2 py-1">Stock</th>
+                          <th class="px-2 py-1">Base Price</th>
+                          <th class="px-2 py-1">Discounted Price</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${product.variants
+                          .map(
+                            (v) => `
+                            <tr class="border-b border-gray-700">
+                              <td class="px-2 py-1">${v.mlSize || "N/A"}ml</td>
+                              <td class="px-2 py-1">${
+                                v.stock > 0 ? v.stock : "Out of Stock"
+                              }</td>
+                              <td class="px-2 py-1">₹${v.basePrice || 0}</td>
+                              <td class="px-2 py-1">₹${v.discountPrice || 0}</td>
+                            </tr>
+                          `
+                          )
+                          .join("")}
+                      </tbody>
+                    </table>
+                  `
+                  : "<p class='text-center'>No Variants Available</p>"
+              }
+            </div>
+          `;
+
+          viewModal.classList.remove("hidden");
+        });
+      });
+
+      closeViewModal.addEventListener("click", () =>
+        viewModal.classList.add("hidden")
+      );
+    </script>
+  </body>
+</html>

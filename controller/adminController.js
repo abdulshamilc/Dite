@@ -1,0 +1,561 @@
+import User from "../models/userModels.js";
+import Admin from "../models/adminModels.js";
+import Categories from "../models/categories.js";
+import Products from "../models/productsModels.js";
+import sendMail from "../services/mailer.js";
+import bcrypt from "bcryptjs";
+import addCategoryValidation from "../validators/addCatogoryValidation.js";
+const getLogin = (req, res) => {
+  if (req.session.admin) {
+    res.redirect("admin/dashboard");
+  } else res.render("admin/login", { errors: {}, oldData: {} });
+};
+
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Checking required fields
+    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!password)
+      return res.status(400).json({ message: "Password is required" });
+
+    // Verifying Admin Email
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (!admin) return res.status(400).json({ message: "Invalid Email" });
+
+    // Validating the password
+    const validatePassword = await bcrypt.compare(password, admin.password);
+    if (!validatePassword)
+      return res.status(400).json({ message: "Invalid Password" });
+
+    // Saving admin On session
+    req.session.admin = {
+      id: admin._id,
+      email: admin.email,
+      role: admin.role,
+    };
+
+    req.session.save((err) => {
+      if (err) {
+        console.error("Session save error:", err);
+        return res.status(500).json({ message: "Session error" });
+      }
+    });
+
+    //  If everything is correct → success response
+    return res.json({
+      message: "Login successful",
+      adminId: admin._id,
+      redirect: "admin/dashboard",
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ message: "Server error, please try again later" });
+  }
+};
+const getForgotPassword = (req, res) => {
+  res.render("admin/forgetPassword");
+};
+
+const forgetPassword = async (req, res) => {
+  try {
+    const email = req.body.email;
+
+    // Checking required fields
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    // Verifying the Email
+    const admin = await User.findOne({ email: email.toLowerCase() });
+    if (!admin) return res.status(400).json({ message: "Invalid Email" });
+
+    // validating Role
+    if (admin.role != "admin")
+      return res.status(400).json({ message: "Access Denied " });
+
+    // If everything is correct → success response
+    const otp = Math.floor(1000 + Math.random() * 9000);
+    console.log(`OTP = ${otp}`);
+
+    sendMail({
+      to: email,
+      subject: "Your OTP Code For Resetting Password",
+      text: `Your OTP code For resetting Dite Admin Account password is ${otp}`,
+      html: `<p>Your OTP code is <b>${otp}</b></p>`,
+    });
+
+    return res.json({
+      message: "OTP sent successfully to your email",
+      adminId: admin._id,
+      // redirect:"/"
+      redirect: "/admin/verify-otp",
+    });
+  } catch (error) {
+    console.error("Error in forgetPassword:", error);
+    return res
+      .status(500)
+      .json({ message: "Something went wrong", error: error.message });
+  }
+};
+
+const OtpVerification = async (req, res) => {
+  const otp = req.body.otp;
+};
+
+const getDashboard = (req, res) => {
+  res.render("admin/dashboard");
+};
+const getOrders = (req, res) => {
+  res.render("admin/orders");
+};
+
+// Product Field
+
+const getProducts = async (req, res) => {
+  try {
+    // pagination
+    const { page, limit, skip } = req.pagination;
+
+    const products = await Products.find({ isDeleted: false })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("category");
+      
+
+    // Totel Products
+    const totelProducts = await Products.countDocuments({ isDeleted: false });
+
+    // New Products in  last 10 days
+    const today = new Date();
+    const past10Days = new Date();
+    past10Days.setDate(today.getDate() - 10);
+
+    const newProductsCount = await Products.countDocuments({
+      isDeleted: false,
+      createdAt: { $gte: past10Days, $lte: today },
+    });
+
+    // Listed Products
+    const activeProductsCount = await Products.countDocuments({
+      isDeleted: false,
+      isListed: true,
+    });
+
+    // out Of Stock Products
+    const outOfStockProducts = await Products.find({
+      isDeleted: false,
+      "variants.stock": { $lte: 0 },
+    });
+
+    // Catogory 
+    const categories  = await Categories.find({isDeleted:false , isActive:false}) ;
+
+    res.render("admin/products", {
+      products,
+      categories ,
+      totelProducts,
+      newProductsCount,
+      activeProductsCount,
+      outOfStockProducts,
+      limit,
+      currentPage: page,
+      totalPages: Math.ceil(totelProducts / limit),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+const getAddProducts = async (req, res) => {
+  try {
+    const categories = await Categories.find({ isDeleted: false }).lean();
+    res.render("admin/addProducts", { categories });
+  } catch (error) {}
+};
+
+const toNumber = (val, zero = 0) => {
+  const parsed = parseInt(val);
+  return isNaN(parsed) ? zero : parsed;
+};
+
+const postAddProducts = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      notes,
+      categories,
+      brand,
+      gender,
+      concentration,
+      variants,
+    } = req.body;
+
+    const imageUrls = req.files.map((file) => file.path);
+
+    // parsing varint if it single then its object if it comes in collection it will be an array
+    let parsedVariant;
+
+    if (Array.isArray(variants)) {
+      parsedVariant = variants.map((variants) => ({
+        mlSize: toNumber(variants.mlSize),
+        stock: toNumber(variants.stock),
+        basePrice: toNumber(variants.basePrice),
+        discountedPrice: toNumber(variants.discountedPrice),
+      }));
+    } else {
+      parsedVariant = [
+        {
+          mlSize: toNumber(variants.mlSize),
+          stock: toNumber(variants.stock) || 0,
+          basePrice: toNumber(variants.basePrice),
+          discountedPrice: toNumber(variants.discountedPrice),
+        },
+      ];
+    }
+
+    // Catogory splitting and making an array 
+    let category  = [] ;
+    if(categories) category = categories.split(',');
+
+
+    const newProdducts = new Products({
+      name,
+      description,
+      notes,
+      brand,
+      category,
+      gender,
+      concentration,
+      images: imageUrls,
+      variants: parsedVariant,
+    });
+
+    await newProdducts.save();
+
+    //adding this product to catogory
+    if (categories) {
+      const categoriesIds = categories.split(",");
+      await Categories.updateMany(
+        { _id: { $in: categoriesIds } },
+        { $push: { products: newProdducts._id } }
+      );
+    }
+
+    res.redirect("/admin/products");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+const getEditProducts = async (req, res) => {
+  try {
+    const categories = await Categories.find({ isDeleted: false }).lean();
+    const product = await Products.findById(req.params.id)
+
+    res.render("admin/editProducts", { categories, product });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+};
+
+const postEditProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+    let parsedVariants = [];
+    if (req.body.variants) {
+      if (Array.isArray(req.body.variants)) {
+        parsedVariants = req.body.variants.map((v) => ({
+          mlSize: parseInt(v.mlSize),
+          stock: parseInt(v.stock),
+          basePrice: parseFloat(v.basePrice),
+          discountedPrice: parseFloat(v.discountedPrice),
+        }));
+      } else {
+        parsedVariants = Object.values(req.body.variants).map((v) => ({
+          mlSize: parseInt(v.mlSize),
+          stock: parseInt(v.stock),
+          basePrice: parseFloat(v.basePrice),
+          discountedPrice: parseFloat(v.discountedPrice),
+        }));
+      }
+    }
+
+    const product = await Products.findById(productId);
+    // Handle images
+    let updatedImages = [...product.images];
+    if (req.files && req.files.length > 0) {
+      updatedImages = req.files.map((file) => file.path);
+    }
+
+    // Update product
+    product.name = req.body.name;
+    product.description = req.body.description;
+    product.notes = req.body.notes;
+    product.brand = req.body.brand;
+    product.gender = req.body.gender;
+    product.concentration = req.body.concentration;
+    product.images = updatedImages;
+    product.variants = parsedVariants;
+
+    await product.save();
+
+    res.redirect("/admin/products");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+};
+
+const unlistProduct = async (req, res) => {
+  try {
+    const product = await Products.findOne({ _id: req.params.id });
+
+    product.isListed = !product.isListed;
+    await product.save();
+    res.redirect("/admin/products");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+const deleteProduct = async (req, res) => {
+  try {
+    const product = await Products.findOne({ _id: req.params.id });
+
+    product.isDeleted = !product.isDeleted;
+    await product.save();
+    res.redirect("/admin/products");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+// Customer Field
+const getcustomers = async (req, res) => {
+  try {
+    // Pagination
+
+    const { page, limit, skip } = req.pagination;
+
+    //fetch customers accoding to pagination
+
+    const customers = await User.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Finding Newely Registed Customers
+    const today = new Date();
+    const past15Days = new Date();
+    past15Days.setDate(today.getDate() - 15);
+
+    const newCustomerCount = await User.countDocuments({
+      createdAt: { $gte: past15Days, $lte: today },
+    });
+
+    // Finding Totel Orders
+    const totelOrdersCount = await User.aggregate([
+      {
+        $group: { _id: null, totelOrders: { $sum: "$totalOrders" } },
+      },
+    ]);
+
+    // Finding Totel Spend
+    const totelSpentCount = await User.aggregate([
+      {
+        $group: { _id: null, totelSpent: { $sum: "$totalSpent" } },
+      },
+    ]);
+    // Finding Totel customers
+    const totalCustomers = await User.countDocuments();
+
+    res.render("admin/customers", {
+      customers,
+      newCustomerCount,
+      totelOrdersCount,
+      totelSpentCount,
+      totalCustomers,
+      limit,
+      currentPage: page,
+      totalPages: Math.ceil(totalCustomers / limit),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Server Error");
+  }
+};
+
+const blockUser = async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.params.id });
+
+    user.isBlocked = !user.isBlocked;
+    await user.save();
+    res.redirect("/admin/customers");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+// Category fields
+const getCategories = async (req, res) => {
+  try {
+    // Pagination
+    const { page, limit, skip } = req.pagination;
+
+    // Fetch categories according to pagination
+    const categories = await Categories.find({ isDeleted: false })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    // Total categories
+    const totalCategories = await Categories.countDocuments({
+      isDeleted: false,
+    });
+
+    // Find new categories in last 15 days
+    const today = new Date();
+    const past7Days = new Date();
+    past7Days.setDate(today.getDate() - 7);
+
+    const newCategoriesCount = await Categories.countDocuments({
+      isDeleted: false,
+      createdAt: { $gte: past7Days, $lte: today },
+    });
+
+    // Active categories count
+    const activeCategories = await Categories.countDocuments({
+      isDeleted: false,
+      isActive: true,
+    });
+
+    // Inactive categories count
+    const inactiveCategories = await Categories.countDocuments({
+      isDeleted: false,
+      isActive: false,
+    });
+
+    res.render("admin/categories", {
+      categories,
+      newCategoriesCount,
+      activeCategories,
+      inactiveCategories,
+      totalCategories,
+      limit,
+      currentPage: page,
+      totalPages: Math.ceil(totalCategories / limit),
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+const addCategorie = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    // Validating the Fields
+    const { error, value } = addCategoryValidation.validate(req.body);
+    if (error)
+      return res.status(400).json({ message: error.details[0].message });
+
+    //Checking the category already exist or not
+    const existingCategory = await Categories.findOne({ name });
+    if (existingCategory) {
+      const errors = {};
+      errors.userExist = "User Already Exists ";
+
+      return res.status(400).render("user/signup", {
+        errors,
+        oldData: req.body,
+      });
+    }
+
+    const newCategories = new Categories({
+      name,
+      description,
+    });
+
+    await newCategories.save();
+    res.redirect("/admin/categories");
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Server error");
+  }
+};
+
+const editCategory = async (req, res) => {
+  try {
+    const categorie = await Categories.findOne({ _id: req.params.id });
+    const { name, description } = req.body;
+
+    categorie.name = name;
+    categorie.description = description;
+
+    await categorie.save();
+    res.redirect("/admin/categories");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+const DeactivateCategory = async (req, res) => {
+  try {
+    const categorie = await Categories.findOne({ _id: req.params.id });
+
+    categorie.isActive = !categorie.isActive;
+    await categorie.save();
+    res.redirect("/admin/categories");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+const deleteCategory = async (req, res) => {
+  try {
+    const categorie = await Categories.findOne({ _id: req.params.id });
+
+    categorie.isDeleted = !categorie.isDeleted;
+    await categorie.save();
+    res.redirect("/admin/categories");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server Error");
+  }
+};
+
+export {
+  login,
+  getLogin,
+  getForgotPassword,
+  forgetPassword,
+  getDashboard,
+  getOrders,
+  getProducts,
+  getAddProducts,
+  postAddProducts,
+  getEditProducts,
+  postEditProduct,
+  unlistProduct,
+  deleteProduct,
+  getcustomers,
+  blockUser,
+  getCategories,
+  addCategorie,
+  editCategory,
+  DeactivateCategory,
+  deleteCategory,
+};
