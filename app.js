@@ -77,8 +77,8 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/admin", adminRouter); //admin router
 app.use("/", userRouter); //User Router
 
-app.get("/", (req, res) => {
-  res.send("Hello World");
+app.use((req, res) => {
+  res.status(404).render('pageNotFound'); 
 });
 
 app.listen(port, () => console.log("Server is Running on 300"));
