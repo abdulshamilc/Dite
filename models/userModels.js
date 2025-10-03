@@ -19,6 +19,14 @@ const userSchema = new mongoose.Schema(
     phone: {
       type: String,
     },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Others" ,"Not" ],
+      required: true,
+    },
+    image:{
+      type: String,
+    },
     totalOrders: {
       type: Number,
       default: 0,

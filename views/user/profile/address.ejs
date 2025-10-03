@@ -1,0 +1,248 @@
+<%- include("../../partials/user/header") %>
+
+<style>
+  :root {
+    --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+    --text:#f5f5f5;        
+    --surface:#ffffff;
+    --accent:#d3a35b;
+    --radius:14px;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color .25s; }
+  a:hover { color: #b5823d; }
+
+  .container { max-width: 1500px; margin-inline: auto; padding: 10px 0; }
+  .page-title { text-align: center; font-size: 2rem; margin: 20px 0; font-weight: 800; letter-spacing: 1px; color: var(--accent); }
+  .layout { display: flex; gap: 24px; align-items: flex-start; flex-direction: column; }
+  @media (min-width: 960px) { .layout { flex-direction: row; } }
+
+  .card { flex: 1; background: var(--surface); color: #1a1a1a; border-radius: var(--radius); padding: 28px; position: relative; box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15); }
+
+  .edit-btn, .add-btn, .set-default-btn, .delete-btn, .modal-btn { 
+    background: var(--accent); 
+    color: #fff; 
+    border: none; 
+    border-radius: 8px; 
+    padding: 6px 12px; 
+    font-weight: 700; 
+    font-size: 14px;
+    cursor: pointer; 
+    transition: background .25s, transform .25s; 
+    margin-left: 10px;
+  }
+  .edit-btn:hover, .add-btn:hover, .set-default-btn:hover, .delete-btn:hover, .modal-btn:hover { background: #b5823d; transform: scale(1.05); }
+  .add-btn { margin-bottom: 20px; padding: 8px 14px; }
+  .delete-btn, .modal-btn.cancel { background: #e63946; }
+  .delete-btn:hover, .modal-btn.cancel:hover { background: #b32d38; }
+  .modal-btn.confirm { background: #2ecc71; }
+  .modal-btn.confirm:hover { background: #27ae60; }
+
+  .form { max-width: 720px; margin-inline: auto; display: grid; gap: 24px; }
+  .row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .row label { min-width: 120px; font-weight: 700; color: #3a2e22; }
+  .field { flex: 1; min-width: 280px; background: #fafafa; color: #111; border: 1px solid #caa880; border-radius: 10px; padding: 14px 16px; font-size: 15px; transition: border-color .25s, box-shadow .25s; }
+  .field:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(211,163,91,.25); outline: none; }
+
+  .divider { height: 1px; background: #caa880; opacity: .5; margin: 14px 0; }
+
+  .view-mode .form { display: none; }
+  .edit-mode .view-mode { display: none; }
+  .edit-mode .form { display: grid; }
+
+  .form-buttons { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
+  .form-buttons .edit-btn { position: static; }
+
+  .address-card { border: 1px solid #caa880; border-radius: 10px; padding: 16px; margin-bottom: 20px; position: relative; }
+  .address-card.default { border-color: var(--accent); background: #fffdf5; }
+  .address-card h3 { font-size: 18px; font-weight: 700; color: #3a2e22; margin: 0 0 10px 0; }
+  .address-card .field-text { font-size: 14px; color: #111; padding: 8px 0; display: block; }
+
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-content {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 20px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+  }
+  .modal-content p { font-size: 16px; color: #1a1a1a; margin: 0 0 20px 0; }
+  .modal-buttons { display: flex; justify-content: center; gap: 10px; }
+</style>
+
+<body>
+  <div class="container">
+    <h1 class="page-title">ADDRESS</h1>
+
+    <section class="layout" aria-label="Address layout">
+      <%- include("../../partials/user/profileSideBar") %>
+
+      <main class="card view-mode" aria-labelledby="address-details-title">
+        <div class="view-mode">
+          <button class="add-btn" onclick="toggleEditMode('add')">Add New Address</button>
+          
+          <% if (address && address.length > 0) { %>
+            <% address.forEach((addr) => { %>
+              <div class="address-card <%= addr.isDefault ? 'default' : '' %>">
+                <h3><%= addr.hoNo || 'Address' %></h3>
+                <div class="row"><label>Full Name:</label><span class="field-text"><%= addr.fullName || '' %></span></div>
+                <div class="row"><label>Street:</label><span class="field-text"><%= addr.street || '' %></span></div>
+                <div class="row"><label>City:</label><span class="field-text"><%= addr.city || '' %></span></div>
+                <div class="row"><label>State:</label><span class="field-text"><%= addr.state || '' %></span></div>
+                <div class="row"><label>Zip Code:</label><span class="field-text"><%= addr.pin || '' %></span></div>
+                <div class="row"><label>Country:</label><span class="field-text"><%= addr.country || '' %></span></div>
+                <div class="row"><label>Phone:</label><span class="field-text"><%= addr.phone || '' %></span></div>
+                <div class="row"><label>Alt Phone:</label><span class="field-text"><%= addr.altPhone || '' %></span></div>
+                <div class="row">
+                  <label></label>
+                  <div>
+                    <button class="edit-btn" onclick="toggleEditMode('edit', '<%= addr._id %>')">Edit</button>
+                    <% if (!addr.isDefault) { %>
+                      <button class="set-default-btn" onclick="setDefaultAddress('<%= addr._id %>')">Set as Default</button>
+                      <button class="delete-btn" onclick="showDeleteModal('<%= addr._id %>')">Delete</button>
+                    <% } else { %>
+                      <span style="font-size: 14px; color: var(--accent); margin-left: 10px;">Default</span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <p>No addresses found.</p>
+          <% } %>
+        </div>
+
+        <form class="form" id="address-form" method="post">
+          <input type="hidden" name="addressId" id="addressId" value="">
+          <div class="row"><label>Full Name:</label><input class="field" name="fullName" type="text" placeholder="Enter Full Name" /></div>
+          <div class="row"><label>House No:</label><input class="field" name="hoNo" type="text" placeholder="Enter House Number or Name" /></div>
+          <div class="row"><label>Street:</label><input class="field" name="street" type="text" placeholder="Enter street address" /></div>
+          <div class="row"><label>City:</label><input class="field" name="city" type="text" placeholder="Enter city" /></div>
+          <div class="row"><label>State:</label><input class="field" name="state" type="text" placeholder="Enter state" /></div>
+          <div class="row"><label>Zip Code:</label><input class="field" name="pin" type="text" placeholder="Enter zip code" /></div>
+          <div class="row"><label>Country:</label><input class="field" name="country" type="text" placeholder="Enter country" /></div>
+          <div class="row"><label>Phone:</label><input class="field" name="phone" type="text" placeholder="Enter Phone" /></div>
+          <div class="row"><label>Alt Phone:</label><input class="field" name="altPhone" type="text" placeholder="Enter Alt Phone" /></div>
+          <div class="row"><label>Default:</label><input type="checkbox" name="isDefault" value="true" /><span style="font-size: 14px; margin-left: 10px;">Set as default address</span></div>
+          <div class="row form-buttons">
+            <label></label>
+            <div class="form-buttons">
+              <button type="button" class="edit-btn" onclick="toggleEditMode()">Cancel</button>
+              <button type="submit" class="edit-btn">Save</button>
+            </div>
+          </div>
+        </form>
+
+        <div class="modal" id="delete-modal">
+          <div class="modal-content">
+            <p>Are you sure you want to delete this address?</p>
+            <div class="modal-buttons">
+              <button class="modal-btn cancel" onclick="hideDeleteModal()">Cancel</button>
+              <button class="modal-btn confirm" onclick="confirmDelete()">Confirm</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <script>
+    let deleteAddressId = '';
+
+    function toggleEditMode(mode = 'edit', addressId = '') {
+      const card = document.querySelector('.card');
+      const form = document.getElementById('address-form');
+      const addressIdInput = document.getElementById('addressId');
+
+      if (card.classList.contains('view-mode')) {
+        card.classList.remove('view-mode');
+        card.classList.add('edit-mode');
+
+        if (mode === 'add') {
+          form.reset();
+          addressIdInput.value = '';
+          form.action = '/add-address';
+        } else if (addressId) {
+          const addr = <%- JSON.stringify(address || []) %>.find(a => a._id === addressId);
+          if (addr) {
+            form.querySelector('[name="fullName"]').value = addr.fullName || '';
+            form.querySelector('[name="hoNo"]').value = addr.hoNo || '';
+            form.querySelector('[name="street"]').value = addr.street || '';
+            form.querySelector('[name="city"]').value = addr.city || '';
+            form.querySelector('[name="state"]').value = addr.state || '';
+            form.querySelector('[name="pin"]').value = addr.pin || '';
+            form.querySelector('[name="country"]').value = addr.country || '';
+            form.querySelector('[name="phone"]').value = addr.phone || '';
+            form.querySelector('[name="altPhone"]').value = addr.altPhone || '';
+            form.querySelector('[name="isDefault"]').checked = addr.isDefault || false;
+            addressIdInput.value = addr._id;
+            form.action = '/edit-address/' + addr._id;
+          }
+        }
+      } else {
+        card.classList.remove('edit-mode');
+        card.classList.add('view-mode');
+        form.reset();
+        addressIdInput.value = '';
+      }
+    }
+
+    function setDefaultAddress(addressId) {
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/address/set-default';
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'addressId';
+      input.value = addressId;
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+    }
+
+    function showDeleteModal(addressId) {
+      deleteAddressId = addressId;
+      document.getElementById('delete-modal').style.display = 'flex';
+    }
+
+    function hideDeleteModal() {
+      document.getElementById('delete-modal').style.display = 'none';
+      deleteAddressId = '';
+    }
+
+    function confirmDelete() {
+      if (deleteAddressId) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/delete-address/' + deleteAddressId;
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'addressId';
+        input.value = deleteAddressId;
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
+      }
+      hideDeleteModal();
+    }
+  </script>
+</body>

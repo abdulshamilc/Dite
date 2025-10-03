@@ -100,7 +100,7 @@
                     <span id="placeholder-<%= i %>" class="text-gray-400">Image</span>
                   <% } %>
                 </div>
-                <input type="file" name="images[]" accept="image/*" class="hidden" id="file-<%= i %>" onchange="handleFileChange(event, <%= i %>)" />
+                <input type="file" name="images" accept="image/*" class="hidden" id="file-<%= i %>" onchange="handleFileChange(event, <%= i %>)" />
                 <button type="button" onclick="document.getElementById('file-<%= i %>').click()" class="nav-btn bg-gray-700 text-white px-3 py-1 mt-2 rounded hover:bg-gray-800">Change</button>
               </div>
             <% } %>

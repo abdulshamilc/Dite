@@ -1,33 +1,92 @@
 <head>
-  <link rel="stylesheet" href="/style/user/header.css">
+  <link rel="stylesheet" href="style/user/header.css">
   <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 </head>
 
 <header class="header bg-black">
-  <nav class="nav container flex items-center justify-between py-4">
-    
+  <nav class="nav flex items-center justify-between py-4">
     <!-- Logo -->
     <div class="logo">
-      <img src="/images/logo/Dite White Logo.png" alt="Dité Logo" class="h-10">
+      <img src="/images/logo/Dite White Logo.png" alt="Dité Logo" class="h-10" />
     </div>
-    
+
+    <!-- Hamburger Menu Button -->
+    <div class="hamburger" onclick="toggleMobileMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
     <!-- Navigation Menu -->
-    <ul class="nav-menu flex space-x-6 text-white font-medium">
+    <ul id="nav-menu" class="nav-menu flex space-x-6 text-white font-medium">
       <li><a href="/" class="hover:text-gray-300">Home</a></li>
       <li><a href="/shop" class="hover:text-gray-300">Shop</a></li>
-      <li><a href="/#collections" class="hover:text-gray-300">Collections</a></li>
+      <li><a href="/collections" class="hover:text-gray-300">Collections</a></li>
     </ul>
-    
+
     <!-- Icons -->
-    <div class="nav-icons flex space-x-4 text-white text-lg">
-      <i class="fas fa-search cursor-pointer hover:text-gray-300"></i>
-      <a href="/login" class="hover:text-gray-300">
-        <i class="fas fa-user"></i>
-      </a>
-      <a href="/login" class="hover:text-gray-300">
+    <div class="nav-icons flex space-x-4 text-white text-lg relative">
+      <a href="/login"><i class="fas fa-heart cursor-pointer hover:text-gray-300 text-white"></i></a>
+
+      <!-- Profile Dropdown or Login Redirect -->
+      <% if (session && session.user) { %>
+        <div class="relative group">
+          <a href="#" class="hover:text-gray-300 profile-icon">
+            <i class="fas fa-user"></i>
+          </a>
+          <ul class="absolute bg-black text-white rounded-md py-2 w-40 right-0">
+            <li><a href="/profile" class="block px-4 py-2 hover:bg-gray-800">Profile</a></li>
+            <li><a href="/orders" class="block px-4 py-2 hover:bg-gray-800">Orders</a></li>
+            <li><a href="/wishlist" class="block px-4 py-2 hover:bg-gray-800">Wishlist</a></li>
+            <li><a href="/logout" class="block px-4 py-2 hover:bg-gray-800">Logout</a></li>
+          </ul>
+        </div>
+      <% } else { %>
+        <a href="/login" class="hover:text-gray-300">
+          <i class="fas fa-user"></i>
+        </a>
+      <% } %>
+
+      <a href="/cart" class="hover:text-gray-300">
         <i class="fas fa-shopping-bag"></i>
       </a>
     </div>
-    
   </nav>
 </header>
+
+<% if (session && session.user) { %>
+<script>
+  // Get the profile icon and its parent group
+  const profileIcon = document.querySelector('.profile-icon');
+  const group = profileIcon.parentElement;
+
+  // Add click event listener to toggle the dropdown
+  profileIcon.addEventListener('click', (e) => {
+    e.preventDefault(); // Prevent default anchor behavior
+    group.classList.toggle('active');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!group.contains(e.target)) {
+      group.classList.remove('active');
+    }
+  });
+</script>
+<% } %>
+
+<script>
+  function toggleMobileMenu() {
+    const navMenu = document.getElementById('nav-menu');
+    navMenu.classList.toggle('active');
+  }
+
+  // Close mobile menu when clicking outside
+  document.addEventListener('click', (e) => {
+    const navMenu = document.getElementById('nav-menu');
+    const hamburger = document.querySelector('.hamburger');
+    if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
+      navMenu.classList.remove('active');
+    }
+  });
+</script>

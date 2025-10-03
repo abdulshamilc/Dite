@@ -1,0 +1,178 @@
+<head>
+  <style>
+    .header {
+      background-color: rgba(0, 0, 0, 0.9);
+      padding: 15px 0;
+      position: fixed;
+      width: 100%;
+      top: 0;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .logo img {
+      height: 45px;
+      width: auto;
+    }
+
+    .nav-menu {
+      display: flex;
+      list-style: none;
+      gap: 30px;
+    }
+
+    .nav-menu a {
+      color: #ffffff;
+      text-decoration: none;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: color 0.3s ease;
+    }
+
+    .nav-menu a:hover {
+      color: #d4af37;
+    }
+
+    .nav-icons {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .nav-icons i {
+      font-size: 18px;
+      cursor: pointer;
+      color: #ffffff;
+      transition: color 0.3s ease;
+    }
+
+    .nav-icons i:hover {
+      color: #d4af37;
+    }
+
+    /* Dropdown Menu Styling */
+    .nav-icons .group {
+      position: relative;
+    }
+
+    .nav-icons .group ul {
+      display: none; /* Hidden by default */
+      position: absolute;
+      top: 100%; /* Align directly below the icon */
+      right: -10px; /* Adjusted to align with the icon */
+      background-color: rgba(194, 180, 163, 0.8); /* #C2B4A3 with 80% opacity */
+      color: #fff;
+      border-radius: 8px;
+      min-width: 180px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      padding: 10px 0;
+      opacity: 0;
+      transform: translateY(-10px);
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      list-style: none; /* Remove bullet points */
+    }
+
+    /* Show dropdown when active class is added */
+    .nav-icons .group.active ul {
+      display: block;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Dropdown items */
+    .nav-icons .group ul li {
+      list-style: none; /* Ensure no bullet points */
+    }
+
+    .nav-icons .group ul li a {
+      display: block;
+      padding: 12px 20px;
+      text-decoration: none;
+      color: white;
+      font-size: 14px;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .nav-icons .group ul li a:hover {
+      background-color: rgba(31, 31, 31, 0.8); /* Slightly darker hover effect */
+      color: #d4af37;
+    }
+  </style>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+</head>
+
+<header class="header bg-black">
+  <nav class="nav flex items-center justify-between py-4">
+    <!-- Logo -->
+    <div class="logo">
+      <img src="/images/logo/Dite White Logo.png" alt="Dité Logo" class="h-10" />
+    </div>
+
+    <!-- Navigation Menu -->
+    <ul class="nav-menu flex space-x-6 text-white font-medium">
+      <li><a href="/" class="hover:text-gray-300">Home</a></li>
+      <li><a href="/shop" class="hover:text-gray-300">Shop</a></li>
+      <li><a href="/collections" class="hover:text-gray-300">Collections</a></li>
+    </ul>
+
+    <!-- Icons -->
+    <div class="nav-icons flex space-x-4 text-white text-lg relative">
+      <i class="fas fa-search cursor-pointer hover:text-gray-300"></i>
+
+      <!-- Profile Dropdown or Login Redirect -->
+      <% if (session && session.user) { %>
+        <div class="relative group">
+          <a href="#" class="hover:text-gray-300 profile-icon">
+            <i class="fas fa-user"></i>
+          </a>
+          <ul class="absolute bg-black text-white rounded-md py-2 w-40 right-0">
+            <li><a href="/profile" class="block px-4 py-2 hover:bg-gray-800">Profile</a></li>
+            <li><a href="/orders" class="block px-4 py-2 hover:bg-gray-800">Orders</a></li>
+            <li><a href="/wishlist" class="block px-4 py-2 hover:bg-gray-800">Wishlist</a></li>
+            <li><a href="/logout" class="block px-4 py-2 hover:bg-gray-800">Logout</a></li>
+          </ul>
+        </div>
+      <% } else { %>
+        <a href="/login" class="hover:text-gray-300">
+          <i class="fas fa-user"></i>
+        </a>
+      <% } %>
+
+      <a href="/login" class="hover:text-gray-300">
+        <i class="fas fa-shopping-bag"></i>
+      </a>
+    </div>
+  </nav>
+</header>
+
+<% if (session && session.user) { %>
+<script>
+  // Get the profile icon and its parent group
+  const profileIcon = document.querySelector('.profile-icon');
+  const group = profileIcon.parentElement;
+
+  // Add click event listener to toggle the dropdown
+  profileIcon.addEventListener('click', (e) => {
+    e.preventDefault(); // Prevent default anchor behavior
+    group.classList.toggle('active');
+  });
+
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!group.contains(e.target)) {
+      group.classList.remove('active');
+    }
+  });
+</script>
+<% } %>

@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cart - Dité</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background-color: #1a1a1a;
+        color: #ffffff;
+        line-height: 1.6;
+      }
+
+      /* Main Content */
+      .cart-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      .cart-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+      }
+
+      .cart-content {
+        display: flex;
+        gap: 2rem;
+        align-items: flex-start;
+      }
+
+      /* Cart Items Section */
+      .cart-items {
+        flex: 1;
+        background-color: #2a2a2a;
+        padding: 1.5rem;
+        border-radius: 8px;
+      }
+
+      .cart-item {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background-color: #1a1a1a;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        position: relative;
+        align-items: flex-start; /* Ensure top alignment for items */
+      }
+
+      .item-image {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 4px;
+        background-color: #333;
+        flex-shrink: 0; /* Prevent image from shrinking */
+      }
+
+      .item-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0; /* Allow text wrapping */
+      }
+
+      .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem; /* Add gap for better spacing */
+      }
+
+      .item-name {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        flex: 1; /* Allow name to take space */
+      }
+
+      .item-size {
+        font-size: 0.85rem;
+        color: #999;
+      }
+
+      .item-price {
+        font-size: 1.1rem;
+        font-weight: 600;
+        white-space: nowrap; /* Prevent price wrapping */
+      }
+
+      .item-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        flex-wrap: wrap; /* Allow wrapping on small screens */
+      }
+
+      .remove-btn {
+        background: none;
+        border: 1px solid #666;
+        color: #fff;
+        width: 28px;
+        height: 28px;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0; /* Prevent shrinking */
+      }
+
+      .remove-btn:hover {
+        border-color: #ff4444;
+        color: #ff4444;
+      }
+
+      .quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        border: 1px solid #666;
+        border-radius: 4px;
+        padding: 0.25rem 0.5rem;
+      }
+
+      .quantity-btn {
+        background: none;
+        border: none;
+        color: #fff;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 0.25rem 0.5rem;
+        min-width: 30px; /* Consistent button size */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .quantity-btn:hover {
+        color: #ccc;
+      }
+
+      .quantity {
+        min-width: 30px;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+
+      .item-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        gap: 1rem; /* Add gap for better spacing */
+      }
+
+      .stock-status {
+        font-size: 0.85rem;
+        color: #4ade80;
+      }
+
+      .delivery-info {
+        font-size: 0.75rem;
+        color: #999;
+      }
+
+      .delivery-date {
+        color: #4ade80;
+      }
+
+      .free-delivery {
+        font-size: 0.85rem;
+        color: #fff;
+        background-color: #333;
+        padding: 0.25rem 0.75rem;
+        border-radius: 4px;
+        white-space: nowrap; /* Prevent wrapping */
+      }
+
+      /* Order Summary Section */
+      .order-summary {
+        width: 380px;
+        background-color: #d4c5a9;
+        color: #000;
+        padding: 1.5rem;
+        border-radius: 8px;
+        position: sticky;
+        top: 2rem;
+      }
+
+      .summary-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+
+      .summary-items {
+        margin-bottom: 1.5rem;
+      }
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+        font-size: 0.9rem;
+      }
+
+      .summary-item.discount {
+        color: #c2410c;
+      }
+
+      .summary-divider {
+        border: none;
+        border-top: 1px solid #999;
+        margin: 1rem 0;
+      }
+
+      .subtotal {
+        display: flex;
+        justify-content: space-between;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+      }
+
+      .promo-section {
+        display: flex;
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .promo-input {
+        flex: 1;
+        padding: 0.5rem;
+        border: 1px solid #999;
+        border-radius: 4px;
+        background-color: #fff;
+        font-size: 0.85rem;
+      }
+
+      .apply-btn {
+        padding: 0.5rem 1rem;
+        background-color: #000;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+      }
+
+      .apply-btn:hover {
+        background-color: #333;
+      }
+
+      .total-section {
+        background-color: #000;
+        color: #fff;
+        padding: 1rem;
+        border-radius: 4px;
+        text-align: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .total-label {
+        font-size: 0.9rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .total-amount {
+        font-size: 1.75rem;
+        font-weight: 700;
+      }
+
+      .checkout-btn {
+        width: 100%;
+        padding: 1rem;
+        background-color: #fff;
+        color: #000;
+        border: 2px solid #000;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .checkout-btn:hover {
+        background-color: #f0f0f0;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        .cart-content {
+          flex-direction: column;
+        }
+
+        .order-summary {
+          width: 100%;
+          position: static;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .cart-container {
+          padding: 1rem;
+        }
+
+        .cart-item {
+          flex-direction: column;
+          align-items: stretch; /* Full width alignment on mobile */
+        }
+
+        .item-image {
+          width: 100%;
+          height: 200px;
+          align-self: center; /* Center image on mobile */
+        }
+
+        .item-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+        }
+
+        .item-price {
+          text-align: right;
+        }
+
+        .item-controls {
+          justify-content: space-between;
+        }
+
+        .item-footer {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+          text-align: center;
+        }
+
+        .free-delivery {
+          align-self: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <%- include("../../partials/user/header") %>
+
+    <!-- Main Content -->
+    <main class="cart-container">
+      <h1 class="cart-title">CART</h1>
+
+      <div class="cart-content">
+        <!-- Cart Items -->
+        <div class="cart-items">
+          <% if (cart && cart.items.length > 0) { %>
+            <% cart.items.forEach(item => { %>
+              <div class="cart-item">
+                <img
+                  src="<%= item.image %>"
+                  alt="<%= item.name %>"
+                  class="item-image"
+                />
+                <div class="item-details">
+                  <div class="item-header">
+                    <div>
+                      <div class="item-name"><%= item.name %></div>
+                      <% if (item.size) { %>
+                        <div class="item-size"><%= item.size %></div>
+                      <% } %>
+                    </div>
+                    <div class="item-price">
+                      Rs.<%= item.basePrice.toFixed(2) %>
+                    </div>
+                  </div>
+                  <div class="item-controls">
+                    <form
+                      action="/cart/delete/<%= item._id %>"
+                      method="POST"
+                      style="display: inline"
+                    >
+                      <button type="submit" class="remove-btn">
+                        <svg
+                          width="16"
+                          height="16"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+                          ></path>
+                        </svg>
+                      </button>
+                    </form>
+                    <div class="quantity-controls">
+                      <button
+                        class="quantity-btn"
+                        onclick="updateQuantity('<%= item._id %>', 'dec')"
+                      >
+                        -
+                      </button>
+                      <span class="quantity">Qty: <%= item.quantity %></span>
+                      <button
+                        class="quantity-btn"
+                        onclick="updateQuantity('<%= item._id %>', 'inc')"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div class="item-footer">
+                    <div>
+                      <div class="stock-status"><%= item.stockStatus %></div>
+                      <div class="delivery-info">
+                        Arrives by Tuesday,
+                        <span class="delivery-date">Jul 07 @ 10:00</span>
+                      </div>
+                    </div>
+                    <div class="free-delivery">Free Delivery</div>
+                  </div>
+                </div>
+              </div>
+            <% }); %>
+          <% } else { %>
+            <p style="text-align: center; padding: 2rem; color: #999;">Your cart is empty.</p>
+          <% } %>
+        </div>
+
+        <!-- Order Summary -->
+        <aside class="order-summary">
+          <h2 class="summary-title">Order Summary</h2>
+
+          <div class="summary-items">
+            <% if (cart && cart.items.length > 0) { %>
+              <% cart.items.forEach(item => { %>
+                <div class="summary-item">
+                  <span><%= item.name %></span>
+                  <span>Rs.<%= (item.basePrice * item.quantity).toFixed(2) %></span>
+                </div>
+              <% }); %>
+              <div class="summary-item">
+                <span>Delivery Charges</span>
+                <span>Rs.0.00 (Free Delivery)</span>
+              </div>
+              <% if (subtotal > total) { %>
+                <div class="summary-item discount">
+                  <span>Discount</span>
+                  <span>Rs.<%= (subtotal - total).toFixed(2) %></span>
+                </div>
+              <% } %>
+            <% } %>
+          </div>
+
+          <hr class="summary-divider" />
+
+          <div class="subtotal">
+            <span>Subtotal</span>
+            <span>Rs.<%= subtotal.toFixed(2) %></span>
+          </div>
+
+          <div class="promo-section">
+            <input type="text" class="promo-input" placeholder="Promo Code" />
+            <button class="apply-btn">Apply</button>
+          </div>
+
+          <div class="total-section">
+            <div class="total-label">TOTAL :</div>
+            <div class="total-amount">Rs.<%= total.toFixed(2) %></div>
+          </div>
+
+          <a href="checkout/address"><button class="checkout-btn">CHECKOUT</button></a>
+        </aside>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <%- include("../../partials/user/footer") %>
+
+    <script>
+      async function updateQuantity(itemId, action) {
+        try {
+          const res = await fetch(`/cart/Quantity/${itemId}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ action }),
+          });
+
+          if (res.ok) {
+            window.location.href = "/cart";
+          } else {
+            const data = await res.json();
+            alert(data.message || "Failed to update quantity");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+          alert("An error occurred while updating quantity.");
+        }
+      }
+    </script>
+  </body>
+</html>

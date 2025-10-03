@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Dité - Categories</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", "Arial", sans-serif;
+        background-color: #0a0a0a;
+        color: #ffffff;
+        line-height: 1.6;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Categories Section */
+      .categories-section {
+        background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+        padding: 140px 0 80px;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .categories-section::before {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(
+          circle,
+          rgba(212, 175, 55, 0.15) 0%,
+          transparent 50%
+        );
+        z-index: 0;
+        animation: pulse 10s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(1);
+          opacity: 0.15;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.1;
+        }
+        100% {
+          transform: scale(1);
+          opacity: 0.15;
+        }
+      }
+
+      .categories-title {
+        font-size: 60px;
+        font-weight: 900;
+        margin-bottom: 20px;
+        letter-spacing: 4px;
+        color: #d4af37;
+        text-transform: uppercase;
+        position: relative;
+        z-index: 1;
+        text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        animation: fadeInDown 1s ease-out;
+      }
+
+      .categories-subtitle {
+        color: #e0e0e0;
+        font-size: 18px;
+        margin-bottom: 50px;
+        position: relative;
+        z-index: 1;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        animation: fadeInUp 1s ease-out;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Category Section */
+      .category-section {
+        margin-bottom: 80px;
+      }
+
+      .category-heading {
+        font-size: 32px;
+        font-weight: 700;
+        color: #d4af37;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 40px;
+        text-align: left;
+        position: relative;
+        z-index: 1;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Product List */
+      .product-list {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+
+      .product-item,
+      .more-item {
+        background-color: #1a1a1a;
+        border-radius: 16px;
+        overflow: hidden;
+        transition: all 0.4s ease;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        position: relative;
+        width: 100%;
+        aspect-ratio: 3 / 4;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .product-item:hover,
+      .more-item:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      .product-image {
+        width: 100%;
+        height: 60%;
+        object-fit: cover;
+        background-color: #222;
+        transition: transform 0.5s ease;
+      }
+
+      .product-item:hover .product-image {
+        transform: scale(1.05);
+      }
+
+      .product-info {
+        padding: 20px;
+        text-align: center;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      .product-name {
+        font-size: 16px;
+        margin-bottom: 10px;
+        color: #ffffff;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 700;
+      }
+
+      .product-price {
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .base-price {
+        color: #999;
+        text-decoration: line-through;
+        font-size: 14px;
+      }
+
+      .discounted-price {
+        color: #d4af37;
+        font-size: 16px;
+        font-weight: 700;
+      }
+
+      .shop-now-btn {
+        background: linear-gradient(90deg, #d4af37, #f0c14b);
+        color: #000000;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .shop-now-btn:hover {
+        background: linear-gradient(90deg, #b8941f, #d4af37);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 15px rgba(212, 175, 55, 0.5);
+      }
+
+      .shop-now-btn::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.3),
+          transparent
+        );
+        transition: 0.5s;
+      }
+
+      .shop-now-btn:hover::after {
+        left: 100%;
+      }
+
+      /* Wishlist Icon */
+      .wishlist-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(26, 26, 26, 0.7);
+        border: none;
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 2;
+      }
+
+      .wishlist-btn i {
+        color: #ffffff;
+        font-size: 16px;
+      }
+
+      .wishlist-btn.active i {
+        color: #d4af37;
+      }
+
+      .wishlist-btn:hover {
+        background-color: rgba(212, 175, 55, 0.2);
+        transform: scale(1.1);
+      }
+
+      .wishlist-btn.active:hover i {
+        color: #b8941f;
+      }
+
+      /* More Card */
+      .more-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background-color: #1a1a1a;
+      }
+
+      .more-content {
+        padding: 20px;
+      }
+
+      .more-text {
+        font-size: 18px;
+        font-weight: 700;
+        color: #d4af37;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        .categories-title {
+          font-size: 48px;
+        }
+
+        .product-list {
+          grid-template-columns: repeat(4, 1fr);
+          gap: 15px;
+        }
+
+        .category-heading {
+          font-size: 28px;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .categories-title {
+          font-size: 36px;
+        }
+
+        .categories-subtitle {
+          font-size: 16px;
+        }
+
+        .product-list {
+          grid-template-columns: repeat(3, 1fr);
+          gap: 10px;
+        }
+
+        .category-heading {
+          font-size: 24px;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .categories-title {
+          font-size: 28px;
+        }
+
+        .categories-subtitle {
+          font-size: 14px;
+        }
+
+        .product-list {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .product-image {
+          height: 50%;
+        }
+
+        .category-heading {
+          font-size: 20px;
+        }
+
+        .product-name {
+          font-size: 14px;
+        }
+
+        .base-price,
+        .discounted-price {
+          font-size: 12px;
+        }
+
+        .shop-now-btn {
+          font-size: 10px;
+          padding: 8px 15px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <%- include("../../partials/user/header") %>
+
+    <!-- Categories Section -->
+    <section class="categories-section">
+      <div class="container">
+        <h1 class="categories-title">Categories</h1>
+        <p class="categories-subtitle">
+          Browse our premium products, organized by gender and category for your
+          style and preference.
+        </p>
+      </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container">
+      <!-- Men Category -->
+      <% if (products.some(product => product.gender === 'MEN')) { %>
+      <section class="category-section">
+        <h2 class="category-heading">Men</h2>
+        <div class="product-list">
+          <% let menProducts = products.filter(product => product.gender ===
+          'MEN').slice(0, 5); %> <% menProducts.forEach(product => { %>
+          <a href="shop/<%=product._id%>">
+            <div class="product-item">
+              <button
+                class="wishlist-btn"
+                title="Add to Wishlist"
+                onclick="toggleWishlist(this)"
+              >
+                <i class="far fa-heart"></i>
+              </button>
+              <img
+                src="<%= product.images[0] %>"
+                alt="<%= product.name %>"
+                class="product-image"
+              />
+              <div class="product-info">
+                <h3 class="product-name"><%= product.name %></h3>
+              </div>
+            </div>
+          </a>
+          <% }); %> 
+          <!-- "More" only shows if >5 men products exist -->
+          <% if (products.filter(product => product.gender ===
+          'MEN').length > 5) { %>
+          <a href="/shop/men">
+            <div class="more-item">
+              <div class="more-content">
+                <p class="more-text">More</p>
+              </div>
+            </div>
+          </a>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
+
+      <!-- Women Category -->
+      <% if (products.some(product => product.gender === 'WOMEN')) { %>
+      <section class="category-section">
+        <h2 class="category-heading">Women</h2>
+        <div class="product-list">
+          <% let womenProducts = products.filter(product => product.gender ===
+          'WOMEN').slice(0, 5); %> <% womenProducts.forEach(product => { %>
+          <a href="shop/<%=product._id%>">
+            <div class="product-item">
+              <button
+                class="wishlist-btn"
+                title="Add to Wishlist"
+                onclick="toggleWishlist(this)"
+              >
+                <i class="far fa-heart"></i>
+              </button>
+              <img
+                src="<%= product.images[0] %>"
+                alt="<%= product.name %>"
+                class="product-image"
+              />
+              <div class="product-info">
+                <h3 class="product-name"><%= product.name %></h3>
+              </div>
+            </div>
+          </a>
+          <% }); %> 
+          <!-- "More" only shows if >5 women products exist -->
+          <% if (products.filter(product => product.gender ===
+          'WOMEN').length > 5) { %>
+          <a href="/shop/women">
+            <div class="more-item">
+              <div class="more-content">
+                <p class="more-text">More</p>
+              </div>
+            </div>
+          </a>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
+
+      <!-- Unisex Category -->
+      <% if (products.some(product => product.gender === 'UNISEX')) { %>
+      <section class="category-section">
+        <h2 class="category-heading">Unisex</h2>
+        <div class="product-list">
+          <% let unisexProducts = products.filter(product => product.gender ===
+          'UNISEX').slice(0, 5); %> <% unisexProducts.forEach(product => { %>
+          <a href="shop/<%=product._id%>">
+            <div class="product-item">
+              <button
+                class="wishlist-btn"
+                title="Add to Wishlist"
+                onclick="toggleWishlist(this)"
+              >
+                <i class="far fa-heart"></i>
+              </button>
+              <img
+                src="<%= product.images[0] %>"
+                alt="<%= product.name %>"
+                class="product-image"
+              />
+              <div class="product-info">
+                <h3 class="product-name"><%= product.name %></h3>
+              </div>
+            </div>
+          </a>
+          <% }); %> 
+          <!-- "More" only shows if >5 unisex products exist -->
+          <% if (products.filter(product => product.gender ===
+          'UNISEX').length > 5) { %>
+          <a href="/shop/unisex">
+            <div class="more-item">
+              <div class="more-content">
+                <p class="more-text">More</p>
+              </div>
+            </div>
+          </a>
+          <% } %>
+        </div>
+      </section>
+      <% } %>
+
+      <!-- Dynamic Category Sections -->
+      <% categories.forEach(category => { %> <% let validCategoryProducts =
+      products.filter(product => category.products.includes(product._id)); %> <%
+      if (validCategoryProducts.length > 0) { %>
+      <section class="category-section">
+        <h2 class="category-heading"><%= category.name %></h2>
+        <div class="product-list">
+          <% let categoryProducts = validCategoryProducts.slice(0, 5); %> <%
+          categoryProducts.forEach(product => { %>
+          <a href="shop/<%=product._id%>">
+            <div class="product-item">
+              <button
+                class="wishlist-btn"
+                title="Add to Wishlist"
+                onclick="toggleWishlist(this)"
+              >
+                <i class="far fa-heart"></i>
+              </button>
+              <img
+                src="<%= product.images[0] %>"
+                alt="<%= product.name %>"
+                class="product-image"
+              />
+              <div class="product-info">
+                <h3 class="product-name"><%= product.name %></h3>
+              </div>
+            </div>
+          </a>
+          <% }); %> 
+          <!-- "More" only shows if >5 products in this category exist -->
+          <% if (validCategoryProducts.length > 5) { %>
+          <a href="categories/<%=category._id%>">
+            <div class="more-item">
+              <div class="more-content">
+                <p class="more-text">More</p>
+              </div>
+            </div>
+          </a>
+          <% } %>
+        </div>
+      </section>
+      <% } %> <% }); %>
+    </main>
+
+    <!-- Footer -->
+    <%- include("../../partials/user/footer") %>
+
+    <script>
+      function toggleWishlist(button) {
+        button.classList.toggle("active");
+        const icon = button.querySelector("i");
+        icon.classList.toggle("far");
+        icon.classList.toggle("fas");
+      }
+    </script>
+  </body>
+</html>

@@ -37,10 +37,37 @@ const adminSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    verify:{
+      
+    }
   },
   {
     timestamps: true, // automatically adds createdAt and updatedAt
   }
 );
 
-export default mongoose.model("Admin", adminSchema);
+
+const admiResetPasswordSchema = new mongoose.Schema({
+  email:{
+    type:String,
+    required:true,
+  },
+  action:{
+    type:String,
+    required : true
+  },
+  otp:{
+    type:Number
+  },
+  resetToken:{
+    type:String
+  },
+  createdAt:{
+    type:Date,
+    default:Date.now,
+    expires:300    
+  },
+})
+
+export const Admin =  mongoose.model("Admin", adminSchema);
+export const AdmiResetPassword =  mongoose.model("AdmiResetPassword", admiResetPasswordSchema);

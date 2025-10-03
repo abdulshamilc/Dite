@@ -1,0 +1,101 @@
+<style>
+  .sidebar{
+    width:100%;
+    background:#201a14;
+    border-radius:14px;
+    padding:16px;
+  }
+  .greeting{
+    display:flex; align-items:center; gap:12px;
+    background:#2a221b; padding:12px; border-radius:10px; margin-bottom:12px;
+  }
+  .avatar-sm{
+    inline-size:40px; block-size:40px; border-radius:50%;
+    background:#3a2f25; display:grid; place-items:center; color:#e8dccf;
+    font-weight:700;
+  }
+  .menu{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .menu a{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 12px; border-radius:10px;
+    background:rgba(255,255,255,.03);
+    outline:1px solid rgba(255,255,255,.06);
+    color:var(--text);
+  }
+  .menu a:hover{background:rgba(255,255,255,.07)}
+  .menu a[aria-current="page"]{
+    background:color-mix(in srgb, var(--accent) 85%, #000 15%);
+    color:#121212;
+    outline-color:color-mix(in srgb, var(--accent) 90%, #000 10%);
+    font-weight:700;
+  }
+  .menu .bullet{
+    inline-size:18px; block-size:18px; border-radius:5px;
+    background:rgba(0,0,0,.4); outline:1px solid rgba(255,255,255,.18);
+  }
+  .sidebar-footer{
+    margin-top:12px; background:#bfa688; color:#1a1a1a;
+    border-radius:10px; padding:12px; text-align:center; font-weight:600;
+    opacity:.85;
+  }
+
+  @media (min-width: 960px){
+    .sidebar{width:260px; position:sticky; top:24px}
+  }
+</style>
+
+<aside class="sidebar" aria-label="Profile navigation">
+  <div class="greeting">
+    <div class="avatar-sm"><%= user.name ? user.name.charAt(0).toUpperCase() : "U" %></div>
+    <div>Hello, <strong><%= user.name %></strong></div>
+  </div>
+
+  <nav>
+  <ul class="menu">
+    <li>
+      <a href="/profile" aria-current="<%= currentPath === '/profile' ? 'page' : false %>">
+        <span class="bullet"></span> Profile
+      </a>
+    </li>
+
+    <li>
+      <a href="/orders" aria-current="<%= currentPath === '/orders' ? 'page' : false %>">
+        <span class="bullet"></span> My Orders
+      </a>
+    </li>
+
+    <li>
+      <a href="/wallet" aria-current="<%= currentPath === '/wallet' ? 'page' : false %>">
+        <span class="bullet"></span> Wallet
+      </a>
+    </li>
+
+    <li>
+      <a href="/address" aria-current="<%= currentPath === '/address' ? 'page' : false %>">
+        <span class="bullet"></span> Address
+      </a>
+    </li>
+
+    <li>
+      <a href="/refer" aria-current="<%= currentPath === '/refer' ? 'page' : false %>">
+        <span class="bullet"></span> Refer and Earn
+      </a>
+    </li>
+
+    <li>
+      <a href="/delete-account" aria-current="<%= currentPath === '/delete-account' ? 'page' : false %>">
+        <span class="bullet"></span> Security
+      </a>
+    </li>
+
+    <li>
+      <a href="/logout" aria-current="<%= currentPath === '/logout' ? 'page' : false %>">
+        <span class="bullet"></span> LogOut
+      </a>
+    </li>
+  </ul>
+</nav>
+
+
+  <div class="sidebar-footer">Account</div>
+</aside>

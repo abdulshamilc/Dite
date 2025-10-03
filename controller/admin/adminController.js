@@ -1,10 +1,20 @@
-import User from "../models/userModels.js";
-import Admin from "../models/adminModels.js";
-import Categories from "../models/categories.js";
-import Products from "../models/productsModels.js";
-import sendMail from "../services/mailer.js";
+import User from "../../models/userModels.js";
+import { Admin, AdmiResetPassword } from "../../models/adminModels.js";
+import Categories from "../../models/categories.js";
+import Products from "../../models/productsModels.js";
+import sendMail from "../../services/mailer.js";
 import bcrypt from "bcryptjs";
-import addCategoryValidation from "../validators/addCatogoryValidation.js";
+import addCategoryValidation from "../../validators/addCatogoryValidation.js";
+import jwt from "jsonwebtoken";
+import passwordSchema from '../../validators/resetPasswordValidator.js'
+const secret = process.env.JWT_SECRET;
+
+const pageNotFound = (req, res) => {
+  try {
+    res.render("admin/pageNotFound");
+  } catch (error) {}
+};
+
 const getLogin = (req, res) => {
   if (req.session.admin) {
     res.redirect("admin/dashboard");
@@ -60,21 +70,8 @@ const getForgotPassword = (req, res) => {
   res.render("admin/forgetPassword");
 };
 
-const forgetPassword = async (req, res) => {
+const genarateOTP = async (email) => {
   try {
-    const email = req.body.email;
-
-    // Checking required fields
-    if (!email) return res.status(400).json({ message: "Email is required" });
-
-    // Verifying the Email
-    const admin = await User.findOne({ email: email.toLowerCase() });
-    if (!admin) return res.status(400).json({ message: "Invalid Email" });
-
-    // validating Role
-    if (admin.role != "admin")
-      return res.status(400).json({ message: "Access Denied " });
-
     // If everything is correct → success response
     const otp = Math.floor(1000 + Math.random() * 9000);
     console.log(`OTP = ${otp}`);
@@ -85,6 +82,31 @@ const forgetPassword = async (req, res) => {
       text: `Your OTP code For resetting Dite Admin Account password is ${otp}`,
       html: `<p>Your OTP code is <b>${otp}</b></p>`,
     });
+    const action = "Forget Password";
+
+    await AdmiResetPassword.create({ email, action, otp });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const forgetPassword = async (req, res) => {
+  try {
+    const email = req.body.email;
+
+    // Checking required fields
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    // Verifying the Email
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (!admin) return res.status(400).json({ message: "Invalid Email" });
+
+    // validating Role
+    if (admin.role != "admin")
+      return res.status(400).json({ message: "Access Denied " });
+
+    await genarateOTP(email);
+    req.session.email = email;
 
     return res.json({
       message: "OTP sent successfully to your email",
@@ -100,15 +122,98 @@ const forgetPassword = async (req, res) => {
   }
 };
 
-const OtpVerification = async (req, res) => {
-  const otp = req.body.otp;
+const getOtpVerification = (req, res) => {
+  try {
+    res.render("admin/otpForgetPassword");
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const PostOtpVerification = async (req, res) => {
+  try {
+    const EnterdOtp = req.body.otp;
+    const adminOtp = await AdmiResetPassword.findOne({
+      email: req.session.email,
+    }).sort({ createdAt: -1 });
+
+    if (!EnterdOtp) return res.status(400).json({ message: "OTP is required" });
+
+    if (!adminOtp)
+      return res.status(400).json({ message: "OTP expired or not found" });
+
+    if (EnterdOtp != adminOtp.otp)
+      return res.status(400).json({ message: "OTP is Incorrect" });
+
+    const email = req.session.email;
+    const action = "Reset Pasword";
+
+    //  Create JWT Reset Token (valid for 15 minutes)
+    const resetToken = jwt.sign({ email: email }, process.env.JWT_SECRET, {
+      expiresIn: "15m",
+    });
+
+    await AdmiResetPassword.create({ email, action, resetToken });
+
+    console.log(`Reset Tocken = ${resetToken}`);
+
+    await AdmiResetPassword.deleteOne({ _id: adminOtp._id });
+
+    return res.json({
+      success: true,
+      redirectUrl: `/admin/reset-password/${resetToken}`,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+const getResetPasword = async (req, res) => {
+  const { token } = req.params;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    res.render("admin/resetForgetPassword", { email: decoded.email, token });
+  } catch (error) {
+    console.log(error);
+    return res.status(400).send("Invalid or expired reset link");
+  }
+};
+
+const postResetPassword = async (req, res) => {
+  try {
+    const token = req.params.token 
+    const { newPassword, confirmPassword } = req.body;
+
+     const { error } = passwordSchema.validate({ newPassword, confirmPassword });
+     if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    console.log("Tocken = "+token) ;
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const email = decoded.email;
+
+    const admin = await Admin.findOne({ email });
+
+    admin.password = await bcrypt.hash(newPassword ,10)
+    await admin.save() ;
+    
+
+  } catch (error) {
+
+    console.log(error)
+  }
 };
 
 const getDashboard = (req, res) => {
-  res.render("admin/dashboard");
+  res.render("admin/pageNotFound");
 };
 const getOrders = (req, res) => {
-  res.render("admin/orders");
+  res.render("admin/pageNotFound");
 };
 
 // Product Field
@@ -123,7 +228,6 @@ const getProducts = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate("category");
-      
 
     // Totel Products
     const totelProducts = await Products.countDocuments({ isDeleted: false });
@@ -150,12 +254,15 @@ const getProducts = async (req, res) => {
       "variants.stock": { $lte: 0 },
     });
 
-    // Catogory 
-    const categories  = await Categories.find({isDeleted:false , isActive:false}) ;
+    // Catogory
+    const categories = await Categories.find({
+      isDeleted: false,
+      isActive: false,
+    });
 
     res.render("admin/products", {
       products,
-      categories ,
+      categories,
       totelProducts,
       newProductsCount,
       activeProductsCount,
@@ -218,10 +325,9 @@ const postAddProducts = async (req, res) => {
       ];
     }
 
-    // Catogory splitting and making an array 
-    let category  = [] ;
-    if(categories) category = categories.split(',');
-
+    // Catogory splitting and making an array
+    let category = [];
+    if (categories) category = categories.split(",");
 
     const newProdducts = new Products({
       name,
@@ -256,7 +362,7 @@ const postAddProducts = async (req, res) => {
 const getEditProducts = async (req, res) => {
   try {
     const categories = await Categories.find({ isDeleted: false }).lean();
-    const product = await Products.findById(req.params.id)
+    const product = await Products.findById(req.params.id);
 
     res.render("admin/editProducts", { categories, product });
   } catch (err) {
@@ -290,8 +396,12 @@ const postEditProduct = async (req, res) => {
     const product = await Products.findById(productId);
     // Handle images
     let updatedImages = [...product.images];
+
     if (req.files && req.files.length > 0) {
-      updatedImages = req.files.map((file) => file.path);
+      req.files.forEach((file, index) => {
+        // Update the slot with the new file if provided
+        updatedImages[index] = file.path;
+      });
     }
 
     // Update product
@@ -405,6 +515,12 @@ const blockUser = async (req, res) => {
     console.error(error);
     res.status(500).send("Server Error");
   }
+};
+
+const getSaleReport = async (req, res) => {
+  try {
+    res.render("admin/pageNotFound");
+  } catch (error) {}
 };
 
 // Category fields
@@ -537,11 +653,27 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+const logOut = (req, res) => {
+  try {
+    delete req.session.admin ;
+    return res.redirect('/admin') ;
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal server error");
+  }
+};
+
 export {
+  pageNotFound,
   login,
   getLogin,
   getForgotPassword,
   forgetPassword,
+  genarateOTP,
+  getOtpVerification,
+  PostOtpVerification,
+  getResetPasword,
+  postResetPassword,
   getDashboard,
   getOrders,
   getProducts,
@@ -551,6 +683,7 @@ export {
   postEditProduct,
   unlistProduct,
   deleteProduct,
+  getSaleReport,
   getcustomers,
   blockUser,
   getCategories,
@@ -558,4 +691,5 @@ export {
   editCategory,
   DeactivateCategory,
   deleteCategory,
+  logOut,
 };

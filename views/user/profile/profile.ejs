@@ -1,0 +1,247 @@
+<%- include("../../partials/user/header") %>
+
+<style>
+  :root {
+    --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+    --text:#f5f5f5;        
+    --surface:#ffffff;
+    --accent:#d3a35b;
+    --radius:14px;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color .25s; }
+  a:hover { color: #b5823d; }
+
+  .container {
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: 10px 0px;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 2rem;
+    margin: 20px 0;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  @media (min-width: 960px) {
+    .layout { flex-direction: row; }
+  }
+
+  .card {
+    flex: 1;
+    background: var(--surface);
+    color: #1a1a1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+  }
+
+  .edit-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s, transform .25s;
+  }
+  .edit-btn:hover {
+    background: #b5823d;
+    transform: scale(1.05);
+  }
+
+  .avatar-lg {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    margin: 8px auto 28px;
+    object-fit: cover;
+    border: 5px solid var(--accent);
+    box-shadow: 0 6px 18px rgba(0,0,0,.3);
+    display: block;
+  }
+
+  .form {
+    max-width: 720px;
+    margin-inline: auto;
+    display: grid;
+    gap: 24px;
+  }
+  .row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .row label {
+    min-width: 120px;
+    font-weight: 700;
+    color: #3a2e22;
+  }
+  .field {
+    flex: 1;
+    min-width: 280px;
+    background: #fafafa;
+    color: #111;
+    border: 1px solid #caa880;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 15px;
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(211,163,91,.25);
+    outline: none;
+  }
+
+  .gender { display: flex; align-items: center; gap: 20px; }
+  .divider { height: 1px; background: #caa880; opacity: .5; margin: 14px 0; }
+
+  .view-mode .field-text {
+    flex: 1;
+    min-width: 280px;
+    padding: 14px 16px;
+    color: #111;
+    font-size: 15px;
+  }
+  .view-mode .row {
+    margin-bottom: 24px;
+  }
+  .view-mode .form { display: none; }
+  .edit-mode .view-mode { display: none; }
+  .edit-mode .form { display: grid; }
+
+  .form-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .form-buttons .edit-btn {
+    position: static; /* Override absolute positioning for form buttons */
+  }
+</style>
+
+<body>
+  <div class="container">
+    <h1 class="page-title">PROFILE</h1>
+
+    <section class="layout" aria-label="Profile layout">
+      <%- include("../../partials/user/profileSideBar") %>
+
+      <main class="card view-mode" aria-labelledby="profile-details-title">
+        <button class="edit-btn" onclick="toggleEditMode()">Edit</button>
+        <img src="<%= user.image || '/images/default-avatar.jpg' %>" alt="Profile Picture" class="avatar-lg">
+
+        <div class="view-mode">
+          <div class="row">
+            <label>Name:</label>
+            <span class="field-text"><%= user.name || '' %></span>
+          </div>
+
+          <div class="row">
+            <label>Gender:</label>
+            <span class="field-text"><%= user.gender || '' %></span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <label for="email">Email:</label>
+            <span class="field-text"><%= user.email %></span>
+          </div>
+
+          <div class="row">
+            <label for="phone">Phone:</label>
+            <span class="field-text"><%= user.phone || '' %></span>
+          </div>
+        </div>
+
+        <form class="form" action="/profile" method="post">
+          <div class="row">
+            <label>Name:</label>
+            <input class="field" name="name" type="text" value="<%= user.name || '' %>" />
+          </div>
+
+          <fieldset class="row">
+            <legend style="min-width:120px;font-weight:700;color:#3a2e22">Gender:</legend>
+            <div class="gender">
+              <label>
+                <input type="radio" name="gender" value="Male" <%= user.gender === "Male" ? "checked" : "" %> /> Male
+              </label>
+              <label>
+                <input type="radio" name="gender" value="Female" <%= user.gender === "Female" ? "checked" : "" %> /> Female
+              </label>
+              <label>
+                <input type="radio" name="gender" value="Others" <%= user.gender === "Others" ? "checked" : "" %> /> Others
+              </label>
+              <label>
+                <input type="radio" name="gender" value="Not" <%= user.gender === "Not" ? "checked" : "" %> /> Prefer Not To Say
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <label for="email">Email:</label>
+            <input class="field" id="email" name="email" type="email" value="<%= user.email %>" readonly />
+          </div>
+
+          <div class="row">
+            <label for="phone">Phone:</label>
+            <input class="field" id="phone" name="phone" type="text" value="<%= user.phone || '' %>" />
+          </div>
+
+          <div class="row form-buttons">
+            <label></label> <!-- Empty label to align buttons with fields -->
+            <div class="form-buttons">
+              <button type="button" class="edit-btn" onclick="toggleEditMode()">Cancel</button>
+              <button type="submit" class="edit-btn">Save</button>
+            </div>
+          </div>
+        </form>
+      </main>
+    </section>
+  </div>
+
+  <script>
+    function toggleEditMode() {
+      const card = document.querySelector('.card');
+      const editButton = document.querySelector('.edit-btn[onclick="toggleEditMode()"]');
+      if (card.classList.contains('view-mode')) {
+        card.classList.remove('view-mode');
+        card.classList.add('edit-mode');
+        editButton.textContent = 'Edit';
+      } else {
+        card.classList.remove('edit-mode');
+        card.classList.add('view-mode');
+        editButton.textContent = 'Edit';
+      }
+    }
+
+
+  </script>
+</body>

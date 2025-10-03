@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Final Checkout - Dité</title>
+    <style>
+      .checkout-container,
+      .checkout-container * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background-color: #1a1a1a;
+        color: #ffffff;
+        line-height: 1.6;
+      }
+
+      /* Main Content */
+      .checkout-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
+
+      .checkout-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+      }
+
+      .checkout-content {
+        display: flex;
+        gap: 2rem;
+        align-items: flex-start;
+      }
+
+      .left-content {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      /* Checkout Sections */
+      .checkout-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .section {
+        background-color: #1a1a1a;
+        padding: 1.5rem;
+        border-radius: 8px;
+      }
+
+      .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #d4c5a9;
+      }
+
+      /* Order Review */
+      .order-review .cart-item {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background-color: #1a1a1a;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        position: relative;
+        align-items: flex-start;
+      }
+
+      .item-image {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 4px;
+        background-color: #333;
+        flex-shrink: 0;
+      }
+
+      .item-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
+      }
+
+      .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .item-name {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        flex: 1;
+      }
+
+      .item-size {
+        font-size: 0.85rem;
+        color: #999;
+      }
+
+      .item-price {
+        font-size: 1.1rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .quantity-display {
+        font-size: 0.9rem;
+        color: #ccc;
+        min-width: 30px;
+        text-align: center;
+      }
+
+      .item-total {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4ade80;
+      }
+
+      .item-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        gap: 1rem;
+      }
+
+      .stock-status {
+        font-size: 0.85rem;
+        color: #4ade80;
+      }
+
+      .delivery-info {
+        font-size: 0.75rem;
+        color: #999;
+      }
+
+      .delivery-date {
+        color: #4ade80;
+      }
+
+      /* Address Display */
+      .address-display {
+        background-color: #333;
+        padding: 1.5rem;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .address-name {
+        font-weight: 500;
+        font-size: 1.1rem;
+      }
+
+      .address-line {
+        font-size: 0.95rem;
+        color: #ccc;
+      }
+
+      .view-btn {
+        padding: 0.5rem 1rem;
+        background-color: transparent;
+        color: #d4c5a9;
+        border: 1px solid #d4c5a9;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        align-self: flex-start;
+        margin-top: 1rem;
+      }
+
+      .view-btn:hover {
+        background-color: #d4c5a9;
+        color: #000;
+      }
+
+      /* Payment Selection */
+      .payment-selection {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .payment-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background-color: #333;
+        border-radius: 4px;
+        border: 2px solid transparent;
+        cursor: pointer;
+      }
+
+      .payment-option:hover,
+      .payment-option.selected {
+        border-color: #d4c5a9;
+      }
+
+      .payment-radio {
+        width: 20px;
+        height: 20px;
+        accent-color: #d4c5a9;
+      }
+
+      .payment-icon {
+        font-size: 1.5rem;
+      }
+
+      /* Price Sidebar */
+      .price-sidebar {
+        flex: 1;
+        background-color: #2a2a2a;
+        padding: 1.5rem;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        position: sticky;
+        top: 2rem; /* Matches your .checkout-container padding for smooth sticking */
+        align-self: flex-start; /* Ensures it doesn't stretch full height */
+        max-height: calc(100vh - 4rem); /* Prevents overflow beyond viewport height, accounting for top/bottom padding */
+        overflow-y: auto; /* Allows internal scrolling if content is too tall */
+      }
+
+      /* Order Summary in Sidebar */
+      .order-summary {
+        flex: 1;
+      }
+
+      .summary-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #d4c5a9;
+        margin-bottom: 1rem;
+      }
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #444;
+        font-size: 0.9rem;
+      }
+
+      .summary-item:last-child {
+        border-bottom: none;
+      }
+
+      .summary-name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .summary-qty {
+        color: #999;
+        white-space: nowrap;
+        margin-right: 0.5rem;
+      }
+
+      .summary-total {
+        font-weight: 500;
+        color: #4ade80;
+        white-space: nowrap;
+      }
+
+      .price-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #d4c5a9;
+        margin-bottom: 1rem;
+      }
+
+      .price-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #444;
+      }
+
+      .price-detail:last-child {
+        border-bottom: none;
+        font-weight: 600;
+        color: #4ade80;
+      }
+
+      .confirm-btn {
+        width: 100%;
+        padding: 1rem;
+        background-color: #4ade80;
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: auto;
+      }
+
+      .confirm-btn:hover {
+        background-color: #22c55e;
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      .modal {
+        background-color: #2a2a2a;
+        padding: 2rem;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #d4c5a9;
+        text-align: center;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #999;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      .modal-close:hover {
+        color: #fff;
+      }
+
+      .address-detail {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #444;
+      }
+
+      .address-detail:last-child {
+        border-bottom: none;
+      }
+
+      .address-detail-label {
+        font-weight: 500;
+        color: #d4c5a9;
+      }
+
+      .address-detail-value {
+        color: #ccc;
+        text-align: right;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        .checkout-content {
+          flex-direction: column;
+        }
+
+        .price-sidebar {
+          order: -1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .checkout-container {
+          padding: 1rem;
+        }
+
+        .order-review .cart-item {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .item-image {
+          width: 100%;
+          height: 200px;
+          align-self: center;
+        }
+
+        .item-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+        }
+
+        .item-price,
+        .item-total {
+          text-align: right;
+        }
+
+        .item-footer {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+          text-align: center;
+        }
+
+        .address-display {
+          text-align: left;
+        }
+
+        .payment-option {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+
+        .price-detail {
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .address-detail {
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .address-detail-value {
+          text-align: left;
+          margin-top: 0.25rem;
+        }
+
+        /* Adjust sidebar summary for mobile */
+        .summary-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.25rem;
+          text-align: left;
+        }
+
+        .summary-qty {
+          margin-right: 0;
+        }
+
+        .summary-total {
+          align-self: flex-end;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Main Content -->
+    <main class="checkout-container">
+      <h1 class="checkout-title">FINAL CHECKOUT</h1>
+
+      <div class="checkout-content">
+        <div class="left-content">
+          <div class="checkout-sections">
+            <!-- Product Overview (Order Review) -->
+            <div class="section">
+              <h2 class="section-title">Product Overview</h2>
+              <div class="order-review">
+                <% if (cart && cart.items.length > 0) { %> <%
+                cart.items.forEach(item => { %>
+                <div class="cart-item">
+                  <img
+                    src="<%= item.image %>"
+                    alt="<%= item.name %>"
+                    class="item-image"
+                  />
+                  <div class="item-details">
+                    <div class="item-header">
+                      <div>
+                        <div class="item-name"><%= item.name %></div>
+                        <% if (item.size) { %>
+                        <div class="item-size">Size: <%= item.size %></div>
+                        <% } %>
+                        <div class="quantity-display">
+                          Qty: <%= item.quantity %>
+                        </div>
+                      </div>
+                      <div class="item-total">
+                        Rs.<%= (item.basePrice * item.quantity).toFixed(2) %>
+                      </div>
+                    </div>
+                    <div class="item-footer">
+                      <div>
+                        <div class="stock-status"><%= item.stockStatus %></div>
+                        <div class="delivery-info">
+                          Arrives by Tuesday,
+                          <span class="delivery-date">Oct 07 @ 10:00</span>
+                        </div>
+                      </div>
+                      <div class="free-delivery">Free Delivery</div>
+                    </div>
+                  </div>
+                </div>
+                <% }); %> <% } else { %>
+                <p style="text-align: center; padding: 2rem; color: #999">
+                  No items in cart.
+                </p>
+                <% } %>
+              </div>
+            </div>
+
+            <!-- Delivery Address Display -->
+            <div class="section">
+              <h2 class="section-title">Delivery Address</h2>
+              <% if (selectedAddress) { %>
+              <div class="address-display">
+                <div class="address-name"><%= selectedAddress.fullName %></div>
+                <div class="address-line"><%= selectedAddress.hoNo %>, <%= selectedAddress.street %></div>
+                <div class="address-line"><%= selectedAddress.city %>, <%= selectedAddress.state %> - <%= selectedAddress.pin %></div>
+                <div class="address-line">Phone: <%= selectedAddress.phone %></div>
+                <% if (selectedAddress.altPhone) { %>
+                <div class="address-line">Alternate Phone: <%= selectedAddress.altPhone %></div>
+                <% } %>
+                <div class="address-line">Country: <%= selectedAddress.country %></div>
+                <button type="button" class="view-btn" onclick="openViewModal(<%= JSON.stringify(selectedAddress) %>)">
+                  View Full Details
+                </button>
+              </div>
+              <% } else { %>
+              <p style="color: #999; text-align: center; padding: 1rem">
+                No address selected.
+              </p>
+              <% } %>
+            </div>
+
+            <!-- Payment Options -->
+            <div class="section">
+              <h2 class="section-title">Payment Option</h2>
+              <div class="payment-selection">
+                <label class="payment-option">
+                  <input type="radio" class="payment-radio" name="payment" value="online" required />
+                  <span class="payment-icon">💳</span>
+                  <span>Online Payment</span>
+                </label>
+                <label class="payment-option">
+                  <input type="radio" class="payment-radio" name="payment" value="cod" />
+                  <span class="payment-icon">💰</span>
+                  <span>Cash on Delivery</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Price Details Sidebar -->
+        <div class="price-sidebar">
+          <% if (cart && cart.items.length > 0) { %>
+          <div class="order-summary">
+            <h3 class="summary-title">Order Summary</h3>
+            <% cart.items.forEach(item => { %>
+            <div class="summary-item">
+              <span class="summary-name"><%= item.name %></span>
+              <span class="summary-qty">Qty: <%= item.quantity %> x Rs. <%= item.basePrice.toFixed(2) %></span>
+              <span class="summary-total">Rs. <%= (item.basePrice * item.quantity).toFixed(2) %></span>
+            </div>
+            <% }); %>
+          </div>
+          <% } %>
+
+          <div>
+            <h2 class="price-title">Price Details</h2>
+            <% let subtotal = 0; %>
+            <% if (cart && cart.items.length > 0) { %>
+              <% cart.items.forEach(item => { subtotal += item.basePrice * item.quantity; }); %>
+            <% } %>
+            <div class="price-detail">
+              <span>Subtotal</span>
+              <span>Rs. <%= subtotal.toFixed(2) %></span>
+            </div>
+            <div class="price-detail">
+              <span>Delivery Charges</span>
+              <span>Rs. 0.00</span>
+            </div>
+            <div class="price-detail">
+              <span>Total</span>
+              <span>Rs. <%= subtotal.toFixed(2) %></span>
+            </div>
+          </div>
+          <button class="confirm-btn" onclick="confirmOrder()">
+            CONFIRM ORDER
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- View Address Modal -->
+    <div class="modal-overlay" id="viewModal">
+      <div class="modal">
+        <button class="modal-close" onclick="closeViewModal()">&times;</button>
+        <h2 class="modal-title">View Address</h2>
+        <div class="address-view">
+          <div class="address-detail">
+            <span class="address-detail-label">Full Name:</span>
+            <span class="address-detail-value" id="viewFullName"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">Phone:</span>
+            <span class="address-detail-value" id="viewPhone"></span>
+          </div>
+          <div
+            class="address-detail"
+            id="viewAltPhoneContainer"
+            style="display: none"
+          >
+            <span class="address-detail-label">Alternate Phone:</span>
+            <span class="address-detail-value" id="viewAltPhone"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">House No.:</span>
+            <span class="address-detail-value" id="viewHoNo"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">Street:</span>
+            <span class="address-detail-value" id="viewStreet"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">City:</span>
+            <span class="address-detail-value" id="viewCity"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">State:</span>
+            <span class="address-detail-value" id="viewState"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">Pin Code:</span>
+            <span class="address-detail-value" id="viewPin"></span>
+          </div>
+          <div class="address-detail">
+            <span class="address-detail-label">Country:</span>
+            <span class="address-detail-value" id="viewCountry"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <%- include("../../partials/user/footer") %>
+
+    <script>
+      // Confirm Order (stub - integrate with backend, check payment selected)
+      function confirmOrder() {
+        const selectedPayment = document.querySelector(".payment-radio:checked");
+        if (!selectedPayment) {
+          alert("Please select a payment method.");
+          return;
+        }
+        // Collect data: cart, selectedAddress._id, paymentMethod
+        // Example: fetch('/order/confirm', { method: 'POST', body: JSON.stringify({ cart, addressId: '<%= selectedAddress._id %>', payment: selectedPayment.value }), headers: { 'Content-Type': 'application/json' } })
+        alert("Order confirmed! (Implement backend logic)");
+        // window.location.href = '/order/success'; // Uncomment for redirect
+      }
+
+      // Handle payment selection
+      document.addEventListener("DOMContentLoaded", function () {
+        const paymentRadios = document.querySelectorAll(".payment-radio");
+        paymentRadios.forEach((radio) => {
+          radio.addEventListener("change", function () {
+            document
+              .querySelectorAll(".payment-option")
+              .forEach((opt) => opt.classList.remove("selected"));
+            this.closest(".payment-option").classList.add("selected");
+          });
+        });
+      });
+
+      // Modal functions
+      function openViewModal(addressData) {
+        document.getElementById("viewFullName").textContent =
+          addressData.fullName || "";
+        document.getElementById("viewPhone").textContent =
+          addressData.phone || "";
+        const altPhoneContainer = document.getElementById(
+          "viewAltPhoneContainer"
+        );
+        if (addressData.altPhone) {
+          document.getElementById("viewAltPhone").textContent =
+            addressData.altPhone;
+          altPhoneContainer.style.display = "flex";
+        } else {
+          altPhoneContainer.style.display = "none";
+        }
+        document.getElementById("viewHoNo").textContent =
+          addressData.hoNo || "";
+        document.getElementById("viewStreet").textContent =
+          addressData.street || "";
+        document.getElementById("viewCity").textContent =
+          addressData.city || "";
+        document.getElementById("viewState").textContent =
+          addressData.state || "";
+        document.getElementById("viewPin").textContent = addressData.pin || "";
+        document.getElementById("viewCountry").textContent =
+          addressData.country || "";
+        document.getElementById("viewModal").classList.add("show");
+      }
+
+      function closeViewModal() {
+        document.getElementById("viewModal").classList.remove("show");
+      }
+
+      // Close modal on overlay click
+      document
+        .getElementById("viewModal")
+        .addEventListener("click", function (e) {
+          if (e.target === this) {
+            closeViewModal();
+          }
+        });
+    </script>
+  </body>
+</html>

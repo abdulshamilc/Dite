@@ -1,10 +1,15 @@
 import express from 'express'
 import {isAuthenticatedAdmin} from '../middlewares/authMiddleware.js'
 import {
+    pageNotFound,
     login, 
     getLogin ,
     getForgotPassword, 
     forgetPassword ,
+    getOtpVerification,
+    PostOtpVerification,
+    getResetPasword,
+    postResetPassword,
     getDashboard,getOrders, 
     getProducts ,
     getAddProducts,
@@ -13,6 +18,7 @@ import {
     postEditProduct,
     unlistProduct,
     deleteProduct,
+    getSaleReport,
     getcustomers,
     blockUser,
     getCategories, 
@@ -20,7 +26,8 @@ import {
     DeactivateCategory,
     deleteCategory,
     editCategory,
-} from '../controller/adminController.js'
+    logOut,
+} from '../controller/admin/adminController.js'
 import { pagination } from '../middlewares/paginationMiddleware.js';
 import upload from '../middlewares/uploadMulter.js';
 
@@ -33,10 +40,11 @@ router.get('/forgot-password',getForgotPassword) ;
 
 router.post('/forgot-password',forgetPassword) ;
 
-router.get('/verify-otp',(req,res)=>{
-    res.render('admin/otpForgetPassword');
-}) 
+router.get('/verify-otp',getOtpVerification)
+router.post('/verify-otp',PostOtpVerification)
 
+router.get('/reset-password/:token',getResetPasword)
+router.post('/reset-password/:token',postResetPassword)
 
 router.get('/dashboard',isAuthenticatedAdmin,getDashboard) 
 
@@ -50,6 +58,8 @@ router.post('/products/edit-product/:id',isAuthenticatedAdmin, upload.array('ima
 router.post('/products/unlist/:id',isAuthenticatedAdmin,unlistProduct)
 router.post('/products/delete/:id',isAuthenticatedAdmin,deleteProduct)
 
+router.get('/sales',isAuthenticatedAdmin,pagination,getSaleReport) 
+
 router.get('/customers',isAuthenticatedAdmin,pagination,getcustomers) 
 router.post('/customers/block/:id',isAuthenticatedAdmin,blockUser)
 
@@ -59,4 +69,11 @@ router.post('/categories/active/:id',isAuthenticatedAdmin,DeactivateCategory)
 router.post('/categories/delete/:id',isAuthenticatedAdmin,deleteCategory)
 router.post('/categories/edit/:id',isAuthenticatedAdmin,editCategory)
 
+
+router.get('/coupons',isAuthenticatedAdmin,pageNotFound)  
+router.get('/refunds',isAuthenticatedAdmin,pageNotFound)  
+router.get('/banners',isAuthenticatedAdmin,pageNotFound)  
+router.get('/referrals',isAuthenticatedAdmin,pageNotFound)  
+
+router.get('/logout',logOut)
 export default router

@@ -1,55 +1,193 @@
 .header {
-        background-color: rgba(0, 0, 0);
-        padding: 15px 0;
-        position: fixed;
-        width: 100%;
-        top: 0;
-        z-index: 1000;
-        backdrop-filter: blur(10px);
-      }
+  background-color: rgba(0, 0, 0, 0.9);
+  padding: 15px 0;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(10px);
+}
 
-      .nav {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
+.nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  position: relative;
+}
 
-      .logo img {
-        height: 45px;
-        width: auto;
-      }
+.logo img {
+  height: 45px;
+  width: auto;
+}
 
-      .nav-menu {
-        display: flex;
-        list-style: none;
-        gap: 30px;
-      }
+.nav-menu {
+  display: flex;
+  list-style: none;
+  gap: 30px;
+}
 
-      .nav-menu a {
-        color: #ffffff;
-        text-decoration: none;
-        font-size: 14px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        transition: color 0.3s ease;
-      }
+.nav-menu a {
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: color 0.3s ease;
+}
 
-      .nav-menu a:hover {
-        color: #d4af37;
-      }
+.nav-menu a:hover {
+  color: #d4af37;
+}
 
-      .nav-icons {
-        display: flex;
-        gap: 20px;
-        align-items: center;
-      }
+.nav-icons {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
 
-      .nav-icons i {
-        font-size: 18px;
-        cursor: pointer;
-        transition: color 0.3s ease;
-      }
+.nav-icons i {
+  font-size: 18px;
+  cursor: pointer;
+  color: #ffffff;
+  transition: color 0.3s ease;
+}
 
-      .nav-icons i:hover {
-        color: #d4af37;
-      }
+.nav-icons i:hover {
+  color: #d4af37;
+}
+
+/* Hamburger Menu */
+.hamburger {
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  padding: 5px;
+}
+
+.hamburger span {
+  width: 25px;
+  height: 3px;
+  background-color: #ffffff;
+  margin: 3px 0;
+  transition: 0.3s;
+}
+
+/* Dropdown Menu Styling */
+.nav-icons .group {
+  position: relative;
+}
+
+.nav-icons .group ul {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: 100%; /* Align directly below the icon */
+  right: -10px; /* Adjusted to align with the icon */
+  background-color: rgba(194, 180, 163, 0.8); /* #C2B4A3 with 80% opacity */
+  color: #fff;
+  border-radius: 8px;
+  min-width: 180px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  padding: 10px 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  list-style: none; /* Remove bullet points */
+}
+
+/* Show dropdown when active class is added */
+.nav-icons .group.active ul {
+  display: block;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Dropdown items */
+.nav-icons .group ul li {
+  list-style: none; /* Ensure no bullet points */
+}
+
+.nav-icons .group ul li a {
+  display: block;
+  padding: 12px 20px;
+  text-decoration: none;
+  color: white;
+  font-size: 14px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.nav-icons .group ul li a:hover {
+  background-color: rgba(31, 31, 31, 0.8); /* Slightly darker hover effect */
+  color: #d4af37;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .hamburger {
+    display: flex;
+  }
+
+  .nav-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    flex-direction: column;
+    gap: 0;
+    padding: 20px 0;
+    margin: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 999;
+  }
+
+  .nav-menu.active {
+    display: flex;
+  }
+
+  .nav-menu li {
+    width: 100%;
+  }
+
+  .nav-menu li a {
+    display: block;
+    padding: 15px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-menu li:last-child a {
+    border-bottom: none;
+  }
+
+  .nav-menu a:hover {
+    color: #d4af37;
+    background-color: rgba(212, 175, 55, 0.1);
+  }
+
+  .nav {
+    padding: 0 15px;
+  }
+
+  .logo img {
+    height: 40px;
+  }
+
+  .nav-icons {
+    gap: 15px;
+  }
+
+  .nav-icons i {
+    font-size: 16px;
+  }
+
+  /* Adjust profile dropdown on mobile */
+  .nav-icons .group ul {
+    right: 0;
+    min-width: 150px;
+  }
+}
