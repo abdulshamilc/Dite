@@ -151,7 +151,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div class="count-box">
             <p class="text-gray-400">Total Products</p>
-            <p class="text-xl font-bold"><%= products.length %></p>
+            <p class="text-xl font-bold"><%= totelProducts %></p>
           </div>
           <div class="count-box">
             <p class="text-gray-400">New Products</p>
@@ -313,6 +313,44 @@
             </tbody>
           </table>
         </div>
+
+        <!-- Pagination and Page Limit -->
+        <div class="flex justify-between items-center mt-4">
+          <!-- Pagination -->
+          <div class="flex-1 flex justify-center items-center space-x-4">
+            <% if (totalPages > 1) { %>
+              <% if (currentPage > 1) { %>
+                <a
+                  href="/admin/products?page=<%= currentPage - 1 %>&limit=<%= limit %>"
+                  class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </a>
+              <% } %>
+              <span class="text-gray-400"><%= currentPage %> / <%= totalPages %></span>
+              <% if (currentPage < totalPages) { %>
+                <a
+                  href="/admin/products?page=<%= currentPage + 1 %>&limit=<%= limit %>"
+                  class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </a>
+              <% } %>
+            <% } %>
+          </div>
+
+          <!-- Page Limit -->
+          <div class="flex items-center space-x-2">
+            <label for="pageLimit" class="text-gray-400">Show</label>
+            <select id="limitSelect" onchange="changePageLimit(this.value)">
+              <option value="5" <%= limit == 5 ? "selected" : "" %>>5</option>
+              <option value="10" <%= limit == 10 ? "selected" : "" %>>10</option>
+              <option value="20" <%= limit == 20 ? "selected" : "" %>>20</option>
+              <option value="50" <%= limit == 50 ? "selected" : "" %>>50</option>
+            </select>
+            <span class="text-gray-400">per page</span>
+          </div>
+        </div>
       </main>
     </div>
 
@@ -389,9 +427,80 @@
       </div>
     </div>
 
+    <!-- Error Popup Modal -->
+    <div
+      id="errorPopup"
+      class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span id="errorMessage">Something went wrong!</span>
+      <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Success Popup Modal -->
+    <div
+      id="successPopup"
+      class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+      <span id="successMessage">Success!</span>
+      <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
     <!-- JS for actions -->
     <script>
       lucide.createIcons();
+
+      // Handle page limit change
+      function changePageLimit(limit) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("limit", limit);
+        url.searchParams.set("page", 1);
+        window.location.href = url.toString();
+      }
+
+      // Function to filter table rows based on search and status
+      function filterTable() {
+        const searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+        const statusFilter = document.getElementById("statusFilter").value;
+        const rows = document.querySelectorAll("tbody tr");
+
+        rows.forEach((row) => {
+          const productName = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+          const status = row
+            .querySelector("td:nth-child(6) span")
+            .textContent.toLowerCase();
+
+          const matchesSearch = searchQuery === "" || productName.includes(searchQuery);
+          const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && status === "listed") ||
+            (statusFilter === "blocked" && status === "notlisted");
+
+          row.style.display = matchesSearch && matchesStatus ? "" : "none";
+        });
+      }
+
+      // Search functionality (triggered by Enter key)
+      document.getElementById("searchInput").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          filterTable();
+        }
+      });
+
+      // Clear search
+      document.getElementById("clearSearch").addEventListener("click", () => {
+        document.getElementById("searchInput").value = "";
+        filterTable();
+      });
+
+      // Status filter
+      document.getElementById("statusFilter").addEventListener("change", filterTable);
 
       // BLOCK / ACTIVATE MODAL
       const blockButtons = document.querySelectorAll(".open-block-modal");
@@ -483,9 +592,7 @@
               <p><strong>Concentration:</strong> <span>${
                 product.concentration || "N/A"
               }</span></p>
-              <p><strong>Category:</strong> <span>${
-                product.categorys || "N/A"
-              }</span></p>
+              <p><strong>Category:</strong> <span>${categoryNames}</span></p>
             </div>
             <div class="view-modal-variants">
               <h4 class="text-lg font-semibold mt-4 mb-2">Variants</h4>
@@ -531,6 +638,54 @@
       closeViewModal.addEventListener("click", () =>
         viewModal.classList.add("hidden")
       );
+
+      // Function to show error popup
+      function showErrorPopup(message) {
+        const popup = document.getElementById("errorPopup");
+        const messageElement = document.getElementById("errorMessage");
+
+        messageElement.textContent = message || "An unexpected error occurred.";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close manually
+      document.getElementById("closeErrorPopup").addEventListener("click", () => {
+        document.getElementById("errorPopup").classList.add("hidden");
+      });
+
+      // Function to show success popup
+      function showSuccessPopup(message) {
+        const popup = document.getElementById("successPopup");
+        const messageElement = document.getElementById("successMessage");
+
+        messageElement.textContent = message || "Success!";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close success popup manually
+      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+        document.getElementById("successPopup").classList.add("hidden");
+      });
+
+      // Display server-side flash messages on load
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        showErrorPopup("<%= errorMessage %>");
+      <% } %>
+      <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+        showSuccessPopup("<%= successMessage %>");
+      <% } %>
     </script>
   </body>
 </html>

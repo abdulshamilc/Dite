@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OTP Verification - Dité</title>
+  <link rel="stylesheet" href="/style/user/signupOtpVerification.css">
+</head>
+<body>
+  <div class="otp-container">
+    <!-- OTP Verification Form -->
+    <div class="otp-form">
+      <div class="logo">
+        <img src="/images/logo/Dite White Logo.png" alt="Dité Logo">
+      </div>
+      <form action="/signup/verify-otp" method="POST">
+        <h2 class="otp-title">Confirm with OTP</h2>
+        <p class="otp-instruction">Please check your mail address for OTP</p>
+        
+       <span class="error" id="otpError"><%= errors?.otp || '' %></span>
+
+        <!-- OTP Inputs -->
+        <div class="otp-input-group">
+          <input type="text" class="otp-input" maxlength="1" name="otp1" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+          <input type="text" class="otp-input" maxlength="1" name="otp2" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+          <input type="text" class="otp-input" maxlength="1" name="otp3" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+          <input type="text" class="otp-input" maxlength="1" name="otp4" pattern="[0-9]" inputmode="numeric" autocomplete="one-time-code">
+        </div>
+
+        <div class="otp-timer">
+          <span class="timer-text">Remaining Time: <span id="timer">00:57</span></span>
+          <a href="/signup/resend-otp" class="resend-link">Didn't you receive code? Resend</a>
+        </div>
+
+        <button type="submit" class="confirm-btn">confirm</button>
+      </form>
+
+      <div class="back-link-container">
+        <a href="/signup" class="back-link">Go back to Signup page</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Auto-focus functionality for OTP inputs
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs[0].focus(); // Focus on first input on load
+
+    otpInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const value = e.target.value;
+        if (value.length === 1 && /\d/.test(value)) {
+          // Move to next input if valid digit
+          if (index < otpInputs.length - 1) {
+            otpInputs[index + 1].focus();
+          }
+        } else {
+          // Clear invalid input
+          e.target.value = '';
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+          // Move to previous input on backspace if current is empty
+          otpInputs[index - 1].focus();
+        }
+      });
+
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const digits = paste.replace(/\D/g, '').slice(0, otpInputs.length - index);
+        let currentIndex = index;
+        digits.split('').forEach((digit) => {
+          if (currentIndex < otpInputs.length) {
+            otpInputs[currentIndex].value = digit;
+            currentIndex++;
+          }
+        });
+        if (currentIndex < otpInputs.length) {
+          otpInputs[currentIndex].focus();
+        } else {
+          otpInputs[otpInputs.length - 1].focus();
+        }
+      });
+    });
+
+    // Optional: Timer functionality (you can implement countdown logic here)
+    // For now, it's static as per design
+  </script>
+</body>
+</html>

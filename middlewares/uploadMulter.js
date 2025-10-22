@@ -2,13 +2,17 @@ import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../services/cloudinaryStorage.js";
 
-//Cloudinary storage
-
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
+  cloudinary,
   params: (req, file) => {
+    // Decide the folder dynamically
+    let folder = "others";
+
+    if (req.baseUrl.includes("/products")) folder = `products/${req.body.productId || "general"}`;
+    else if (req.baseUrl.includes("/profile")) folder = `profile_pics/${req.user?._id || "unknown"}`;
+    
     return {
-      folder: `products/${req.body.productId}`, // dynamic folder
+      folder,
       allowed_formats: ["jpg", "png", "jpeg", "webp"],
     };
   },

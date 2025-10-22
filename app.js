@@ -77,6 +77,9 @@ app.use(express.static(path.join(__dirname, "public")));
 app.use("/admin", adminRouter); //admin router
 app.use("/", userRouter); //User Router
 
+app.use("/admin",(req, res) => {
+  res.status(404).render('pageNotFoundAdmin'); 
+});
 app.use((req, res) => {
   res.status(404).render('pageNotFound'); 
 });

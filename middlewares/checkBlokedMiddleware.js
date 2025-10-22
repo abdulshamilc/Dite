@@ -1,4 +1,4 @@
-import User from "../models/userModels.js";
+import {User} from "../models/userModels.js";
 
 
 const isBlocked = async(req,res,next)=>{

@@ -1,6 +1,6 @@
 import Address from "../../models/addressModel.js";
 import Cart from "../../models/cartModel.js";
-import User from "../../models/userModels.js";
+import {User} from "../../models/userModels.js";
 
 const getCheckout = async (req, res) => {
   const userEmail = req.session.user;

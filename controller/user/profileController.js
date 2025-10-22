@@ -1,4 +1,4 @@
-import User from "../../models/userModels.js";
+import { User } from "../../models/userModels.js";
 import Address from "../../models/addressModel.js";
 
 const getProfile = async (req, res) => {
@@ -19,16 +19,23 @@ const postProfile = async (req, res) => {
   try {
     const { name, gender, email, phone } = req.body;
 
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email: req.session.user });
 
     if (!user) {
       return res.status(404).send("User not found");
     }
 
+    let imageUrl = user.image; // keep existing one
+    if (req.file) {
+      imageUrl = req.file.path;
+    }
+
+    // Update fields
+
     user.name = name;
     user.gender = gender;
-    user.email = email;
     user.phone = phone || "";
+    user.image = imageUrl;
 
     await user.save();
 
@@ -48,7 +55,11 @@ const getAddress = async (req, res) => {
     const user = await User.findOne({ email: email });
     const address = await Address.find({ userId: user._id, isDeleted: false });
 
-    res.render("user/profile/address", { address, currentPath: req.path, user });
+    res.render("user/profile/address", {
+      address,
+      currentPath: req.path,
+      user,
+    });
   } catch (error) {
     console.log(error);
   }
@@ -180,6 +191,16 @@ const postDeletetAdress = async (req, res) => {
   }
 };
 
+const userlogOut = (req, res) => {
+  try {
+    delete req.session.user;
+    return res.redirect("/");
+  } catch (error) {
+    console.log(error);
+    res.status(500).send("Internal server error");
+  }
+};
+
 export {
   getProfile,
   postProfile,
@@ -188,4 +209,5 @@ export {
   postEditAddress,
   postsetDefaultAdress,
   postDeletetAdress,
+  userlogOut,
 };

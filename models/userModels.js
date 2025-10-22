@@ -22,7 +22,6 @@ const userSchema = new mongoose.Schema(
     gender: {
       type: String,
       enum: ["Male", "Female", "Others" ,"Not" ],
-      required: true,
     },
     image:{
       type: String,
@@ -47,4 +46,31 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-export default mongoose.model("User", userSchema);
+
+const userOtpVerificationSchema = new mongoose.Schema({
+  email:{
+    type:String,
+    required:true,
+  },
+  action:{
+    type:String,
+    required : true
+  },
+  otp:{
+    type:Number
+  },
+  resetToken:{
+    type:String
+  },
+  createdAt:{
+    type:Date,
+    default:Date.now,
+    expires:300    
+  },
+})
+
+
+const User = mongoose.model("User", userSchema);
+const UserOtpVerification = mongoose.model("UserOtpVerificationSchema", userOtpVerificationSchema);
+
+export{User ,UserOtpVerification} 

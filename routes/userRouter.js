@@ -1,12 +1,17 @@
 import express from "express";
 import passport from "passport";
+import upload from "../middlewares/uploadMulter.js";
 
 import {
   notLogginedHome,
   getSignup,
   signup,
+  getSignupOtpVerify,
+  resendSignupOtp,
+  postSignupOtpVerify,
   getLogin,
   login,
+  getForgotPassword,
   userBloked,
 } from "../controller/user/userController.js";
 
@@ -18,6 +23,7 @@ import {
   postEditAddress,
   postsetDefaultAdress,
   postDeletetAdress,
+  userlogOut,
 } from "../controller/user/profileController.js";
 
 import {
@@ -75,8 +81,15 @@ router.get("/", notLogginedHome);
 router.get("/signup", getSignup);
 
 router.post("/signup", signup);
+
+router.get("/signup/verify-otp", getSignupOtpVerify);
+router.get("/signup/resend-otp", resendSignupOtp);
+router.post("/signup/verify-otp", postSignupOtpVerify);
+
 router.get("/login", getLogin);
 router.post("/login", login);
+
+router.get("/forgot-password", getForgotPassword);
 
 router.get("/userBloked", userBloked);
 
@@ -96,7 +109,7 @@ router.post("/cart/delete/:id", isAuthenticatedUser,isBlocked, deleteCart);
 router.post("/cart/quantity/:id", isAuthenticatedUser,isBlocked, updateQuatity);
 
 router.get("/profile", isAuthenticatedUser, isBlocked, getProfile);
-router.post("/profile", isAuthenticatedUser, isBlocked, postProfile);
+router.post("/profile", isAuthenticatedUser, isBlocked , upload.single("image") , postProfile);
 
 router.get("/address", isAuthenticatedUser, isBlocked, getAddress);
 router.post("/add-address", isAuthenticatedUser, isBlocked, postAddAddress);
@@ -120,11 +133,14 @@ router.post(
 );
 
 
-router.get('/checkout/address',getCheckout);
-router.post('/checkout/address/save-location/:id',addGeolocation);
-router.post('/checkout/address/clear-location/:id',clearGeolocation);
-router.post('/checkout/address/add-newaddress',addNewAddress);
+router.get('/checkout/address',isAuthenticatedUser,isBlocked,getCheckout);
+router.post('/checkout/address/save-location/:id',isAuthenticatedUser,isBlocked,addGeolocation);
+router.post('/checkout/address/clear-location/:id',isAuthenticatedUser,isBlocked,clearGeolocation);
+router.post('/checkout/address/add-newaddress',isAuthenticatedUser,isBlocked,addNewAddress);
 
-router.get('/checkout/payment/:id',getPaymentpage);
+router.get('/checkout/payment/:id',isAuthenticatedUser,isBlocked,getPaymentpage);
 
+
+
+router.get('/logout',userlogOut);
 export default router;

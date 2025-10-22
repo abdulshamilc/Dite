@@ -35,6 +35,7 @@
       <h2 class="text-2xl font-bold text-center mb-6">Edit Product</h2>
 
       <form
+        id="editProductForm"
         action="/admin/products/edit-product/<%= product._id %>"
         method="POST"
         enctype="multipart/form-data"
@@ -225,25 +226,38 @@
       span.addEventListener('click', () => removeCategory(id, name));
     });
 
-    // Image cropping
+    // ✅ Fixed Image cropping + preview
     function handleFileChange(event, index) {
       const file = event.target.files[0];
       if (!file) return;
+
       const reader = new FileReader();
       reader.onload = e => {
         const img = document.getElementById(`preview-${index}`);
-        img.src = e.target.result;
+        const placeholder = document.getElementById(`placeholder-${index}`);
+
+        if (croppers[index]) {
+          croppers[index].destroy();
+          croppers[index] = null;
+        }
+
+        if (placeholder) placeholder.classList.add('hidden');
         img.classList.remove('hidden');
-        document.getElementById(`placeholder-${index}`).classList.add('hidden');
-        if (croppers[index]) croppers[index].destroy();
-        croppers[index] = new Cropper(img, { aspectRatio: 3/4, viewMode: 1 });
+        img.src = e.target.result; // ✅ show new image immediately
+
+        img.onload = () => {
+          croppers[index] = new Cropper(img, {
+            aspectRatio: 3 / 4,
+            viewMode: 1,
+            autoCropArea: 1
+          });
+        };
       };
       reader.readAsDataURL(file);
     }
 
-    // Variants
+    // Variants (unchanged)
     function addVariantHandler() {
-      // Create new variant group
       const div = document.createElement("div");
       div.className = "variant-group grid grid-cols-4 gap-4 p-4 bg-gray-800 rounded";
       div.innerHTML = `
@@ -266,25 +280,16 @@
           <button type="button" class="add-variant nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full">Add Variant</button>
         </div>
       `;
-
-      // Remove existing "Add Variant" buttons
       document.querySelectorAll(".add-variant").forEach(btn => btn.remove());
-
-      // Append new variant group
       variantsContainer.appendChild(div);
-
-      // Attach event listeners to new buttons
       div.querySelector(".add-variant").addEventListener("click", addVariantHandler);
       div.querySelector(".remove-variant").addEventListener("click", removeVariantHandler);
-
       variantCount++;
     }
 
     function removeVariantHandler() {
       const variantGroup = this.closest(".variant-group");
       variantGroup.remove();
-
-      // Ensure the last variant group has an "Add Variant" button
       const allGroups = variantsContainer.querySelectorAll(".variant-group");
       if (allGroups.length > 0) {
         const lastGroup = allGroups[allGroups.length - 1];
@@ -299,25 +304,46 @@
       }
     }
 
-    // Attach event listeners to existing buttons
     document.querySelectorAll(".add-variant").forEach(btn => btn.addEventListener("click", addVariantHandler));
     document.querySelectorAll(".remove-variant").forEach(btn => btn.addEventListener("click", removeVariantHandler));
 
-    // Form submission with cropped images
-    document.querySelector("form").addEventListener("submit", function(e){
+    document.getElementById("editProductForm").addEventListener("submit", function(e){
       e.preventDefault();
       const form = e.target;
       const formData = new FormData(form);
       const cropKeys = Object.keys(croppers);
-      if(cropKeys.length === 0){ form.submit(); return; }
+      if(cropKeys.length === 0){ 
+        submitForm(formData);
+        return; 
+      }
 
       Promise.all(cropKeys.map(idx => new Promise(resolve => {
-        croppers[idx].getCroppedCanvas().toBlob(blob => {
-          formData.append("images[]", blob, `image-${idx}.jpg`);
+        if (croppers[idx]) {
+          croppers[idx].getCroppedCanvas().toBlob(blob => {
+            formData.append("images[]", blob, `image-${idx}.jpg`);
+            resolve();
+          }, "image/jpeg");
+        } else {
           resolve();
-        }, "image/jpeg");
-      }))).then(()=> form.submit());
+        }
+      }))).then(() => submitForm(formData));
     });
+
+    function submitForm(formData) {
+      fetch(form.action, {
+        method: 'POST',
+        body: formData
+      }).then(response => {
+        if (response.ok) {
+          window.location.href = '/admin/products';
+        } else {
+          alert('Error updating product. Please try again.');
+        }
+      }).catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while updating the product.');
+      });
+    }
   </script>
 </body>
 </html>

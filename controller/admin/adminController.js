@@ -1,4 +1,4 @@
-import User from "../../models/userModels.js";
+import { User } from "../../models/userModels.js";
 import { Admin, AdmiResetPassword } from "../../models/adminModels.js";
 import Categories from "../../models/categories.js";
 import Products from "../../models/productsModels.js";
@@ -6,7 +6,7 @@ import sendMail from "../../services/mailer.js";
 import bcrypt from "bcryptjs";
 import addCategoryValidation from "../../validators/addCatogoryValidation.js";
 import jwt from "jsonwebtoken";
-import passwordSchema from '../../validators/resetPasswordValidator.js'
+import passwordSchema from "../../validators/resetPasswordValidator.js";
 const secret = process.env.JWT_SECRET;
 
 const pageNotFound = (req, res) => {
@@ -124,11 +124,32 @@ const forgetPassword = async (req, res) => {
 
 const getOtpVerification = (req, res) => {
   try {
+    if (!req.session.email) return res.redirect("/admin/forgot-password");
     res.render("admin/otpForgetPassword");
   } catch (error) {
     console.log(error);
   }
 };
+
+// const resendOtp = async (req, res) => {
+//   try {
+//    if (!req.session.email) return res.redirect("/admin/forgot-password");
+
+//     const  email  = req.session.email;
+
+//     // Delete any old OTPs for that email
+//     await AdmiResetPassword.deleteMany({ email });
+
+//     genarateOTP(email);
+
+//     // Optionally set a message for feedback
+//     req.session.otpSuccess = "A new OTP has been sent to your email.";
+//     res.redirect("/signup/verify-otp");
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).send("Error resending OTP");
+//   }
+// };
 
 const PostOtpVerification = async (req, res) => {
   try {
@@ -159,6 +180,7 @@ const PostOtpVerification = async (req, res) => {
 
     await AdmiResetPassword.deleteOne({ _id: adminOtp._id });
 
+    delete req.session.email;
     return res.json({
       success: true,
       redirectUrl: `/admin/reset-password/${resetToken}`,
@@ -172,40 +194,87 @@ const PostOtpVerification = async (req, res) => {
 const getResetPasword = async (req, res) => {
   const { token } = req.params;
   try {
+    // Check if token exists in DB
+    const tokenExist = await AdmiResetPassword.findOne({ resetToken: token });
+    if (!tokenExist) {
+      return res.render("pageNotFoundAdmin");
+    }
+
+    // Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    res.render("admin/resetForgetPassword", { email: decoded.email, token });
+    res.render("admin/resetForgetPassword", {
+      email: decoded?.email || null,
+      token: token,
+      errorMsg: null,
+      successMsg: null,
+    });
   } catch (error) {
-    console.log(error);
-    return res.status(400).send("Invalid or expired reset link");
+    let msg = "Invalid reset link.";
+    if (error.name === "TokenExpiredError")
+      msg = "Reset link expired. Please request a new one.";
+
+    return res.render("admin/resetForgetPassword", {
+      email: null,
+      token: null,
+      errorMsg: msg,
+      successMsg: null,
+    });
   }
 };
 
 const postResetPassword = async (req, res) => {
   try {
-    const token = req.params.token 
+    console.log("Working");
+    const token = req.params.token;
     const { newPassword, confirmPassword } = req.body;
 
-     const { error } = passwordSchema.validate({ newPassword, confirmPassword });
-     if (error) {
+    const { error } = passwordSchema.validate({ newPassword, confirmPassword });
+    if (error) {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    console.log("Tocken = "+token) ;
+    console.log("Tocken = " + token);
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res
+          .status(400)
+          .json({ message: "Reset link expired. Please request a new one." });
+      }
+      return res.status(400).json({ message: "Invalid reset token." });
+    }
 
     const email = decoded.email;
 
-    const admin = await Admin.findOne({ email });
+    const admin = await Admin.findOne({ email: email });
+    const isSame = await bcrypt.compare(newPassword, admin.password);
+    if (isSame) {
+      return res
+        .status(400)
+        .json({
+          message: "New password cannot be the same as the old password.",
+        });
+    }
 
-    admin.password = await bcrypt.hash(newPassword ,10)
-    await admin.save() ;
-    
+    admin.password = await bcrypt.hash(newPassword, 10);
+    await admin.save();
 
+    await AdmiResetPassword.deleteOne({ resetToken: token });
+
+    return res.json({
+      success: true,
+      message: "Password reset successful. You can now log in.",
+      redirect: "/admin/login",
+    });
   } catch (error) {
-
-    console.log(error)
+    console.error("Error in postResetPassword:", error);
+    return res
+      .status(500)
+      .json({ message: "Something went wrong", error: error.message });
   }
 };
 
@@ -220,6 +289,14 @@ const getOrders = (req, res) => {
 
 const getProducts = async (req, res) => {
   try {
+
+    const errorMessage = req.session.errorMessage;
+    const successMessage = req.session.successMessage;
+
+    // Clear them so they don’t reappear after refresh
+    req.session.errorMessage = null;
+    req.session.successMessage = null;
+
     // pagination
     const { page, limit, skip } = req.pagination;
 
@@ -270,6 +347,8 @@ const getProducts = async (req, res) => {
       limit,
       currentPage: page,
       totalPages: Math.ceil(totelProducts / limit),
+      errorMessage,
+      successMessage,
     });
   } catch (error) {
     console.error(error);
@@ -352,10 +431,12 @@ const postAddProducts = async (req, res) => {
       );
     }
 
+    req.session.successMessage = "New Product Has Been Added";
     res.redirect("/admin/products");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    req.session.errorMessage = "Something Went Wrong";
+    res.redirect("/admin/products");
   }
 };
 
@@ -366,8 +447,9 @@ const getEditProducts = async (req, res) => {
 
     res.render("admin/editProducts", { categories, product });
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server Error");
+    console.error(error);
+    req.session.errorMessage = "Something Went Wrong";
+    res.redirect("/admin/products");
   }
 };
 
@@ -416,10 +498,12 @@ const postEditProduct = async (req, res) => {
 
     await product.save();
 
+    req.session.successMessage = "Product Has Been Edited ";
     res.redirect("/admin/products");
   } catch (err) {
-    console.error(err);
-    res.status(500).send("Server Error");
+    console.error(error);
+    req.session.errorMessage = "Something Went Wrong";
+    res.redirect("/admin/products");
   }
 };
 
@@ -429,6 +513,7 @@ const unlistProduct = async (req, res) => {
 
     product.isListed = !product.isListed;
     await product.save();
+    req.session.successMessage = "Product Status Has Been Changed  ";
     res.redirect("/admin/products");
   } catch (error) {
     console.error(error);
@@ -442,6 +527,7 @@ const deleteProduct = async (req, res) => {
 
     product.isDeleted = !product.isDeleted;
     await product.save();
+    req.session.successMessage = "Product Status Has Been Deleted  ";
     res.redirect("/admin/products");
   } catch (error) {
     console.error(error);
@@ -526,6 +612,14 @@ const getSaleReport = async (req, res) => {
 // Category fields
 const getCategories = async (req, res) => {
   try {
+    // ✅ Move flash messages from session → res.locals
+    const errorMessage = req.session.errorMessage;
+    const successMessage = req.session.successMessage;
+
+    // Clear them so they don’t reappear after refresh
+    req.session.errorMessage = null;
+    req.session.successMessage = null;
+
     // Pagination
     const { page, limit, skip } = req.pagination;
 
@@ -571,6 +665,8 @@ const getCategories = async (req, res) => {
       limit,
       currentPage: page,
       totalPages: Math.ceil(totalCategories / limit),
+      errorMessage,
+      successMessage,
     });
   } catch (error) {
     console.error(error);
@@ -582,21 +678,16 @@ const addCategorie = async (req, res) => {
   try {
     const { name, description } = req.body;
 
-    // Validating the Fields
-    const { error, value } = addCategoryValidation.validate(req.body);
-    if (error)
-      return res.status(400).json({ message: error.details[0].message });
+    if (!name || !description) {
+      req.session.errorMessage = "Both name and description are required.";
+      return res.redirect("/admin/categories");
+    }
 
-    //Checking the category already exist or not
+    // Check if category exists
     const existingCategory = await Categories.findOne({ name });
     if (existingCategory) {
-      const errors = {};
-      errors.userExist = "User Already Exists ";
-
-      return res.status(400).render("user/signup", {
-        errors,
-        oldData: req.body,
-      });
+      req.session.errorMessage = "Category already exists!";
+      return res.redirect("/admin/categories");
     }
 
     const newCategories = new Categories({
@@ -605,6 +696,7 @@ const addCategorie = async (req, res) => {
     });
 
     await newCategories.save();
+    req.session.successMessage = "Category added successfully!";
     res.redirect("/admin/categories");
   } catch (error) {
     console.log(error);
@@ -617,10 +709,21 @@ const editCategory = async (req, res) => {
     const categorie = await Categories.findOne({ _id: req.params.id });
     const { name, description } = req.body;
 
+    if (!name || !description) {
+      req.session.errorMessage = "Both name and description are required.";
+      return res.redirect("/admin/categories");
+    }
+
+    const existingCategory = await Categories.findOne({ name });
+    if (existingCategory && existingCategory != categorie.name) {
+      req.session.errorMessage = "Category already exists!";
+      return res.redirect("/admin/categories");
+    }
     categorie.name = name;
     categorie.description = description;
 
     await categorie.save();
+    req.session.successMessage = "Category Edited successfully!";
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
@@ -633,6 +736,9 @@ const DeactivateCategory = async (req, res) => {
 
     categorie.isActive = !categorie.isActive;
     await categorie.save();
+    if (categorie.isActive)
+      req.session.successMessage = "Category Activated successfully!";
+    else req.session.successMessage = "Category Deactivated successfully!";
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
@@ -646,6 +752,7 @@ const deleteCategory = async (req, res) => {
 
     categorie.isDeleted = !categorie.isDeleted;
     await categorie.save();
+    req.session.successMessage = "Category Deleted successfully!";
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
@@ -655,8 +762,8 @@ const deleteCategory = async (req, res) => {
 
 const logOut = (req, res) => {
   try {
-    delete req.session.admin ;
-    return res.redirect('/admin') ;
+    delete req.session.admin;
+    return res.redirect("/admin");
   } catch (error) {
     console.log(error);
     res.status(500).send("Internal server error");

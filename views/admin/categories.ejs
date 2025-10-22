@@ -261,51 +261,54 @@ aside {
     </div>
 
     <!-- Add Category Modal -->
-    <div
-      id="addCategoryModal"
-      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-    >
-      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
-        <h2 class="text-lg font-bold mb-4">Add New Category</h2>
-        <form id="addCategoryForm" method="POST" action="/admin/categories/addCategorie">
-          <div class="mb-4">
-            <label for="categoryName" class="block text-gray-300 mb-2">Name</label>
-            <input
-              type="text"
-              id="categoryName"
-              name="name"
-              class="w-full bg-gray-800 p-2 rounded text-white"
-              placeholder="Enter category name"
-            />
-          </div>
-          <div class="mb-4">
-            <label for="categoryDescription" class="block text-gray-300 mb-2">Description</label>
-            <textarea
-              id="categoryDescription"
-              name="description"
-              class="w-full bg-gray-800 p-2 rounded text-white"
-              placeholder="Enter category description"
-              rows="4"
-            ></textarea>
-          </div>
-          <div class="flex justify-end space-x-4">
-            <button
-              type="button"
-              id="cancelAdd"
-              class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              class="px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
-            >
-              Add
-            </button>
-          </div>
-        </form>
+<div
+  id="addCategoryModal"
+  class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+>
+  <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
+    <h2 class="text-lg font-bold mb-4">Add New Category</h2>
+    <form id="addCategoryForm" method="POST" action="/admin/categories/addCategorie">
+      <div class="mb-4">
+        <label for="categoryName" class="block text-gray-300 mb-2">Name</label>
+        <input
+          type="text"
+          id="categoryName"
+          name="name"
+          class="w-full bg-gray-800 p-2 rounded text-white border border-gray-700 focus:border-yellow-600 focus:outline-none"
+          placeholder="Enter category name"
+        />
+        <p id="nameError" class="text-red-500 text-sm mt-1 hidden"></p>
       </div>
-    </div>
+      <div class="mb-4">
+        <label for="categoryDescription" class="block text-gray-300 mb-2">Description</label>
+        <textarea
+          id="categoryDescription"
+          name="description"
+          class="w-full bg-gray-800 p-2 rounded text-white border border-gray-700 focus:border-yellow-600 focus:outline-none"
+          placeholder="Enter category description"
+          rows="4"
+        ></textarea>
+        <!-- <CHANGE> Added error message field for description validation -->
+        <p id="descriptionError" class="text-red-500 text-sm mt-1 hidden"></p>
+      </div>
+      <div class="flex justify-end space-x-4">
+        <button
+          type="button"
+          id="cancelAdd"
+          class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          class="px-4 py-2 bg-yellow-600 rounded hover:bg-yellow-700"
+        >
+          Add
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
     <!-- Edit Category Modal -->
     <div
@@ -391,6 +394,29 @@ aside {
         <span class="text-gray-400">per page</span>
       </div>
     </div>
+    <!-- Error Popup Modal -->
+<div
+  id="errorPopup"
+  class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+>
+  <i data-lucide="alert-circle" class="w-5 h-5"></i>
+  <span id="errorMessage">Something went wrong!</span>
+  <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+    <i data-lucide="x" class="w-4 h-4"></i>
+  </button>
+</div>
+
+<!-- Success Popup Modal -->
+<div
+  id="successPopup"
+  class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+>
+  <i data-lucide="check-circle" class="w-5 h-5"></i>
+  <span id="successMessage">Success!</span>
+  <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+    <i data-lucide="x" class="w-4 h-4"></i>
+  </button>
+</div>
 
     <script>
       lucide.createIcons();
@@ -516,7 +542,99 @@ aside {
         document.getElementById("editCategoryModal").classList.add("hidden");
         document.getElementById("editCategoryForm").reset();
       });
+
+  // Function to show error popup
+  function showErrorPopup(message) {
+    const popup = document.getElementById("errorPopup");
+    const messageElement = document.getElementById("errorMessage");
+
+    messageElement.textContent = message || "An unexpected error occurred.";
+    popup.classList.remove("hidden");
+    popup.classList.add("opacity-100", "translate-y-0");
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+      popup.classList.add("hidden");
+    }, 4000);
+  }
+
+  // Close manually
+  document.getElementById("closeErrorPopup").addEventListener("click", () => {
+    document.getElementById("errorPopup").classList.add("hidden");
+  });
+
+  // Function to show success popup
+  function showSuccessPopup(message) {
+    const popup = document.getElementById("successPopup");
+    const messageElement = document.getElementById("successMessage");
+
+    messageElement.textContent = message || "Success!";
+    popup.classList.remove("hidden");
+    popup.classList.add("opacity-100", "translate-y-0");
+
+    // Auto-hide after 4 seconds
+    setTimeout(() => {
+      popup.classList.add("hidden");
+    }, 4000);
+  }
+
+  // Close success popup manually
+  document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+    document.getElementById("successPopup").classList.add("hidden");
+  });
+
+  // Display server-side flash messages on load
+  <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+    showErrorPopup("<%= errorMessage %>");
+  <% } %>
+  <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+    showSuccessPopup("<%= successMessage %>");
+  <% } %>
+
+  // Client-side validation for add category form
+  const addForm = document.getElementById("addCategoryForm");
+  const nameInput = document.getElementById("categoryName");
+  const descInput = document.getElementById("categoryDescription");
+  const nameError = document.getElementById("nameError");
+  const descError = document.getElementById("descriptionError");
+
+  // Clear errors on input
+  nameInput.addEventListener("input", () => {
+    nameError.classList.add("hidden");
+    nameInput.classList.remove("border-red-500");
+  });
+  descInput.addEventListener("input", () => {
+    descError.classList.add("hidden");
+    descInput.classList.remove("border-red-500");
+  });
+
+  // Validate on submit
+  addForm.addEventListener("submit", (e) => {
+    let isValid = true;
+
+    // Validate name
+    if (!nameInput.value.trim()) {
+      nameError.textContent = "Name is required.";
+      nameError.classList.remove("hidden");
+      nameInput.classList.add("border-red-500");
+      isValid = false;
+    }
+
+    // Validate description
+    if (!descInput.value.trim()) {
+      descError.textContent = "Description is required.";
+      descError.classList.remove("hidden");
+      descInput.classList.add("border-red-500");
+      isValid = false;
+    }
+
+    if (!isValid) {
+      e.preventDefault();
+      showErrorPopup("Please fill in all required fields.");
+    }
+  });
+
+      
     </script>
   </body>
 </html>
-```
