@@ -1,5 +1,6 @@
 import { User } from "../../models/userModels.js";
-import Address from "../../models/addressModel.js";
+import {Address} from "../../models/addressModel.js";
+import Order from "../../models/ordersModel.js";
 
 const getProfile = async (req, res) => {
   try {
@@ -190,6 +191,51 @@ const postDeletetAdress = async (req, res) => {
     console.error(error);
   }
 };
+const getOrders = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.redirect('/login');
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.redirect('/login');
+    }
+
+    // Pagination
+    let page = parseInt(req.query.page) || 1;
+    if (page < 1) page = 1;
+    const limit = 5;
+    const skip = (page - 1) * limit;
+
+    const totalOrders = await Order.countDocuments({ userId: user._id });
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      pages.push(i);
+    }
+
+    const orders = await Order.find({ userId: user._id })
+      .sort({ placedAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();  // Faster reads
+
+    // Pass raw orders (handle formatting in EJS)
+    res.render('user/profile/orders', {
+      orders: orders || [],  // Ensure array
+      totalPages,
+      currentPage: page,
+      pages
+    });
+  } catch (error) {
+    console.error('Error fetching order history:', error);
+    res.status(500).send('Internal Server Error');
+  }
+};
+
 
 const userlogOut = (req, res) => {
   try {
@@ -209,5 +255,6 @@ export {
   postEditAddress,
   postsetDefaultAdress,
   postDeletetAdress,
+  getOrders,
   userlogOut,
 };

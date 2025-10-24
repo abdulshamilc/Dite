@@ -1,6 +1,8 @@
-import Address from "../../models/addressModel.js";
+import {Address} from "../../models/addressModel.js";
 import Cart from "../../models/cartModel.js";
-import {User} from "../../models/userModels.js";
+import { User } from "../../models/userModels.js";
+import Order from "../../models/ordersModel.js";
+import { nanoid } from "nanoid";
 
 const getCheckout = async (req, res) => {
   const userEmail = req.session.user;
@@ -111,27 +113,100 @@ const addNewAddress = async (req, res) => {
   }
 };
 
+const getPaymentpage = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    const addressId = req.params.id;
 
-const getPaymentpage = async (req,res)=>{
+    if (!userEmail) return res.redirect("/login");
 
- try {
-   const userEmail = req.session.user ;
-  const addressId = req.params.id ;
+    const user = await User.findOne({ email: userEmail });
+    const cart = await Cart.findOne({ userId: user._id });
+    const selectedAddress = await Address.findById(addressId);
 
-   if (!userEmail) return res.redirect("/login");
+    if (!selectedAddress) return res.status(404).send("Address not found");
 
-   const user = await User.findOne({email : userEmail}) ;
-   const cart = await Cart.findOne({userId:user._id}) ;
-   const selectedAddress  = await Address.findById(addressId) ;
+    res.render("user/checkout/finalChekout", { user, cart, selectedAddress });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const placeOrder = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.session.user });
+    if (!user) return res.redirect('/login');
+
+    const { addressId, items, paymentMethod } = req.body;
+
+    const selectedAddress = await Address.findById(addressId);
+
+    if (!selectedAddress) {
+      return res.status(400).json({ message: "Invalid address ID" });
+    }
+
+   
+    const totalAmount = items.reduce((acc, item) => {
+      const price = item.discoundedPrice ?? item.basePrice; 
+      return acc + price * item.quantity;
+    }, 0);
+
+    const newOrder = new Order({
+      orderID: `ORD-${nanoid(8)}`,
+      userId: user._id,
+      address: selectedAddress,
+      items: items.map((item) => ({
+        productId: item.productId,
+        name: item.name,
+        basePrice: item.basePrice,
+        discoundedPrice: item.discoundedPrice,
+        quantity: item.quantity,
+        image: item.image,
+      })),
+      paymentMethod,
+      totalAmount,
+      orderStatus: "Placed",
+      tracking: [
+        {
+          status: "Placed",
+          message: "Your order has been placed successfully",
+        },
+      ],
+      placedAt: new Date(),
+    });
+
+    req.session.orderplaced = true ;
+    await newOrder.save();
+    
 
 
-   if (!selectedAddress) return res.status(404).send("Address not found");
+  } catch (error) {
+    console.error("Error in placeOrder:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
-  res.render("user/checkout/finalChekout", { user, cart, selectedAddress });
 
- } catch (error) {
-  console.log(error) ;  
- }
+const getSuccessPage = async(req,res)=>{
+  
+  const user = await User.findOne({email:req.session.user}) ;
+  if(!user)res.redirect('/login') ;
+  
+  if(!req.session.orderplaced)res.redirect('/cart') ;
+  
+  await Cart.deleteMany({userId: user._id})
+
+  res.render('user/checkout/succuss')
 }
 
-export { getCheckout, addGeolocation, clearGeolocation , addNewAddress , getPaymentpage };
+
+export {
+  getCheckout,
+  addGeolocation,
+  clearGeolocation,
+  addNewAddress,
+  getPaymentpage,
+  placeOrder,
+  getSuccessPage,
+};
+

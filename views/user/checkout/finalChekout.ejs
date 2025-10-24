@@ -688,18 +688,39 @@
 
     <script>
       // Confirm Order (stub - integrate with backend, check payment selected)
-      function confirmOrder() {
-        const selectedPayment = document.querySelector(".payment-radio:checked");
-        if (!selectedPayment) {
-          alert("Please select a payment method.");
-          return;
-        }
-        // Collect data: cart, selectedAddress._id, paymentMethod
-        // Example: fetch('/order/confirm', { method: 'POST', body: JSON.stringify({ cart, addressId: '<%= selectedAddress._id %>', payment: selectedPayment.value }), headers: { 'Content-Type': 'application/json' } })
-        alert("Order confirmed! (Implement backend logic)");
-        // window.location.href = '/order/success'; // Uncomment for redirect
-      }
+     function confirmOrder() {
+  const selectedPayment = document.querySelector(".payment-radio:checked");
+  if (!selectedPayment) {
+    alert("Please select a payment method.");
+    return;
+  }
 
+  fetch('/checkout/placeOrder', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      items: <%- JSON.stringify(cart.items) %>,  // send all cart items
+      addressId: '<%= selectedAddress._id %>',   // send selected address
+      paymentMethod: selectedPayment.value       // send payment method
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    // Assuming your backend responds with { success: true } on success
+    if (data.success) {
+      // Payment/order successful → redirect to success page
+      window.location.href = '/checkout/success';
+    } else {
+      // Payment/order failed → redirect to failed page
+      window.location.href = '/checkout/failed';
+    }
+  })
+  .catch(err => {
+    console.error('Error:', err);
+    // Redirect to failed page if network or server error occurs
+    window.location.href = '/checkout/failed';
+  });
+}
       // Handle payment selection
       document.addEventListener("DOMContentLoaded", function () {
         const paymentRadios = document.querySelectorAll(".payment-radio");

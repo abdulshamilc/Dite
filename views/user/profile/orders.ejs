@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Same styles as before */
+        :root {
+            --primary: #080808;
+            --secondary: #ffffff;
+            --accent: #d4af37;
+            --border: #333333;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: var(--secondary);
+        }
+        
+        .accent-text { color: var(--accent); }
+        .accent-border { border-color: var(--accent); }
+        .order-card {
+            background-color: #262626;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .order-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+        .status-pending { background-color: rgba(212, 175, 55, 0.1); color: var(--accent); }
+        .status-shipped { background-color: rgba(100, 200, 100, 0.1); color: #64c864; }
+        .status-delivered { background-color: rgba(100, 200, 100, 0.1); color: #64c864; }
+        .pagination-btn { @apply px-3 py-2 rounded-md font-medium transition-colors; }
+        .pagination-btn:hover:not(.disabled) { @apply bg-gray-700 text-accent; }
+        .pagination-btn.active { @apply bg-accent text-primary font-semibold; }
+        .pagination-btn.disabled { @apply text-gray-500 cursor-not-allowed; }
+
+        /* Style for clickable order link */
+        .order-link {
+            @apply block no-underline text-current;
+        }
+        .order-link:hover {
+            @apply no-underline text-current;
+        }
+    </style>
+</head>
+<body>
+    <%- include("../../partials/user/header") %>
+    <div class="min-h-screen pt-20 p-8 flex flex-col items-center justify-center"> <!-- Added flex flex-col items-center justify-center for vertical/horizontal centering -->
+        <!-- Page Header - Centered -->
+        <div class="max-w-6xl mx-auto mb-12 text-center"> <!-- Added text-center -->
+            <h1 class="text-4xl font-bold mb-2">Your Orders</h1>
+            <p class="text-gray-400">Track and manage your orders</p>
+            <div class="h-1 w-20 accent-border border-t-2 mt-4 mx-auto"></div> <!-- Added mx-auto for underline centering -->
+        </div>
+
+        <!-- Filter Button - Centered -->
+        <div class="max-w-6xl mx-auto mb-8 text-center w-full">
+            <button class="bg-accent text-primary px-6 py-3 rounded-md font-semibold hover:bg-opacity-90 transition-colors inline-block">
+                Filter Orders
+            </button>
+        </div>
+
+        <!-- Orders Container -->
+        <div class="max-w-6xl mx-auto space-y-4 mb-8 w-full">
+            <% if (orders && orders.length > 0) { %>
+                <% orders.forEach(function(order) { %>
+                <!-- Transform inline: Format ID, status, date, etc. -->
+                <% 
+                    // Format ID from _id
+                    const formattedId = `#ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+                    
+                    // Map status
+                    let statusText = order.status || 'Processing';
+                    let statusClass = 'pending';
+                    if (order.status === 'shipped' || order.status === 'Shipped') {
+                        statusText = 'Shipped';
+                        statusClass = 'shipped';
+                    } else if (order.status === 'delivered' || order.status === 'Delivered') {
+                        statusText = 'Delivered';
+                        statusClass = 'delivered';
+                    }
+                    
+                    // Date logic (current date: Oct 24, 2025)
+                    const today = new Date('2025-10-24');
+                    let dateLabel = 'Estimated Delivery';
+                    let dateValue;
+                    if (statusText === 'Delivered' && order.deliveredAt) {
+                        dateLabel = 'Delivered On';
+                        dateValue = order.deliveredAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    } else {
+                        const placedDate = new Date(order.placedAt || today);
+                        const estimatedDate = new Date(placedDate);
+                        estimatedDate.setDate(estimatedDate.getDate() + 7);  // +7 days
+                        dateValue = estimatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    }
+                    
+                    // Other formats
+                    const totalFormatted = `${parseFloat(order.totalAmount || 0).toFixed(2)} RS`;
+                    const itemsCount = order.items ? order.items.length : 0;
+                    const tracking = order.trackingNumber || 'Pending';
+                %>
+                <!-- Order Card - Wrapped in Link -->
+                <a href="/order/<%= order._id %>" class="order-link">
+                    <div class="order-card rounded-lg p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div>
+                                <p class="text-gray-400 text-sm mb-1">Order ID</p>
+                                <p class="text-xl font-semibold accent-text"><%= formattedId %></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm mb-1">Status</p>
+                                <span class="status-<%= statusClass %> px-3 py-1 rounded-full text-sm font-medium inline-block"><%= statusText %></span>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm mb-1">
+                                    <% if (statusText === 'Delivered') { %>
+                                        Delivered On
+                                    <% } else { %>
+                                        Estimated Delivery
+                                    <% } %>
+                                </p>
+                                <p class="text-lg font-semibold"><%= dateValue %></p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm mb-1">Total Amount</p>
+                                <p class="text-lg font-semibold accent-text"><%= totalFormatted %></p>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-700">
+                            <p class="text-sm text-gray-400">Items: <%= itemsCount %> | Tracking: <%= tracking %></p>
+                        </div>
+                    </div>
+                </a>
+                <% }); %>
+            <% } else { %>
+                <div class="text-center py-12">
+                    <p class="text-gray-400 text-lg">No orders found.</p>
+                </div>
+            <% } %>
+        </div>
+
+        <!-- Pagination: Same -->
+        <% if (totalPages > 1) { %>
+        <div class="max-w-6xl mx-auto flex justify-center items-center space-x-2">
+            <a href="?page=<%= currentPage > 1 ? currentPage - 1 : 1 %>" 
+               class="pagination-btn <%= currentPage === 1 ? 'disabled' : '' %>">
+                Previous
+            </a>
+            <% pages.forEach(function(p) { %>
+                <a href="?page=<%= p %>" 
+                   class="pagination-btn <%= currentPage === p ? 'active' : '' %>">
+                    <%= p %>
+                </a>
+            <% }); %>
+            <a href="?page=<%= currentPage < totalPages ? currentPage + 1 : totalPages %>" 
+               class="pagination-btn <%= currentPage === totalPages ? 'disabled' : '' %>">
+                Next
+            </a>
+        </div>
+        <% } %>
+    </div>
+</body>
+</html>

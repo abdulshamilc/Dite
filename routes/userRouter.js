@@ -23,6 +23,7 @@ import {
   postEditAddress,
   postsetDefaultAdress,
   postDeletetAdress,
+  getOrders,
   userlogOut,
 } from "../controller/user/profileController.js";
 
@@ -49,6 +50,8 @@ import {
   clearGeolocation,
   addNewAddress,
   getPaymentpage,
+  placeOrder,
+  getSuccessPage,
 } from "../controller/user/checkoutController.js" ;
 
 
@@ -132,14 +135,17 @@ router.post(
   postDeletetAdress
 );
 
+router.get("/orders", isAuthenticatedUser, isBlocked, getOrders);
 
 router.get('/checkout/address',isAuthenticatedUser,isBlocked,getCheckout);
 router.post('/checkout/address/save-location/:id',isAuthenticatedUser,isBlocked,addGeolocation);
 router.post('/checkout/address/clear-location/:id',isAuthenticatedUser,isBlocked,clearGeolocation);
 router.post('/checkout/address/add-newaddress',isAuthenticatedUser,isBlocked,addNewAddress);
+router.post('/checkout/placeOrder',isAuthenticatedUser,isBlocked,placeOrder);
 
 router.get('/checkout/payment/:id',isAuthenticatedUser,isBlocked,getPaymentpage);
 
+router.get('/checkout/sucess',isAuthenticatedUser,isBlocked,getSuccessPage);
 
 
 router.get('/logout',userlogOut);
