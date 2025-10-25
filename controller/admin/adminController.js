@@ -2,6 +2,7 @@ import { User } from "../../models/userModels.js";
 import { Admin, AdmiResetPassword } from "../../models/adminModels.js";
 import Categories from "../../models/categories.js";
 import Products from "../../models/productsModels.js";
+import Orders from '../../models/ordersModel.js'
 import sendMail from "../../services/mailer.js";
 import bcrypt from "bcryptjs";
 import addCategoryValidation from "../../validators/addCatogoryValidation.js";
@@ -281,8 +282,57 @@ const postResetPassword = async (req, res) => {
 const getDashboard = (req, res) => {
   res.render("admin/pageNotFound");
 };
-const getOrders = (req, res) => {
-  res.render("admin/pageNotFound");
+const getOrders = async (req, res) => {
+  try {
+    const errorMessage = req.session.errorMessage;
+    const successMessage = req.session.successMessage;
+    req.session.errorMessage = null;
+    req.session.successMessage = null;
+
+    const { page, limit, skip } = req.pagination;
+
+  
+
+    const orders = await Orders.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalOrders = await Orders.countDocuments();
+
+
+    const pendingOrdersCount = await Orders.countDocuments({
+      orderStatus: { $in: ["Placed", "Shipped"] }
+    });
+    const completedOrdersCount = await Orders.countDocuments({
+      orderStatus: "Delivered"  
+    })
+
+    const revenueResult = await Orders.aggregate([
+      { $match: {  orderStatus: "Delivered" } },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalAmount" } } }  
+    ]);
+    const totalRevenueCount = revenueResult.length > 0 ? revenueResult : [{ totalRevenue: 0 }];
+
+    const totalPages = Math.ceil(totalOrders / limit);
+    const currentPage = page;
+
+    res.render("admin/orders", {
+      orders,
+      totalOrders,
+      pendingOrdersCount,  // Now matches template
+      completedOrdersCount, 
+      totalRevenueCount,  // Now matches template structure
+      currentPage,
+      totalPages,
+      limit,
+      errorMessage,
+      successMessage
+    });
+  } catch (error) {
+    console.error("Error loading orders page:", error);
+    return res.redirect("/admin");
+  }
 };
 
 // Product Field

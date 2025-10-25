@@ -158,8 +158,9 @@ const placeOrder = async (req, res) => {
       items: items.map((item) => ({
         productId: item.productId,
         name: item.name,
+        mlSize:item.mlsize,
         basePrice: item.basePrice,
-        discoundedPrice: item.discoundedPrice,
+        discoundedPrice: item.discountedPrice,
         quantity: item.quantity,
         image: item.image,
       })),
@@ -178,7 +179,7 @@ const placeOrder = async (req, res) => {
     req.session.orderplaced = true ;
     await newOrder.save();
     
-
+    res.json({ success: true });
 
   } catch (error) {
     console.error("Error in placeOrder:", error);
@@ -200,6 +201,19 @@ const getSuccessPage = async(req,res)=>{
 }
 
 
+const getFailedPage = async(req,res)=>{
+  
+  const user = await User.findOne({email:req.session.user}) ;
+  if(!user)res.redirect('/login') ;
+  
+  if(!req.session.orderplaced)res.redirect('/cart') ;
+  
+  await Cart.deleteMany({userId: user._id})
+
+  res.render('user/checkout/failed')
+}
+
+
 export {
   getCheckout,
   addGeolocation,
@@ -208,5 +222,6 @@ export {
   getPaymentpage,
   placeOrder,
   getSuccessPage,
+  getFailedPage,
 };
 

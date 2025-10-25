@@ -236,6 +236,25 @@ const getOrders = async (req, res) => {
   }
 };
 
+const getOrderDetails = async (req, res) => {
+  const orderId = req.params.id;
+  if (!orderId) return res.redirect('/login');
+
+  const user = await User.findOne({ email: req.session.user });
+  if (!user) return res.redirect('/login');
+
+  const order = await Order.findById(orderId)
+  if (!order) return res.redirect('/orders');
+
+  const subTotal = order.items.reduce((acc, ele) => acc + (ele.basePrice * ele.quantity), 0);
+
+  const discount = (order.items.reduce((acc, ele) => acc + (ele.discoundedPrice * ele.quantity), 0)) - subTotal
+
+  const totalAmount = order.items.reduce((acc, ele) => acc + (ele.discoundedPrice * ele.quantity), 0)
+
+  res.render('user/profile/orderDetails', { order ,subTotal , discount ,totalAmount });
+};
+
 
 const userlogOut = (req, res) => {
   try {
@@ -256,5 +275,6 @@ export {
   postsetDefaultAdress,
   postDeletetAdress,
   getOrders,
+  getOrderDetails,
   userlogOut,
 };

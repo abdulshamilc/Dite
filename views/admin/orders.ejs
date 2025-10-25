@@ -1,122 +1,361 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dite - Orders</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <link rel="stylesheet" href="/css/admin.css">
-   <style>
-    .bg-brand { background-color: #C5A987; }
-    .text-brand { color: #C5A987; }
-    .border-brand { border-color: #C5A987; }
-    aside {
-      border-right: 2px solid transparent;
-      border-image: linear-gradient(to bottom, #C5A987, transparent) 1;
-    }
-    .nav-btn {
-      transition: all 0.3s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    .nav-btn:hover {
-      transform: translateX(4px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    .nav-btn.active {
-      box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
-    }
-    .logout-btn {
-      transition: all 0.3s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    .logout-btn:hover {
-      transform: translateX(4px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-  </style>
-</head>
-<body class="min-h-screen bg-black">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orders</title>
+    <link rel="stylesheet" href="/style/admin/orders.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../partials/admin/admin-header") %>
 
-  <!-- Header Partial -->
-  <%- include("../partials/admin/admin-header") %>
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../partials/admin/admin-sidebar") %>
 
-  <div class="flex">
-    <!-- Sidebar Partial -->
-    <%- include("../partials/admin/admin-sidebar") %>
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <div class="mb-6">
+          <h1 class="text-2xl font-bold mb-4">Order Management</h1>
+          <div class="flex justify-between mb-4">
+            <button class="bg-yellow-600 px-4 py-2 rounded">
+              + Export Orders
+            </button>
+          </div>
+          <div
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 place-items-center"
+          >
+            <div class="count-box">
+              <p class="text-gray-400">Total Orders</p>
+              <p class="text-xl font-bold"><%= totalOrders %></p>
+            </div>
+            <div class="count-box">
+              <p class="text-gray-400">Pending Orders</p>
+              <p class="text-xl font-bold text-yellow-400">
+                <%= pendingOrdersCount %>
+              </p>
+            </div>
+            <div class="count-box">
+              <p class="text-gray-400">Completed Orders</p>
+              <p class="text-xl font-bold text-green-400">
+                <%= completedOrdersCount %>
+              </p>
+            </div>
+            <div class="count-box">
+              <p class="text-gray-400">Total Revenue</p>
+              <p class="text-xl font-bold">
+                Rs.<%= totalRevenueCount[0].totalRevenue %>
+              </p>
+            </div>
+          </div>
+          <div class="flex justify-between mb-4">
+            <span>All Orders</span>
+            <div class="flex space-x-4">
+              <select class="bg-gray-800 p-2 rounded">
+                <option>All Status</option>
+                <option>Pending</option>
+                <option>Processing</option>
+                <option>Completed</option>
+                <option>Cancelled</option>
+              </select>
+              <!-- Search bar -->
+              <input
+                type="text"
+                placeholder="Search Order ID or Customer..."
+                class="bg-gray-800 p-2 rounded"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-800">
+                <th class="px-4 py-2 text-left">ORDER ID</th>
+                <th class="px-4 py-2 text-left">CUSTOMER</th>
+                <th class="px-4 py-2 text-left">DATE</th>
+                <th class="px-4 py-2 text-left">TOTAL</th>
+                <th class="px-4 py-2 text-left">ITEMS</th>
+                <th class="px-4 py-2 text-left">QUANTITY</th>
+                <th class="px-4 py-2 text-left">STATUS</th>
+                <th class="px-4 py-2 text-left">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% orders.forEach(order => { %>
+              <tr class="border-b border-gray-700 hover:bg-gray-900">
+                <td class="px-4 py-2"><%= order.orderID %></td>
+                <td class="px-4 py-2"><%= order.address.fullName %></td>
+                <td class="px-4 py-2"><%= new Date(order.placedAt).toLocaleDateString() %></td>
+                <td class="px-4 py-2">Rs <%= order.totalAmount %></td>
+                <td class="px-4 py-2 align-top">
+                  <% order.items.forEach((item, index) => { %>
+                    <div><%= item.name %> <%= item.size ? `(${item.size}ml)` : '' %></div>
+                    <% if (index < order.items.length - 1) { %><br><% } %>
+                  <% }) %>
+                </td>
+                <td class="px-4 py-2 align-top">
+                  <% order.items.forEach((item, index) => { %>
+                    <div><%= item.quantity %></div>
+                    <% if (index < order.items.length - 1) { %><br><% } %>
+                  <% }) %>
+                </td>
+                <td class="px-4 py-2">
+                  <% if(order.orderStatus === 'Completed') { %>
+                  <span class="status-active">Completed</span>
+                  <% } else if(order.orderStatus === 'Pending') { %>
+                  <span class="status-pending">Pending</span>
+                  <% } else if(order.orderStatus === 'Processing') { %>
+                  <span class="status-processing">Processing</span>
+                  <% } else if(order.orderStatus === 'Cancelled') { %>
+                  <span class="status-blocked">Cancelled</span>
+                  <% } else { %>
+                  <span class="status-<%= order.orderStatus.toLowerCase() %>"><%= order.orderStatus %></span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 flex space-x-2">
+                  <!-- View Button -->
+                  <a
+                    href="/admin/orders/<%= order._id %>"
+                    class="text-brand"
+                  >
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </a>
 
-    <!-- Page Content -->
-    <main class="flex-1 p-6 text-white">
-      <h2 class="text-2xl font-bold">Orders</h2>
-      <p>Here you can view and manage all orders.</p>
+                  <!-- Update Status Button -->
+                  <button
+                    type="button"
+                    class="text-blue-500 hover:text-blue-600 open-status-modal"
+                    data-id="<%= order._id %>"
+                    data-current-status="<%= order.orderStatus %>"
+                  >
+                    <i data-lucide="edit" class="w-5 h-5"></i>
+                  </button>
 
-      <!-- Example Orders Table -->
-      <div class="mt-6 overflow-x-auto">
-        <table class="min-w-full text-left border border-gray-700">
-          <thead class="bg-gray-800 text-gray-200">
-            <tr>
-              <th class="px-4 py-2 border-b border-gray-600">Order ID</th>
-              <th class="px-4 py-2 border-b border-gray-600">Customer</th>
-              <th class="px-4 py-2 border-b border-gray-600">Status</th>
-              <th class="px-4 py-2 border-b border-gray-600">Total</th>
-              <th class="px-4 py-2 border-b border-gray-600">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr class="border-b border-gray-700">
-              <td class="px-4 py-2">#1001</td>
-              <td class="px-4 py-2">John Doe</td>
-              <td class="px-4 py-2">Processing</td>
-              <td class="px-4 py-2">$120.00</td>
-              <td class="px-4 py-2">
-                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="px-4 py-2">#1002</td>
-              <td class="px-4 py-2">Jane Smith</td>
-              <td class="px-4 py-2">Shipped</td>
-              <td class="px-4 py-2">$75.00</td>
-              <td class="px-4 py-2">
-                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="px-4 py-2">#1003</td>
-              <td class="px-4 py-2">John mith</td>
-              <td class="px-4 py-2">Shipped</td>
-              <td class="px-4 py-2">$75.00</td>
-              <td class="px-4 py-2">
-                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="px-4 py-2">#1004</td>
-              <td class="px-4 py-2">Smith</td>
-              <td class="px-4 py-2">Shipped</td>
-              <td class="px-4 py-2">$75.00</td>
-              <td class="px-4 py-2">
-                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
-              </td>
-            </tr>
-            <tr class="border-b border-gray-700">
-              <td class="px-4 py-2">#1005</td>
-              <td class="px-4 py-2">Jane </td>
-              <td class="px-4 py-2">Shipped</td>
-              <td class="px-4 py-2">$75.00</td>
-              <td class="px-4 py-2">
-                <button class="px-3 py-1 bg-brand text-black rounded hover:opacity-80">View</button>
-              </td>
-            
-            
-          </tbody>
-        </table>
+                  <!-- Delete Button -->
+                  <button
+                    type="button"
+                    class="text-red-500 hover:text-red-600 open-delete-modal"
+                    data-id="<%= order._id %>"
+                    data-order-id="<%= order.orderID %>"
+                  >
+                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                  </button>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <!-- Status Update Modal -->
+    <div
+      id="statusModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-lg font-bold mb-4">Update Order Status</h2>
+        <p class="mb-4 text-gray-300">Select new status for order:</p>
+
+        <form id="statusForm" method="POST">
+          <div class="mb-6">
+            <select
+              id="newStatus"
+              name="status"
+              class="bg-gray-800 p-2 rounded w-full text-white"
+              required
+            >
+              <option value="">Select Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Processing">Processing</option>
+              <option value="Completed">Completed</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          <div class="flex justify-end space-x-4">
+            <button
+              type="button"
+              id="cancelStatus"
+              class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+            >
+              Update
+            </button>
+          </div>
+        </form>
       </div>
-    </main>
-  </div>
+    </div>
 
-  <script>
-    lucide.createIcons();
-  </script>
-</body>
+    <!-- Confirmation Modal for Delete -->
+    <div
+      id="deleteModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-lg font-bold mb-4">Confirm Action</h2>
+        <p id="deleteMessage" class="mb-6 text-gray-300"></p>
+
+        <div class="flex justify-end space-x-4">
+          <button
+            id="cancelDelete"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <form id="deleteForm" method="POST">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+            >
+              Confirm
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination and Page Limit -->
+    <div class="flex justify-between items-center mt-4">
+      <!-- Pagination Controls (Centered) -->
+      <div class="flex-1 flex justify-center items-center space-x-4">
+        <% if (totalPages > 1) { %>
+          <% if (currentPage > 1) { %>
+            <a
+              href="/admin/orders?page=<%= currentPage - 1 %>&limit=<%= limit %>"
+              class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+            >
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </a>
+          <% } %>
+          <span class="text-gray-400">
+            <%= currentPage %> / <%= totalPages %>
+          </span>
+          <% if (currentPage < totalPages) { %>
+            <a
+              href="/admin/orders?page=<%= currentPage + 1 %>&limit=<%= limit %>"
+              class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+            >
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          <% } %>
+        <% } %>
+      </div>
+
+      <!-- Page Limit Dropdown (Right) -->
+      <div class="flex items-center space-x-2">
+        <label for="pageLimit" class="text-gray-400">Show</label>
+        <select
+          id="pageLimit"
+          class="bg-gray-800 p-2 rounded text-white"
+          onchange="changePageLimit(this.value)"
+        >
+          <option value="5" <%= limit == 5 ? 'selected' : '' %>>5</option>
+          <option value="10" <%= limit == 10 ? 'selected' : '' %>>10</option>
+          <option value="20" <%= limit == 20 ? 'selected' : '' %>>20</option>
+          <option value="50" <%= limit == 50 ? 'selected' : '' %>>50</option>
+        </select>
+        <span class="text-gray-400">per page</span>
+      </div>
+    </div>
+
+    <script>
+      lucide.createIcons();
+
+      // Handle page limit change
+      function changePageLimit(limit) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('limit', limit);
+        url.searchParams.set('page', 1); // Reset to page 1 when limit changes
+        window.location.href = url.toString();
+      }
+
+      // Status modal handling
+      let currentOrderId = null;
+
+      document.querySelectorAll(".open-status-modal").forEach((button) => {
+        button.addEventListener("click", () => {
+          currentOrderId = button.dataset.id;
+          const currentStatus = button.dataset.currentStatus;
+
+          // Set current status in select
+          document.getElementById("newStatus").value = currentStatus;
+
+          // Update form action
+          document.getElementById("statusForm").action = `/admin/orders/${currentOrderId}/status`;
+
+          // Show modal
+          document.getElementById("statusModal").classList.remove("hidden");
+        });
+      });
+
+      // Cancel status button
+      document.getElementById("cancelStatus").addEventListener("click", () => {
+        document.getElementById("statusModal").classList.add("hidden");
+        currentOrderId = null;
+      });
+
+      // Close status modal on outside click
+      document.getElementById("statusModal").addEventListener("click", (e) => {
+        if (e.target.id === "statusModal") {
+          document.getElementById("statusModal").classList.add("hidden");
+          currentOrderId = null;
+        }
+      });
+
+      // Delete modal handling
+      document.querySelectorAll(".open-delete-modal").forEach((button) => {
+        button.addEventListener("click", () => {
+          const orderId = button.dataset.id;
+          const orderIdDisplay = button.dataset.orderId;
+
+          // Update modal message
+          document.getElementById(
+            "deleteMessage"
+          ).textContent = `Are you sure you want to delete order ${orderIdDisplay}?`;
+
+          // Update form action
+          document.getElementById(
+            "deleteForm"
+          ).action = `/admin/orders/delete/${orderId}`;
+
+          // Show modal
+          document.getElementById("deleteModal").classList.remove("hidden");
+        });
+      });
+
+      // Cancel delete button
+      document.getElementById("cancelDelete").addEventListener("click", () => {
+        document.getElementById("deleteModal").classList.add("hidden");
+      });
+
+      // Close delete modal on outside click
+      document.getElementById("deleteModal").addEventListener("click", (e) => {
+        if (e.target.id === "deleteModal") {
+          document.getElementById("deleteModal").classList.add("hidden");
+        }
+      });
+    </script>
+
+    <style>
+      .status-active { @apply px-2 py-1 bg-green-600 text-white rounded text-xs; }
+      .status-pending { @apply px-2 py-1 bg-yellow-600 text-white rounded text-xs; }
+      .status-processing { @apply px-2 py-1 bg-blue-600 text-white rounded text-xs; }
+      .status-blocked { @apply px-2 py-1 bg-red-600 text-white rounded text-xs; }
+      .status-placed { @apply px-2 py-1 bg-yellow-600 text-white rounded text-xs; }
+      .status-shipped { @apply px-2 py-1 bg-blue-600 text-white rounded text-xs; }
+      .status-delivered { @apply px-2 py-1 bg-green-600 text-white rounded text-xs; }
+      .status-cancelled { @apply px-2 py-1 bg-red-600 text-white rounded text-xs; }
+    </style>
+  </body>
 </html>

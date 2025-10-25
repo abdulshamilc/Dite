@@ -1,176 +1,59 @@
-"use client"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Success - Dité</title>
+    <link rel="stylesheet" href="/style/user/header.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles to match the design */
+        .tracking-wider { letter-spacing: 0.05em; }
+        .border-cyan-400 { border-color: #22d3ee; }
+        .hover\:text-cyan-400:hover { color: #22d3ee; }
+        .bg-green-500 { background-color: #22c55e; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .border-b-2 { border-bottom-width: 2px; }
+        .hover\:border-cyan-400:hover { border-color: #22d3ee; }
+    </style>
+</head>
+<body class="min-h-screen bg-black text-white flex flex-col">
+    <%- include("../../partials/user/header") %>
 
-import Link from "next/link"
-import { Check, Search, ShoppingCart, User, Instagram, Facebook, Twitter, Youtube } from "lucide-react"
-
-export default function OrderSuccessPage() {
-  return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
-      {/* Header */}
-      <header className="border-b-2 border-cyan-400 bg-black">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          {/* Logo */}
-          <div className="text-2xl font-bold tracking-wider">Dité</div>
-
-          {/* Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link href="/" className="hover:text-cyan-400 transition">
-              HOME
-            </Link>
-            <Link href="/shop" className="hover:text-cyan-400 transition">
-              SHOP
-            </Link>
-            <Link href="/categories" className="hover:text-cyan-400 transition">
-              CATEGORIES
-            </Link>
-          </nav>
-
-          {/* Icons */}
-          <div className="flex items-center gap-6">
-            <button className="hover:text-cyan-400 transition">
-              <Search size={20} />
-            </button>
-            <button className="hover:text-cyan-400 transition">
-              <ShoppingCart size={20} />
-            </button>
-            <button className="hover:text-cyan-400 transition">
-              <User size={20} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-20">
-        <div className="text-center max-w-2xl">
-          {/* Green Checkmark */}
-          <div className="flex justify-center mb-8">
-            <div className="relative">
-              <div className="w-40 h-40 border-4 border-cyan-400 rounded-lg flex items-center justify-center bg-black">
-                <div className="w-32 h-32 bg-green-500 rounded-lg flex items-center justify-center animate-pulse">
-                  <Check size={80} className="text-black" strokeWidth={3} />
+    <!-- Main Content -->
+    <main class="flex-1 flex items-center justify-center px-4 py-20">
+        <div class="text-center max-w-2xl">
+            <!-- Green Checkmark -->
+            <div class="flex justify-center mb-8">
+                <div class="relative">
+                    <div class="w-40 h-40 border-4 border-cyan-400 rounded-lg flex items-center justify-center bg-black">
+                        <div class="w-32 h-32 bg-green-500 rounded-lg flex items-center justify-center animate-pulse">
+                            <!-- Simple checkmark icon using SVG -->
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-black" stroke-width="3">
+                                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
-              </div>
             </div>
-          </div>
 
-          {/* Thank You Message */}
-          <h1 className="text-3xl md:text-4xl font-bold mb-8 tracking-wide">THANK YOU FOR ORDERING</h1>
+            <!-- Thank You Message -->
+            <h1 class="text-3xl md:text-4xl font-bold mb-8 tracking-wider">THANK YOU FOR ORDERING</h1>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-8 justify-center items-center">
-            <Link
-              href="/orders"
-              className="text-lg font-semibold tracking-wider hover:text-cyan-400 transition border-b-2 border-transparent hover:border-cyan-400 pb-2"
-            >
-              VIEW ORDERS
-            </Link>
-            <Link
-              href="/"
-              className="text-lg font-semibold tracking-wider hover:text-cyan-400 transition border-b-2 border-transparent hover:border-cyan-400 pb-2"
-            >
-              CONTINUE SHOPPING
-            </Link>
-          </div>
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-8 justify-center items-center">
+                <a href="/orders" class="text-lg font-semibold tracking-wider hover:text-cyan-400 transition border-b-2 border-transparent hover:border-cyan-400 pb-2">
+                    VIEW ORDERS
+                </a>
+                <a href="/" class="text-lg font-semibold tracking-wider hover:text-cyan-400 transition border-b-2 border-transparent hover:border-cyan-400 pb-2">
+                    CONTINUE SHOPPING
+                </a>
+            </div>
         </div>
-      </main>
+    </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-800 bg-black">
-        {/* Footer Top */}
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            {/* Logo */}
-            <div>
-              <div className="text-3xl font-bold tracking-wider mb-4">Dité</div>
-              {/* Social Icons */}
-              <div className="flex gap-4">
-                <a href="#" className="border border-white p-2 hover:bg-white hover:text-black transition">
-                  <Instagram size={20} />
-                </a>
-                <a href="#" className="border border-white p-2 hover:bg-white hover:text-black transition">
-                  <Facebook size={20} />
-                </a>
-                <a href="#" className="border border-white p-2 hover:bg-white hover:text-black transition">
-                  <Twitter size={20} />
-                </a>
-                <a href="#" className="border border-white p-2 hover:bg-white hover:text-black transition">
-                  <Youtube size={20} />
-                </a>
-              </div>
-            </div>
-
-            {/* Links Columns */}
-            <div>
-              <h3 className="font-bold mb-4 tracking-wider">Home</h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <a href="#" className="hover:text-white transition">
-                    Contact Us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition">
-                    About Us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition">
-                    FAQ's
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="font-bold mb-4 tracking-wider">Products</h3>
-              <ul className="space-y-2 text-gray-400 text-sm">
-                <li>
-                  <a href="#" className="hover:text-white transition">
-                    Men
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition">
-                    Women
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition">
-                    Unisex
-                  </a>
-                </li>
-              </ul>
-            </div>
-
-            {/* Newsletter */}
-            <div>
-              <h3 className="font-bold mb-4 tracking-wider">Subscribe to Newsletter</h3>
-              <div className="flex">
-                <input
-                  type="email"
-                  placeholder="Your Email"
-                  className="flex-1 bg-transparent border border-gray-600 px-3 py-2 text-sm focus:outline-none focus:border-white"
-                />
-                <button className="bg-white text-black px-4 py-2 hover:bg-gray-200 transition">→</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Footer Bottom */}
-          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-400 text-sm">
-            <p>© 2025 Dité. All rights reserved.</p>
-            <div className="flex gap-6 mt-4 md:mt-0">
-              <a href="#" className="hover:text-white transition">
-                Terms & Conditions
-              </a>
-              <a href="#" className="hover:text-white transition">
-                Privacy Policy
-              </a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
-  )
-}
+    <!-- Footer -->
+    <%- include("../../partials/user/footer") %>
+</body>
+</html>

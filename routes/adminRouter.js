@@ -48,7 +48,7 @@ router.post('/reset-password/:token',postResetPassword)
 
 router.get('/dashboard',isAuthenticatedAdmin,getDashboard) 
 
-router.get('/orders',isAuthenticatedAdmin,getOrders) 
+router.get('/orders',isAuthenticatedAdmin,pagination,getOrders) 
 
 router.get('/products',isAuthenticatedAdmin,pagination,getProducts) 
 router.get('/products/add-product',isAuthenticatedAdmin,getAddProducts)
