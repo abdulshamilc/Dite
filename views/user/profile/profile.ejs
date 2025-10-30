@@ -224,6 +224,136 @@
   .file-input {
     display: none;
   }
+
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+  }
+  .modal-content {
+    background-color: var(--surface);
+    color: #1a1a1a;
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: var(--radius);
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    box-shadow: 0 12px 30px rgba(0,0,0,.3);
+  }
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+  }
+  .close:hover {
+    color: var(--accent);
+  }
+  .modal-title {
+    text-align: center;
+    color: var(--accent);
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .modal-message {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #666;
+    font-size: 14px;
+  }
+  .otp-input-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .otp-input {
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    font-size: 18px;
+    margin: 0 5px;
+    border: 2px solid #caa880;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+  .otp-input:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .modal-btn {
+    flex: 1;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s;
+    min-width: 100px;
+  }
+  .modal-btn:hover:not(:disabled) {
+    background: #b5823d;
+  }
+  .modal-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .resend-timer {
+    text-align: center;
+    margin-top: 10px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  /* Message Styles */
+  .message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    max-width: 350px;
+  }
+  .message {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  .message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
 </style>
 
 <body>
@@ -236,6 +366,8 @@
       <main class="card view-mode" aria-labelledby="profile-details-title">
         <button class="edit-btn" onclick="toggleEditMode()">Edit</button>
         
+        
+
         <div class="avatar-container">
           <img src="<%= user.image || '/images/default-avatar.jpg' %>" alt="Profile Picture" class="avatar-lg" id="avatarLg">
           <button type="button" class="image-overlay" onclick="document.getElementById('imageUploadForm').click()" title="Change Photo">📷</button>
@@ -298,24 +430,6 @@
             <input class="field" id="email" name="email" type="email" value="<%= user.email %>" disabled />
             <button type="button" class="verify-to-edit-btn" id="verifyToEditBtn" onclick="sendCurrentOTP()">Verify to Edit</button>
           </div>
-          <div class="current-otp-section" id="currentOtpSection">
-            <div class="otp-row">
-              <label for="currentOtp">Current OTP:</label>
-              <input class="field otp-field" id="currentOtp" name="currentOtp" type="text" placeholder="Enter 6-digit OTP" maxlength="6" />
-              <button type="button" class="send-current-otp-btn" id="sendCurrentOtpBtn" onclick="sendCurrentOTP()" style="display: none;">Resend OTP</button>
-              <button type="button" class="verify-current-otp-btn" id="verifyCurrentOtpBtn" onclick="verifyCurrentOTP()" style="display: none;">Verify OTP</button>
-            </div>
-            <small style="color: #666; margin-left: 136px;">We'll send a 6-digit code to your current email for verification.</small>
-          </div>
-          <div class="otp-section" id="otpSection">
-            <div class="otp-row">
-              <label for="otp">New OTP:</label>
-              <input class="field otp-field" id="otp" name="otp" type="text" placeholder="Enter 6-digit OTP" maxlength="6" />
-              <button type="button" class="send-otp-btn" id="sendOtpBtn" onclick="sendOTP()">Send OTP</button>
-              <button type="button" class="verify-otp-btn" id="verifyOtpBtn" onclick="verifyOTP()" style="display: none;">Verify OTP</button>
-            </div>
-            <small style="color: #666; margin-left: 136px;">We'll send a 6-digit code to your new email for verification.</small>
-          </div>
 
           <div class="row">
             <label for="phone">Phone:</label>
@@ -334,11 +448,61 @@
     </section>
   </div>
 
+  <!-- OTP Modal -->
+  <div id="otpModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeOTPModal()">&times;</span>
+      <h2 class="modal-title" id="modalTitle">Verify Email</h2>
+      <p class="modal-message" id="modalMessage">OTP sent to <span id="targetEmail"></span></p>
+      <div class="otp-input-container">
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit1" oninput="moveToNext(this, 'otpDigit2')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit2" oninput="moveToNext(this, 'otpDigit3')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit3" oninput="moveToNext(this, 'otpDigit4')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit4" oninput="moveToNext(this, 'otpDigit5')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit5" oninput="moveToNext(this, 'otpDigit6')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit6" oninput="verifyOTPFromModal()" />
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-btn" id="resendBtn" onclick="resendOTP()" disabled>Resend OTP</button>
+        <button class="modal-btn" id="verifyBtn" onclick="verifyOTPFromModal()">Verify</button>
+      </div>
+      <div class="resend-timer" id="resendTimer"></div>
+    </div>
+  </div>
+
+  <!-- Message Container -->
+  <div class="message-container" id="messageContainer"></div>
+
   <script>
     let originalEmail = '<%= user.email %>';
     let otpSent = false;
     let currentVerified = false;
     let newVerified = false;
+    let currentTimer = null;
+    let isCurrentOTP = true; // Flag to distinguish between current and new OTP
+    let currentEmailForOTP = ''; // Track email for resend
+    const RESEND_TIME = 60; // 60 seconds
+
+    // Display server-side success/error messages on page load
+    <% if (typeof success !== 'undefined' && success) { %>
+      showMessage('<%= success %>', 'success');
+    <% } %>
+    <% if (typeof error !== 'undefined' && error) { %>
+      showMessage('<%= error %>', 'error');
+    <% } %>
+
+    function showMessage(message, type = 'success') {
+      const container = document.getElementById('messageContainer');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = message;
+      container.appendChild(msgDiv);
+
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        msgDiv.remove();
+      }, 5000);
+    }
 
     function toggleEditMode() {
       const card = document.querySelector('.card');
@@ -357,8 +521,7 @@
     }
 
     function resetAllStates() {
-      resetCurrentOTPState();
-      resetNewOTPState();
+      resetOTPModal();
       document.getElementById('email').disabled = true;
       document.getElementById('verifyToEditBtn').style.display = 'inline-block';
       currentVerified = false;
@@ -366,116 +529,223 @@
       document.getElementById('submitBtn').disabled = false;
       // Reset image state
       document.getElementById('avatarLg').src = '<%= user.image || '/images/default-avatar.jpg' %>';
-      document.getElementById('imageUploadForm').value = '';  // Updated to clear form input
+      document.getElementById('imageUploadForm').value = '';
     }
 
-    function resetCurrentOTPState() {
-      document.getElementById('currentOtpSection').classList.remove('active');
-      document.getElementById('currentOtpSection').style.display = 'none';
-      document.getElementById('sendCurrentOtpBtn').style.display = 'none';
-      document.getElementById('verifyCurrentOtpBtn').style.display = 'none';
-      document.getElementById('verifyToEditBtn').style.display = 'inline-block';
-      document.getElementById('currentOtp').value = '';
+    function resetOTPModal() {
+      closeOTPModal();
+      if (currentTimer) {
+        clearInterval(currentTimer);
+        currentTimer = null;
+      }
+      // Clear OTP inputs
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById(`otpDigit${i}`).value = '';
+      }
+      document.getElementById('resendBtn').disabled = true;
+      document.getElementById('resendTimer').textContent = '';
     }
 
-    function resetNewOTPState() {
-      document.getElementById('otpSection').classList.remove('active');
-      document.getElementById('sendOtpBtn').style.display = 'inline-block';
-      document.getElementById('verifyOtpBtn').style.display = 'none';
-      document.getElementById('sendOtpBtn').disabled = false;
-      document.getElementById('otp').value = '';
-      otpSent = false;
+    function openOTPModal(email, isCurrent) {
+      currentEmailForOTP = email;
+      isCurrentOTP = isCurrent;
+      document.getElementById('targetEmail').textContent = email;
+      document.getElementById('modalTitle').textContent = isCurrent ? 'Verify Current Email' : 'Verify New Email';
+      document.getElementById('otpModal').style.display = 'block';
+      document.getElementById('otpDigit1').focus();
+      startResendTimer();
+    }
+
+    function closeOTPModal() {
+      document.getElementById('otpModal').style.display = 'none';
+      resetOTPModal();
+    }
+
+    // OTP input navigation
+    function moveToNext(current, nextId) {
+      if (current.value.length === 1 && nextId) {
+        document.getElementById(nextId).focus();
+      }
+    }
+
+    function startResendTimer() {
+      let timeLeft = RESEND_TIME;
+      document.getElementById('resendBtn').disabled = true;
+      document.getElementById('resendTimer').textContent = `Resend in ${timeLeft}s`;
+      currentTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+          document.getElementById('resendTimer').textContent = `Resend in ${timeLeft}s`;
+        } else {
+          document.getElementById('resendBtn').disabled = false;
+          document.getElementById('resendTimer').textContent = 'You can resend now';
+          clearInterval(currentTimer);
+          currentTimer = null;
+        }
+      }, 1000);
+    }
+
+    async function sendOTPToBackend(email, type) {
+      try {
+        const response = await fetch('/profile/changeEmail', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, type })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return { success: true, message: data.message || 'OTP sent successfully!' };
+        } else {
+          const data = await response.json();
+          return { success: false, message: data.message || 'Failed to send OTP' };
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+        return { success: false, message: 'Network error. Please try again.' };
+      }
+    }
+
+    async function resendOTP() {
+      const result = await sendOTPToBackend(currentEmailForOTP, isCurrentOTP ? 'current' : 'new');
+      if (result.success) {
+        showMessage(result.message, 'success');
+      } else {
+        showMessage(result.message, 'error');
+      }
+      startResendTimer();
+    }
+
+    async function verifyOTPFromModal() {
+      const otp = Array.from({length: 6}, (_, i) => document.getElementById(`otpDigit${i+1}`).value).join('');
+      if (otp.length !== 6) {
+        showMessage('Please enter a valid 6-digit OTP.', 'error');
+        return;
+      }
+
+      try {
+        // Send OTP verification to backend route /profile/verify-email
+        const response = await fetch('/profile/verify-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            otp: otp, 
+            email: currentEmailForOTP, 
+            type: isCurrentOTP ? 'current' : 'new' 
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log(`Verifying OTP: ${otp} for ${isCurrentOTP ? 'current' : 'new'} email`);
+          showMessage(isCurrentOTP ? 'Current email verified successfully!' : 'New email verified successfully!', 'success');
+          
+          if (isCurrentOTP) {
+            currentVerified = true;
+            document.getElementById('email').disabled = false;
+            document.getElementById('verifyToEditBtn').style.display = 'none';
+          } else {
+            newVerified = true;
+          }
+          closeOTPModal();
+          if (!isCurrentOTP) {
+            document.getElementById('email').focus();
+          }
+        } else {
+          showMessage(data.message || 'Invalid OTP. Please try again.', 'error');
+          // Clear inputs on error
+          for (let i = 1; i <= 6; i++) {
+            document.getElementById(`otpDigit${i}`).value = '';
+          }
+          document.getElementById('otpDigit1').focus();
+        }
+      } catch (error) {
+        console.error('Verification network error:', error);
+        // showMessage('Network error during verification. Please try again.', 'error');
+        // Clear inputs on error
+        for (let i = 1; i <= 6; i++) {
+          document.getElementById(`otpDigit${i}`).value = '';
+        }
+        document.getElementById('otpDigit1').focus();
+      }
     }
 
     // Initial button click to start current verification
-    function sendCurrentOTP() {
-      // Here, you would typically make an AJAX call to your backend to send OTP to originalEmail
-      // For demo: Simulate sending OTP
-      console.log('Sending current OTP to:', originalEmail); // Replace with actual fetch/post request
-      // alert('Current OTP sent to ' + originalEmail + '! Check your inbox.'); // Uncomment for alert
-
-      document.getElementById('verifyToEditBtn').style.display = 'none';
-      document.getElementById('currentOtpSection').style.display = 'block';
-      document.getElementById('sendCurrentOtpBtn').style.display = 'inline-block';
-      document.getElementById('verifyCurrentOtpBtn').style.display = 'inline-block';
-      document.getElementById('currentOtp').focus();
-    }
-
-    function verifyCurrentOTP() {
-      const currentOtp = document.getElementById('currentOtp').value.trim();
-      if (currentOtp.length !== 6) {
-        alert('Please enter a valid 6-digit OTP.');
-        return;
+    async function sendCurrentOTP() {
+      openOTPModal(originalEmail, true);
+      const result = await sendOTPToBackend(originalEmail, 'current');
+      if (result.success) {
+        showMessage(result.message, 'success');
+      } else {
+        showMessage(result.message, 'error');
+        closeOTPModal();
       }
-      // Here, you would typically make an AJAX call to your backend to verify current OTP
-      // For demo: Simulate verification (always succeeds for now)
-      console.log('Verifying current OTP:', currentOtp); // Replace with actual fetch/post request
-      // alert('Current OTP verified successfully!'); // Uncomment for alert
-
-      currentVerified = true;
-      document.getElementById('email').disabled = false;
-      resetCurrentOTPState(); // Hide the section after verification
-      document.getElementById('email').focus();
     }
 
     document.getElementById('email').addEventListener('input', function() {
       const currentEmail = this.value.trim();
       if (currentVerified && currentEmail && currentEmail !== originalEmail) {
-        document.getElementById('otpSection').classList.add('active');
-      } else {
-        resetNewOTPState();
+        if (!document.getElementById('sendNewOtpBtn')) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'verify-to-edit-btn';
+          btn.id = 'sendNewOtpBtn';
+          btn.textContent = 'Send New OTP';
+          btn.onclick = sendNewOTP;
+          this.parentNode.appendChild(btn);
+        }
       }
     });
 
-    function sendOTP() {
+    async function sendNewOTP() {
       const newEmail = document.getElementById('email').value.trim();
       if (!newEmail || newEmail === originalEmail || !currentVerified) {
-        alert('Please verify your current email first and enter a new email address.');
+        showMessage('Please verify your current email first and enter a new email address.', 'error');
         return;
       }
-      // Here, you would typically make an AJAX call to your backend to send OTP to newEmail
-      // For demo: Simulate sending OTP
-      console.log('Sending new OTP to:', newEmail); // Replace with actual fetch/post request
-      // alert('New OTP sent to ' + newEmail + '! Check your inbox.'); // Uncomment for alert
-      otpSent = true;
-      document.getElementById('sendOtpBtn').style.display = 'none';
-      document.getElementById('verifyOtpBtn').style.display = 'inline-block';
-      document.getElementById('otp').focus();
-    }
-
-    function verifyOTP() {
-      const otp = document.getElementById('otp').value.trim();
-      if (otp.length !== 6) {
-        alert('Please enter a valid 6-digit OTP.');
-        return;
+      openOTPModal(newEmail, false);
+      const result = await sendOTPToBackend(newEmail, 'new');
+      if (result.success) {
+        showMessage(result.message, 'success');
+      } else {
+        showMessage(result.message, 'error');
+        closeOTPModal();
       }
-      // Here, you would typically make an AJAX call to your backend to verify new OTP
-      // For demo: Simulate verification (always succeeds for now)
-      console.log('Verifying new OTP:', otp); // Replace with actual fetch/post request
-      // alert('New OTP verified successfully!'); // Uncomment for alert
-      newVerified = true;
-      document.getElementById('verifyOtpBtn').style.display = 'none';
-      // Optionally, hide OTP section after verification
-      // document.getElementById('otpSection').classList.remove('active');
     }
 
     function handleSubmit(event) {
       const newEmail = document.getElementById('email').value.trim();
       if (newEmail !== originalEmail) {
         if (!currentVerified) {
-          alert('Please verify your current email before changing it.');
+          showMessage('Please verify your current email before changing it.', 'error');
           event.preventDefault();
           return false;
         }
-        const otp = document.getElementById('otp').value.trim();
-        if (!newVerified || !otp || otp.length !== 6) {
-          alert('Please enter and verify the OTP for the new email.');
+        if (!newVerified) {
+          showMessage('Please verify the new email with OTP.', 'error');
           event.preventDefault();
           return false;
         }
       }
-      // Backend should also verify the OTPs on submit for security
-      // For image, the file will be sent
+
+      // Phone number validation: if provided, must be more than 5 digits
+      const phone = document.getElementById('phone').value.trim();
+      if (phone && phone.length <= 5) {
+        showMessage('Enter Valid Phone Number ...', 'error');
+        event.preventDefault();
+        return false;
+      }
+
+      // Simulate form submission success (in real, handle via backend response)
+      // For demo, show success after submit
+      setTimeout(() => {
+        showMessage('Profile updated successfully!', 'success');
+      }, 1000);
       return true;
     }
 
@@ -487,8 +757,17 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         document.getElementById('avatarLg').src = e.target.result;
+        showMessage('Profile picture updated!', 'success');
       };
       reader.readAsDataURL(file);
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+      const modal = document.getElementById('otpModal');
+      if (event.target === modal) {
+        closeOTPModal();
+      }
     }
   </script>
 </body>

@@ -34,6 +34,11 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    twoFactorAuth:{
+      type:Boolean,
+      default:false,
+      required:true
+    },
     isBlocked: {
       type: Boolean,
       default: false,

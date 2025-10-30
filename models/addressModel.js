@@ -15,11 +15,11 @@ const addressSchema = new mongoose.Schema({
     phone:{
         type:String,
         required:true,
-        match: /^[0-9]{10}$/
+        match: /^[0-9]{6,15}$/
     },
     altPhone:{
         type:String,
-        match: /^[0-9]{10}$/
+        match: /^[0-9]{6,15}$/
     },
     hoNo:{
         type:String,

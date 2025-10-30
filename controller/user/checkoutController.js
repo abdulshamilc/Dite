@@ -20,7 +20,7 @@ const getCheckout = async (req, res) => {
       (acc, item) => acc + item.basePrice * item.quantity,
       0
     );
-    total = subtotal; // Add shipping or discounts if any
+    total = subtotal; 
   }
 
   res.render("user/checkout/selectAddress", {
@@ -88,7 +88,7 @@ const addNewAddress = async (req, res) => {
     });
 
     if (existingAddress) {
-      // Address already exists, redirect back
+    
       return res.redirect("/checkout/address");
     }
 

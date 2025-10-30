@@ -6,7 +6,6 @@
     <title>Order History</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Same styles as before */
         :root {
             --primary: #080808;
             --secondary: #ffffff;
@@ -144,7 +143,7 @@
             <% } %>
         </div>
 
-        <!-- Pagination: Same -->
+        <!-- Pagination  -->
         <% if (totalPages > 1) { %>
         <div class="max-w-6xl mx-auto flex justify-center items-center space-x-2">
             <a href="?page=<%= currentPage > 1 ? currentPage - 1 : 1 %>" 

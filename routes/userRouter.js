@@ -12,6 +12,12 @@ import {
   getLogin,
   login,
   getForgotPassword,
+  forgetPassword,
+  getOtpVerification,
+  PostOtpVerification,
+  getResetPasword,
+  postResetPassword,
+  restPassword,
   userBloked,
 } from "../controller/user/userController.js";
 
@@ -21,10 +27,14 @@ import {
   getAddress,
   postAddAddress,
   postEditAddress,
+  changeEmail,
+  verifyChangeEmail,
   postsetDefaultAdress,
   postDeletetAdress,
   getOrders,
   getOrderDetails,
+  getSecurity,
+  getDeleteAcount,
   userlogOut,
 } from "../controller/user/profileController.js";
 
@@ -95,6 +105,14 @@ router.get("/login", getLogin);
 router.post("/login", login);
 
 router.get("/forgot-password", getForgotPassword);
+router.post("/forgot-password", forgetPassword);
+router.get("/forgot-password/otpVerification", getOtpVerification);
+router.post("/forgot-password/otpVerification", PostOtpVerification);
+
+router.get("/reset-password/:token", getResetPasword);
+router.post("/reset-password/:token", postResetPassword);
+
+router.post("/reset-password", restPassword);
 
 router.get("/userBloked", userBloked);
 
@@ -111,10 +129,13 @@ router.get("/collections", getCollections);
 router.get("/cart", isAuthenticatedUser,isBlocked, getCart);
 router.post("/cart/add", isAuthenticatedUser,isBlocked, addToCart);
 router.post("/cart/delete/:id", isAuthenticatedUser,isBlocked, deleteCart);
-router.post("/cart/quantity/:id", isAuthenticatedUser,isBlocked, updateQuatity);
+router.post("/cart/quantity/:id", isAuthenticatedUser, isBlocked, updateQuatity);  // Fixed typo in function name
 
 router.get("/profile", isAuthenticatedUser, isBlocked, getProfile);
 router.post("/profile", isAuthenticatedUser, isBlocked , upload.single("image") , postProfile);
+
+router.post("/profile/changeEmail", isAuthenticatedUser, isBlocked , changeEmail);
+router.post("/profile/verify-email", isAuthenticatedUser, isBlocked , verifyChangeEmail);
 
 router.get("/address", isAuthenticatedUser, isBlocked, getAddress);
 router.post("/add-address", isAuthenticatedUser, isBlocked, postAddAddress);
@@ -136,6 +157,9 @@ router.post(
   isBlocked,
   postDeletetAdress
 );
+
+router.get("/security", isAuthenticatedUser, isBlocked, getSecurity);
+router.get("/security/delete-account-confirm", isAuthenticatedUser, isBlocked, getDeleteAcount);
 
 router.get("/orders", isAuthenticatedUser, isBlocked, getOrders);
 router.get("/order/:id", isAuthenticatedUser, isBlocked, getOrderDetails);

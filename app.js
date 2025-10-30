@@ -8,6 +8,7 @@ import nocache from "nocache";
 import { fileURLToPath } from "url";
 import session from "express-session";
 import passport from "passport";
+import flash  from 'connect-flash';
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 const app = express();
 
@@ -36,11 +37,14 @@ app.use(
 //No Cashe
 app.use(nocache());
 
+
+
 // To accesss the session over all the ejs file 
 app.use((req, res, next) => {
   res.locals.session = req.session;
   next();
 });
+
 
 // Passport setup
 app.use(passport.initialize());
@@ -84,4 +88,4 @@ app.use((req, res) => {
   res.status(404).render('pageNotFound'); 
 });
 
-app.listen(port, () => console.log("Server is Running on 300"));
+app.listen(port, () => console.log(`Server is Running on http://localhost:${port}`));

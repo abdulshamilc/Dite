@@ -1,7 +1,6 @@
 import {User} from "../../models/userModels.js";
 import Cart from "../../models/cartModel.js";
 import Products from "../../models/productsModels.js";
-
 const getCart = async (req, res) => {
   try {
     const email = req.session.user;
@@ -9,6 +8,12 @@ const getCart = async (req, res) => {
 
     const user = await User.findOne({ email: email });
     if (!user) return res.redirect("/login"); // Ensure user exists
+
+    const success = req.session.success ;
+    const error = req.session.error ;
+
+    delete req.session.success ;
+    delete req.session.error ;
 
     const cart = await Cart.findOne({ userId: user._id }).populate(
       "items.productId"
@@ -18,6 +23,8 @@ const getCart = async (req, res) => {
         cart: null,
         subtotal: 0,
         total: 0,
+        success: success,
+        error: error
       });
     }
     const subtotal = cart.items.reduce(
@@ -32,6 +39,8 @@ const getCart = async (req, res) => {
       cart: cart,
       subtotal: subtotal,
       total: total,
+      success:success,
+      error:error
     });
   } catch (error) {
     console.error(error);
@@ -140,25 +149,63 @@ const deleteCart = async (req, res) => {
 const updateQuatity = async (req, res) => {
   try {
     const userEmail = req.session.user;
-    if (!userEmail) return res.redirect("/login");
-
+    if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
+    
     const { action } = req.body;
-    const itemId = req.params;
+    const { id: itemId } = req.params;
+    
+    if (!itemId || !action) {
+      return res.status(400).json({ message: "Invalid request" });
+    }
 
-    const userId = await User.findOne({ email: userEmail });
-    const cart = await Cart.findOne({ userId: userId });
-
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.status(401).json({ message: "User not found" });
+    
+    const cart = await Cart.findOne({ userId: user._id });
+    if (!cart) return res.status(404).json({ message: "Cart not found" });
+    
     const item = cart.items.id(itemId);
+    if (!item) return res.status(404).json({ message: "Item not found" });
 
-    if (action == "inc") item.quantity += 1;
-    else if (action == "dec") {
-      if (item.quantity > 1) item.quantity -= 1;
-      else  cart.items.pull({ _id: itemId });
-    } else return res.redirect("/cart");
+    const product = await Products.findById(item.productId);
+    if (!product) {
+      return res.status(404).json({ message: "This product is missing" });
+    }
+    
+    const selectedVariant = product.variants.find(v => v.mlSize === Number(item.size));
+    if (!selectedVariant) {
+      return res.status(400).json({ message: "Variant not found" });
+    }
 
-    await cart.save();
+    let updated = false;
 
-    res.redirect("/cart");
+    if (action === "inc") {
+      if (item.quantity >= 10) {
+        return res.status(400).json({ message: "Maximum quantity of 10 reached" });
+      }
+      if (selectedVariant.stock < item.quantity + 1) {
+        return res.status(400).json({ message: "The product is out of stock" });
+      }
+      item.quantity += 1;
+      updated = true;
+    } else if (action === "dec") {
+      if (item.quantity > 1) {
+        item.quantity -= 1;
+        updated = true;
+      } else {
+        cart.items.pull({ _id: itemId });
+        updated = true;
+      }
+    } else {
+      return res.status(400).json({ message: "Invalid action" });
+    }
+
+    if (updated) {
+      await cart.save();
+      return res.json({ success: true, message: "Quantity updated successfully" });
+    } else {
+      return res.status(400).json({ message: "No changes made" });
+    }
   } catch (error) {
     console.log(error);
   }

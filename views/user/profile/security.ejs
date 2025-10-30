@@ -1,0 +1,763 @@
+<%- include("../../partials/user/header") %>
+
+<style>
+  :root {
+    --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+    --text:#f5f5f5;        
+    --surface:#ffffff;
+    --accent:#d3a35b;
+    --radius:14px;
+    --danger: #ef4444;
+    --success: #22c55e;
+    --warning: #f59e0b;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color .25s; }
+  a:hover { color: #b5823d; }
+
+  .container {
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: 10px 0px;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 2rem;
+    margin: 20px 0;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  @media (min-width: 960px) {
+    .layout { flex-direction: row; }
+  }
+
+  .card {
+    flex: 1;
+    background: var(--surface);
+    color: #1a1a1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+  }
+
+  .section {
+    margin-bottom: 32px;
+  }
+  .section:last-child {
+    margin-bottom: 0;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-title::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 24px;
+    background: var(--accent);
+    border-radius: 2px;
+  }
+
+  .divider {
+    height: 1px;
+    background: #caa880;
+    opacity: .5;
+    margin: 24px 0;
+  }
+
+  .security-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .security-item:last-child {
+    border-bottom: none;
+  }
+
+  .item-info {
+    flex: 1;
+  }
+  .item-label {
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+  }
+  .item-description {
+    font-size: 14px;
+    color: #666;
+  }
+
+  .item-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .status-enabled {
+    color: var(--success);
+  }
+  .status-disabled {
+    color: #999;
+  }
+  .status-warning {
+    color: var(--warning);
+  }
+
+  .status-badge {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s, transform .25s;
+    font-size: 14px;
+  }
+  .btn:hover {
+    background: #b5823d;
+    transform: scale(1.05);
+  }
+  .btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: scale(1);
+  }
+
+  .btn-danger {
+    background: var(--danger);
+  }
+  .btn-danger:hover {
+    background: #dc2626;
+  }
+
+  .btn-secondary {
+    background: #e5e5e5;
+    color: #1a1a1a;
+  }
+  .btn-secondary:hover {
+    background: #d4d4d4;
+  }
+
+  .form-group {
+    margin-bottom: 20px;
+  }
+  .form-group label {
+    display: block;
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 8px;
+  }
+  .form-group input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #caa880;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .form-group input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(211,163,91,.25);
+    outline: none;
+  }
+
+  .error-message {
+    color: var(--danger);
+    font-size: 12px;
+    margin-top: 5px;
+    display: none;
+    padding: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 4px;
+    border-left: 3px solid var(--danger);
+  }
+
+  /* Notification Styles */
+  .notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 2000;
+    max-width: 350px;
+  }
+
+  .notification {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    margin-bottom: 10px;
+    border-radius: var(--radius);
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    animation: slideIn 0.3s ease forwards;
+  }
+
+  .notification.show {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .notification.success {
+    background: var(--success);
+  }
+
+  .notification.error {
+    background: var(--danger);
+  }
+
+  .notification .close-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .notification .close-btn:hover {
+    opacity: 1;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes slideOut {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  .notification.fade-out {
+    animation: slideOut 0.3s ease forwards;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.active {
+    display: flex;
+  }
+
+  .modal-content {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 32px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  }
+
+  .modal-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin-bottom: 16px;
+  }
+
+  .modal-description {
+    color: #666;
+    margin-bottom: 24px;
+    line-height: 1.6;
+  }
+
+  .modal-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .login-history {
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+
+  .history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #e5e5e5;
+  }
+  .history-item:last-child {
+    border-bottom: none;
+  }
+
+  .history-info {
+    flex: 1;
+  }
+  .history-device {
+    font-weight: 600;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+  }
+  .history-time {
+    font-size: 13px;
+    color: #999;
+  }
+
+  .history-location {
+    font-size: 13px;
+    color: #666;
+    margin-top: 2px;
+  }
+
+  .alert {
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .alert-info {
+    background: #eff6ff;
+    color: #0c4a6e;
+    border: 1px solid #bfdbfe;
+  }
+
+  .alert-warning {
+    background: #fffbeb;
+    color: #78350f;
+    border: 1px solid #fde68a;
+  }
+
+  .alert-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .alert-content {
+    flex: 1;
+  }
+
+  .alert-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .alert-description {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .forgot-password-link {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    color: var(--accent);
+    font-size: 14px;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+
+  .forgot-password-link:hover {
+    color: #b5823d;
+  }
+</style>
+
+<body>
+  <!-- Notification Container -->
+  <div class="notification-container" id="notificationContainer"></div>
+
+  <div class="container">
+    <h1 class="page-title">SECURITY</h1>
+
+    <section class="layout" aria-label="Security layout">
+      <%- include("../../partials/user/profileSideBar") %>
+
+      <main class="card">
+        <!-- Password Section -->
+        <div class="section">
+          <h2 class="section-title">Password</h2>
+          <div class="security-item">
+            <div class="item-info">
+              <div class="item-label">Reset Password</div>
+              <div class="item-description">Update your password regularly to keep your account secure</div>
+            </div>
+            <button class="btn" onclick="openResetPasswordModal()">Reset</button>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Two-Factor Authentication Section -->
+        <div class="section">
+          <h2 class="section-title">Two-Factor Authentication</h2>
+          <div class="security-item">
+            <div class="item-info">
+              <div class="item-label">2FA Status</div>
+              <div class="item-description">Add an extra layer of security to your account</div>
+            </div>
+            <div class="item-status <%= is2FAEnabled ? 'status-enabled' : 'status-disabled' %>">
+              <span class="status-badge"></span>
+              <span><%= is2FAEnabled ? 'Enabled' : 'Disabled' %></span>
+            </div>
+          </div>
+          <div style="margin-top: 12px;">
+            <% if (!is2FAEnabled) { %>
+              <button class="btn" onclick="openEnable2FAModal()">Enable 2FA</button>
+            <% } else { %>
+              <button class="btn btn-secondary" onclick="openDisable2FAModal()">Disable 2FA</button>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Login History Section -->
+        <div class="section">
+          <h2 class="section-title">Login History</h2>
+          <div class="login-history">
+            <% if (logHistory && logHistory.length > 0) { %>
+              <% logHistory.forEach(function(log) { %>
+                <div class="history-item">
+                  <div class="history-info">
+                    <div class="history-device"><%= log.device || 'Unknown Device' %></div>
+                    <div class="history-time"><%= new Date(log.loginTime).toLocaleString() %></div>
+                    <div class="history-location">📍 <%= log.location || 'Unknown Location' %></div>
+                  </div>
+                  <% if (log.isCurrentSession) { %>
+                    <span class="status-enabled">Current</span>
+                  <% } %>
+                </div>
+              <% }); %>
+            <% } else { %>
+              <div class="history-item">
+                <div class="history-info">
+                  <div class="history-device">No login history available</div>
+                </div>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Account Deletion Section -->
+        <div class="section">
+          <div class="alert alert-warning">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+              <div class="alert-title">Danger Zone</div>
+              <div class="alert-description">Deleting your account is permanent and cannot be undone. All your data will be permanently removed.</div>
+            </div>
+          </div>
+          <div class="security-item">
+            <div class="item-info">
+              <div class="item-label">Delete Account</div>
+              <div class="item-description">Permanently delete your account and all associated data</div>
+            </div>
+            <button class="btn btn-danger" onclick="window.location.href='/security/delete-account-confirm'">Delete Account</button>
+          </div>
+        </div>
+      </main>
+    </section>
+  </div>
+
+  <!-- Reset Password Modal -->
+  <div class="modal" id="resetPasswordModal">
+    <div class="modal-content">
+      <h3 class="modal-title">Reset Password</h3>
+      <form id="resetPasswordForm">
+        <div class="form-group">
+          <label for="currentPassword">Current Password</label>
+          <input type="password" id="currentPassword" name="currentPassword" placeholder="Enter your current password">
+        </div>
+        <div class="form-group">
+          <label for="newPassword">New Password</label>
+          <input type="password" id="newPassword" name="newPassword" placeholder="Enter your new password">
+        </div>
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirm your new password">
+        </div>
+        <div id="passwordError" class="error-message"></div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancel</button>
+          <button type="submit" class="btn" id="submitPasswordBtn">Reset Password</button>
+        </div>
+      </form>
+      <div class="forgot-password-link" onclick="window.location.href='/forgot-password'">Forgot Password?</div>
+    </div>
+  </div>
+
+  <!-- Enable 2FA Modal -->
+  <div class="modal" id="enable2FAModal">
+    <div class="modal-content">
+      <h3 class="modal-title">Enable Two-Factor Authentication</h3>
+      <div class="modal-description">
+        <p>Two-factor authentication adds an extra layer of security to your account. You'll need to enter a code from your authenticator app in addition to your password when logging in.</p>
+      </div>
+      <div class="form-group">
+        <label>Scan this QR code with your authenticator app:</label>
+        <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; text-align: center; margin: 12px 0;">
+          <div style="font-size: 12px; color: #666;">QR Code Placeholder</div>
+          <div style="font-size: 48px; margin: 20px 0;">📱</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="twoFACode">Enter the 6-digit code from your app:</label>
+        <input type="text" id="twoFACode" name="twoFACode" maxlength="6" placeholder="000000">
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-secondary" onclick="closeEnable2FAModal()">Cancel</button>
+        <button type="button" class="btn" onclick="verifyTwoFA()">Verify & Enable</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disable 2FA Modal -->
+  <div class="modal" id="disable2FAModal">
+    <div class="modal-content">
+      <h3 class="modal-title">Disable Two-Factor Authentication</h3>
+      <div class="modal-description">
+        <p>Disabling 2FA will remove the extra security layer from your account. This action cannot be undone without re-enabling it.</p>
+      </div>
+      <div class="form-group">
+        <label for="disable2FACode">Enter the 6-digit code from your app to confirm:</label>
+        <input type="text" id="disable2FACode" name="disable2FACode" maxlength="6" placeholder="000000">
+      </div>
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-secondary" onclick="closeDisable2FAModal()">Cancel</button>
+        <button type="button" class="btn btn-danger" onclick="verifyDisable2FA()">Disable 2FA</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Notification Functions
+    function showNotification(type, message, duration = 5000) {
+      const container = document.getElementById('notificationContainer');
+      const notification = document.createElement('div');
+      notification.className = `notification ${type}`;
+      notification.innerHTML = `
+        <span>${message}</span>
+        <button class="close-btn" onclick="this.parentElement.remove();">&times;</button>
+      `;
+      container.appendChild(notification);
+
+      // Auto-remove after duration
+      setTimeout(() => {
+        if (notification.parentElement) {
+          notification.classList.add('fade-out');
+          setTimeout(() => notification.remove(), 300);
+        }
+      }, duration);
+    }
+
+    // Reset Password Modal
+    function openResetPasswordModal() {
+      document.getElementById('resetPasswordModal').classList.add('active');
+      hidePasswordError(); // Clear any previous errors
+    }
+    function closeResetPasswordModal() {
+      document.getElementById('resetPasswordModal').classList.remove('active');
+      document.getElementById('resetPasswordForm').reset();
+      hidePasswordError();
+    }
+
+    function showPasswordError(message) {
+      const errorDiv = document.getElementById('passwordError');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+
+    function hidePasswordError() {
+      const errorDiv = document.getElementById('passwordError');
+      errorDiv.textContent = '';
+      errorDiv.style.display = 'none';
+    }
+
+    // Client-side validation and submit handler
+    document.getElementById('resetPasswordForm').addEventListener('submit', async function(event) {
+      event.preventDefault();
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const submitBtn = document.getElementById('submitPasswordBtn');
+
+      // Clear previous errors
+      hidePasswordError();
+
+      // Client-side checks
+      if (!currentPassword) {
+        showPasswordError('Current password is required!');
+        return;
+      }
+      if (!newPassword) {
+        showPasswordError('New password is required!');
+        return;
+      }
+      if (!confirmPassword) {
+        showPasswordError('Confirm password is required!');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        showPasswordError('New passwords do not match!');
+        return;
+      }
+      if (newPassword.length < 8) {
+        showPasswordError('Password must be at least 8 characters long!');
+        return;
+      }
+
+      if(currentPassword == newPassword){
+        showPasswordError(' New Password must be Diffent From Current Password');
+        return;
+      }
+
+      // Disable button during submission
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Processing...';
+
+      try {
+        // Send to server for Joi validation and processing
+        const response = await fetch('/reset-password', { 
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword,
+            confirmPassword 
+          }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          showNotification('success', data.message || 'Password reset successfully!');
+          closeResetPasswordModal();
+        } else {
+          showPasswordError(data.message || 'Failed to reset password. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showPasswordError('An error occurred. Please try again.');
+      } finally {
+        // Re-enable button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Reset Password';
+      }
+    });
+
+    // Enable 2FA Modal
+    function openEnable2FAModal() {
+      document.getElementById('enable2FAModal').classList.add('active');
+    }
+    function closeEnable2FAModal() {
+      document.getElementById('enable2FAModal').classList.remove('active');
+      document.getElementById('twoFACode').value = '';
+    }
+    function verifyTwoFA() {
+      const code = document.getElementById('twoFACode').value;
+      if (code.length !== 6) {
+        alert('Please enter a valid 6-digit code!');
+        return;
+      }
+      console.log('Verifying 2FA code...'); // Replace with actual API call
+      showNotification('success', 'Two-factor authentication enabled successfully!');
+      closeEnable2FAModal();
+    }
+
+    // Disable 2FA Modal
+    function openDisable2FAModal() {
+      document.getElementById('disable2FAModal').classList.add('active');
+    }
+    function closeDisable2FAModal() {
+      document.getElementById('disable2FAModal').classList.remove('active');
+      document.getElementById('disable2FACode').value = '';
+    }
+    function verifyDisable2FA() {
+      const code = document.getElementById('disable2FACode').value;
+      if (code.length !== 6) {
+        alert('Please enter a valid 6-digit code!');
+        return;
+      }
+      console.log('Verifying disable 2FA code...'); // Replace with actual API call
+      showNotification('success', 'Two-factor authentication disabled successfully!');
+      closeDisable2FAModal();
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(event) {
+      const modals = document.querySelectorAll('.modal.active');
+      modals.forEach(modal => {
+        if (event.target === modal) {
+          modal.classList.remove('active');
+        }
+      });
+    });
+  </script>
+</body>

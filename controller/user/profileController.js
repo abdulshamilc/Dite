@@ -1,6 +1,8 @@
-import { User } from "../../models/userModels.js";
-import {Address} from "../../models/addressModel.js";
+import { User, UserOtpVerification } from "../../models/userModels.js";
+import { Address } from "../../models/addressModel.js";
 import Order from "../../models/ordersModel.js";
+import UserLog from "../../models/userLogModel.js";
+import { generateOTP } from "../../utils/genarateOtp.js";
 
 const getProfile = async (req, res) => {
   try {
@@ -10,7 +12,16 @@ const getProfile = async (req, res) => {
       return res.redirect("/profile/login");
     }
     const user = await User.findOne({ email: email });
-    res.render("user/profile/profile", { user, currentPath: req.path });
+    res.render("user/profile/profile", {
+      user,
+      currentPath: req.path,
+      success: req.session.success || null,
+      error: req.session.error || null,
+    });
+
+    // Delete the Error Mesage After Rendering
+    delete req.session.success;
+    delete req.session.error;
   } catch (error) {
     console.log(error);
   }
@@ -31,19 +42,140 @@ const postProfile = async (req, res) => {
       imageUrl = req.file.path;
     }
 
-    // Update fields
+    // Phone Validation
+    const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
+    if (!phoneRegex.test(phone)) {
+      req.session.error = "Enter a valid phone number (min 6 digits)";
+      return res.redirect("/profile");
+    }
 
-    user.name = name;
-    user.gender = gender;
-    user.phone = phone || "";
-    user.image = imageUrl;
+    const isChanged =
+      user.name !== name ||
+      user.gender !== gender ||
+      user.phone !== phone ||
+      user.image !== imageUrl;
 
-    await user.save();
+    if (isChanged) {
+      // Update fields
+
+      user.name = name;
+      user.gender = gender;
+      user.phone = phone || "";
+      user.image = imageUrl;
+
+      await user.save();
+      req.session.success = "Profile Has Been Updated";
+    } else req.session.success = null;
 
     res.redirect("/profile");
   } catch (error) {
     console.log(error);
+    req.session.error = "Something went wrong while updating profile";
     res.status(500).send("Something went wrong");
+  }
+};
+
+const changeEmail = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) return res.redirect("/login");
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.redirect("/login");
+
+    // Action indicates why we are generating OTP
+    const action = "change_email";
+    const { email } = req.body;
+
+    if (!email)
+      return res
+        .status(400)
+        .json({ success: false, message: "Enter New Email" });
+    await generateOTP(
+      email,
+      "Verify Your Email Change",
+      "Your OTP code for changing email is:",
+      action
+    );
+
+    return res.status(200).json({
+      message: "OTP sent to your current email",
+      success: true,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Failed to send OTP",
+      success: false,
+    });
+  }
+};
+
+const verifyChangeEmail = async (req, res) => {
+  try {
+    if (!req.session.user) return res.redirect("/login");
+
+    const user = await User.findOne({ email: req.session.user });
+
+    if (!user) return res.redirect("/login");
+
+    const { otp, email, type } = req.body;
+
+    const isUsedEmail = await User.findOne({
+      email: email,
+      _id: { $ne: user._id }
+    });
+
+    if (isUsedEmail)
+      return res.json({
+        success: false,
+        redirect: "/profile",
+        message: "Email Already Exists",
+      });
+
+    if (!otp || otp.length !== 6) {
+      return res.json({ success: false, message: "Enter a valid 6-digit OTP" });
+    }
+
+    const otpRecord = await UserOtpVerification.findOne({ email }).sort({
+      createdAt: -1,
+    });
+
+    if (!otpRecord) {
+      return res.json({
+        success: false,
+        message: "OTP Not found Or Expired",
+      });
+    }
+
+    if (otp != otpRecord.otp) {
+      return res.json({ success: false, message: "Incorrect OTP" });
+    }
+
+    // Delete the OTP record
+    await UserOtpVerification.deleteOne({ email: email });
+
+    // Set session flags based on type
+    if (type === "current") {
+      req.session.currentEmailVerified = true;
+      res.json({
+        success: true,
+        message: "Current Email OTP Verification Completed!",
+      });
+    } else if (type === "new") {
+      user.email = email;
+      await user.save();
+      req.session.user = email;
+      res.json({
+        success: true,
+        message: "New Email OTP Verification Completed!",
+      });
+    } else {
+      res.json({ success: false, message: "Invalid verification type." });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Server Error" });
   }
 };
 
@@ -56,8 +188,19 @@ const getAddress = async (req, res) => {
     const user = await User.findOne({ email: email });
     const address = await Address.find({ userId: user._id, isDeleted: false });
 
+    // Prepare messages object from session
+    const messages = {
+      success: req.session.success || null,
+      error: req.session.error || null
+    };
+
+    // Clear session messages after passing them
+    delete req.session.success;
+    delete req.session.error;
+
     res.render("user/profile/address", {
       address,
+      messages: messages,
       currentPath: req.path,
       user,
     });
@@ -81,6 +224,12 @@ const postAddAddress = async (req, res) => {
       altPhone,
       isDefault,
     } = req.body;
+
+    if (!fullName || !hoNo || !street || !city || !pin || !state || !country || !phone ) {
+      req.session.error = 'Please fill in required fields !!';
+      return res.redirect('/address');
+    }
+
 
     const user = await User.findOne({ email: email });
 
@@ -107,9 +256,12 @@ const postAddAddress = async (req, res) => {
 
     await newAdress.save();
 
+    req.session.success = 'Address added successfully!';
     res.redirect("/address");
   } catch (error) {
     console.log(error);
+    req.session.error = "Something Occure While Adding New Adress"
+    res.redirect('/address')
   }
 };
 
@@ -131,6 +283,11 @@ const postEditAddress = async (req, res) => {
 
     const address = await Address.findOne({ _id: addressId });
     if (!address) return res.status(404).send("Address not found");
+
+    if (!fullName || !hoNo || !street || !city || !pin || !state || !country || !phone ) {
+      req.session.error = 'Please fill in required fields !!';
+      return res.redirect('/address');
+    }
 
     if (isDefault) {
       await Address.updateMany(
@@ -195,12 +352,12 @@ const getOrders = async (req, res) => {
   try {
     const userEmail = req.session.user;
     if (!userEmail) {
-      return res.redirect('/login');
+      return res.redirect("/login");
     }
 
     const user = await User.findOne({ email: userEmail });
     if (!user) {
-      return res.redirect('/login');
+      return res.redirect("/login");
     }
 
     // Pagination
@@ -221,40 +378,99 @@ const getOrders = async (req, res) => {
       .sort({ placedAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean();  // Faster reads
+      .lean(); // Faster reads
 
     // Pass raw orders (handle formatting in EJS)
-    res.render('user/profile/orders', {
-      orders: orders || [],  // Ensure array
+    res.render("user/profile/orders", {
+      orders: orders || [], // Ensure array
       totalPages,
       currentPage: page,
-      pages
+      pages,
     });
   } catch (error) {
-    console.error('Error fetching order history:', error);
-    res.status(500).send('Internal Server Error');
+    console.error("Error fetching order history:", error);
+    res.status(500).send("Internal Server Error");
   }
 };
 
 const getOrderDetails = async (req, res) => {
   const orderId = req.params.id;
-  if (!orderId) return res.redirect('/login');
+  if (!orderId) return res.redirect("/login");
 
   const user = await User.findOne({ email: req.session.user });
-  if (!user) return res.redirect('/login');
+  if (!user) return res.redirect("/login");
 
-  const order = await Order.findById(orderId)
-  if (!order) return res.redirect('/orders');
+  const order = await Order.findById(orderId);
+  if (!order) return res.redirect("/orders");
 
-  const subTotal = order.items.reduce((acc, ele) => acc + (ele.basePrice * ele.quantity), 0);
+  const subTotal = order.items.reduce(
+    (acc, ele) => acc + ele.basePrice * ele.quantity,
+    0
+  );
 
-  const discount = (order.items.reduce((acc, ele) => acc + (ele.discoundedPrice * ele.quantity), 0)) - subTotal
+  const discount =
+    order.items.reduce(
+      (acc, ele) => acc + ele.discoundedPrice * ele.quantity,
+      0
+    ) - subTotal;
 
-  const totalAmount = order.items.reduce((acc, ele) => acc + (ele.discoundedPrice * ele.quantity), 0)
+  const totalAmount = order.items.reduce(
+    (acc, ele) => acc + ele.discoundedPrice * ele.quantity,
+    0
+  );
 
-  res.render('user/profile/orderDetails', { order ,subTotal , discount ,totalAmount });
+  res.render("user/profile/orderDetails", {
+    order,
+    subTotal,
+    discount,
+    totalAmount,
+  });
 };
 
+const getSecurity = async (req, res) => {
+  const userEmail = req.session.user;
+  if (!userEmail) res.redirect("/login");
+  const user = await User.findOne({ email: userEmail });
+  if (!user) res.redirect("/login");
+
+  const logHistory = await UserLog.find({ userId: user._id })
+    .sort({ loginTime: -1 })
+    .limit(6);
+
+  const is2FAEnabled = !!user.twoFactorSecret;
+
+  res.render("user/profile/security", {
+    user,
+    logHistory,
+    is2FAEnabled,
+    currentPath: req.originalUrl,
+  });
+};
+
+const getDeleteAcount = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) res.redirect("/login");
+    const user = await User.findOne({ email: userEmail });
+    if (!user) res.redirect("/login");
+
+    res.render("user/profile/deleteAcount", {
+      user,
+      currentPath: req.originalUrl,
+    });
+  } catch (error) {
+    console.error("Error sending OTP:", error);
+    req.flash(
+      "errorMsg",
+      "Failed to send verification code. Please try again."
+    );
+    res.render("user/deleteAccount", {
+      title: "Delete Account",
+      successMsg: null,
+      errorMsg: req.flash("errorMsg")[0],
+    });
+  }
+};
 
 const userlogOut = (req, res) => {
   try {
@@ -269,6 +485,8 @@ const userlogOut = (req, res) => {
 export {
   getProfile,
   postProfile,
+  changeEmail,
+  verifyChangeEmail,
   getAddress,
   postAddAddress,
   postEditAddress,
@@ -276,5 +494,7 @@ export {
   postDeletetAdress,
   getOrders,
   getOrderDetails,
+  getSecurity,
+  getDeleteAcount,
   userlogOut,
 };
