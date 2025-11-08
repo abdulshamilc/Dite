@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Order Details - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .logout-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .logout-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .status-active {
+        color: #10b981;
+      }
+      .status-blocked {
+        color: #ef4444;
+      }
+      .status-pending {
+        color: #f59e0b;
+      }
+      .status-processing {
+        color: #3b82f6;
+      }
+      .status-completed {
+        color: #10b981;
+      }
+      .status-cancelled {
+        color: #ef4444;
+      }
+      .card {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .status-delivered {
+        background-color: #10b981;
+        color: white;
+      }
+      .status-shipped {
+        background-color: #c5a987;
+        color: #1f2937;
+      }
+      .status-pending {
+        background-color: #6b7280;
+        color: white;
+      }
+      .status-active {
+        background-color: #10b981;
+        color: white;
+      }
+      .status-partial {
+        background-color: #f59e0b;
+        color: white;
+      }
+      .status-cancelled {
+        background-color: #ef4444;
+        color: white;
+      }
+      .timeline-item {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        position: relative;
+      }
+      .timeline-dot {
+        width: 0.75rem;
+        height: 0.75rem;
+        border-radius: 50%;
+        margin-top: 0.25rem;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 2;
+      }
+      .timeline-dot.completed {
+        background-color: #10b981;
+      }
+      .timeline-dot.current {
+        background-color: #c5a987;
+        border: 3px solid #c5a987;
+        width: 1.125rem;
+        height: 1.125rem;
+      }
+      .timeline-dot.pending {
+        background-color: #374151;
+        border: 2px solid #6b7280;
+      }
+      .timeline-dot.cancel {
+        background-color: #ef4444;
+      }
+      .timeline-dot.return {
+        background-color: #f59e0b;
+      }
+      .timeline-line {
+        width: 2px;
+        background-color: #374151;
+        margin-left: 0.3125rem;
+        position: absolute;
+        left: 0.3125rem;
+        top: 1.25rem;
+        bottom: -1.25rem;
+        z-index: 1;
+      }
+      .timeline-line.completed {
+        background-color: #10b981;
+      }
+      .timeline-line.current {
+        background-color: #c5a987;
+        border-style: dotted;
+        border-width: 0 0 0 2px;
+      }
+      .timeline-line.pending {
+        background-color: #6b7280;
+        border-style: dotted;
+        border-width: 0 0 0 2px;
+      }
+      .timeline-line.cancel {
+        background-color: #ef4444;
+      }
+      .timeline-line.return {
+        background-color: #f59e0b;
+      }
+      .canceled-item {
+        opacity: 0.6;
+        position: relative;
+      }
+      .canceled-item::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #ef4444;
+        transform: translateY(-50%);
+      }
+      .canceled-badge {
+        background-color: #ef4444;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+      }
+      .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background-color: #c5a987;
+        color: #1f2937;
+        border: none;
+      }
+      .btn-danger {
+        background-color: #ef4444;
+        color: white;
+        border: none;
+      }
+      .btn-secondary {
+        background-color: transparent;
+        color: #9ca3af;
+        border: 1px solid #374151;
+      }
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .event-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+      }
+      .event-status {
+        background-color: #6b7280;
+        color: white;
+      }
+      .event-cancel {
+        background-color: #ef4444;
+        color: white;
+      }
+      .event-return {
+        background-color: #f59e0b;
+        color: white;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../partials/admin/admin-header") %>
+
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../partials/admin/admin-sidebar") %>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <div class="max-w-6xl mx-auto w-full">
+          <!-- Header -->
+          <div class="mb-8">
+            <a href="/admin/orders" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              Back to Orders
+            </a>
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h1 class="text-3xl font-bold mb-2">Order Details</h1>
+                <p class="text-gray-400">Order ID: <span class="text-brand font-semibold">#<%= order.orderID %></span></p>
+              </div>
+              <% 
+              let statusClass = 'status-pending';
+              let statusText = 'Placed';
+              if (order.orderStatus) {
+                  const lowerStatus = order.orderStatus.toLowerCase();
+                  if (lowerStatus === 'delivered') {
+                      statusClass = 'status-delivered';
+                      statusText = 'Delivered';
+                  } else if (lowerStatus === 'shipped') {
+                      statusClass = 'status-shipped';
+                      statusText = 'Shipped';
+                  } else {
+                      statusText = order.orderStatus.charAt(0).toUpperCase() + order.orderStatus.slice(1);
+                      statusClass = `status-${lowerStatus}`;
+                  }
+              }
+              %>
+              <% 
+              let cancelStatusClass = 'status-active';
+              let cancelStatusText = 'Active';
+              if (order.cancelStatus) {
+                  if (order.cancelStatus === 'Active') {
+                      cancelStatusClass = 'status-active';
+                      cancelStatusText = 'Active';
+                  } else if (order.cancelStatus === 'Partially Cancelled') {
+                      cancelStatusClass = 'status-partial';
+                      cancelStatusText = 'Partially Cancelled';
+                  } else if (order.cancelStatus === 'Cancelled') {
+                      cancelStatusClass = 'status-cancelled';
+                      cancelStatusText = 'Cancelled';
+                  }
+              }
+              %>
+              <div class="flex items-center gap-4 ml-4">
+                <span class="status-badge <%= statusClass %>"><%= statusText %></span>
+                <span class="status-badge <%= cancelStatusClass %>"><%= cancelStatusText %></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-8">
+            <!-- Order Summary -->
+            <div class="lg:col-span-2">
+              <div class="card p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 text-brand">Order Summary</h2>
+                
+                <!-- Active Order Items -->
+                <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Active Items</h3>
+                  <% if (order.items && order.items.length > 0) { %>
+                    <% let hasActiveItems = false; %>
+                    <% order.items.forEach(item => { %>
+                      <% if (!item.isCancel) { %>
+                        <% hasActiveItems = true; %>
+                        <div class="flex items-center gap-4">
+                          <% if (item.image) { %>
+                            <img src="<%= item.image %>" alt="<%= item.name %>" class="w-16 h-16 object-cover rounded flex-shrink-0 border border-gray-600">
+                          <% } else { %>
+                            <div class="w-16 h-16 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
+                              <span class="text-gray-400 text-xs">No Image</span>
+                            </div>
+                          <% } %>
+                          <div class="flex-1 min-w-0">
+                            <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
+                            <p class="text-gray-500 text-sm"><%= (item.mlSize || 0) + ' ml' %></p>
+                          </div>
+                          <div class="text-right flex-shrink-0">
+                            <p class="font-semibold">₹<%= ((item.discountedPrice || item.basePrice || 0) * (item.quantity || 1)).toFixed(2) %></p>
+                            <p class="text-sm text-gray-400">Qty: <%= item.quantity || 1 %></p>
+                          </div>
+                        </div>
+                      <% } %>
+                    <% }); %>
+                    <% if (!hasActiveItems) { %>
+                      <p class="text-gray-400 text-center py-4">No active items remaining.</p>
+                    <% } %>
+                  <% } else { %>
+                    <p class="text-gray-400 text-center py-4">No active items found.</p>
+                  <% } %>
+                </div>
+
+                <!-- Canceled Items Section -->
+                <% if (order.items && order.items.some(item => item.isCancel)) { %>
+                <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
+                  <h3 class="text-lg font-semibold text-red-400 mb-3 flex items-center gap-2">
+                    Canceled Items
+                    <span class="canceled-badge">CANCELED</span>
+                  </h3>
+                  <% order.items.filter(item => item.isCancel).forEach(item => { %>
+                  <div class="flex items-center gap-4 canceled-item">
+                    <% if (item.image) { %>
+                      <img src="<%= item.image %>" alt="<%= item.name %>" class="w-16 h-16 object-cover rounded flex-shrink-0 border border-gray-600">
+                    <% } else { %>
+                      <div class="w-16 h-16 bg-gray-700 rounded flex items-center justify-center flex-shrink-0">
+                        <span class="text-gray-400 text-xs">No Image</span>
+                      </div>
+                    <% } %>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
+                      <p class="text-gray-500 text-sm"><%= (item.mlSize || 0) + ' ml' %></p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                      <p class="font-semibold text-red-400">Canceled</p>
+                      <p class="text-sm text-gray-400">Qty: <%= item.quantity || 1 %></p>
+                    </div>
+                  </div>
+                  <% }); %>
+                </div>
+                <% } %>
+
+                <!-- Pricing -->
+                <div class="space-y-2">
+                  <div class="flex justify-between text-gray-300">
+                    <span>Subtotal</span>
+                    <span>₹<%= subTotal || 0 %></span>
+                  </div>
+                  <div class="flex justify-between text-gray-300">
+                    <span>Discount</span>
+                    <span class="text-red-400">-₹<%= discount || 0 %></span>
+                  </div>
+                  <div class="flex justify-between text-gray-300">
+                    <span>Shipping</span>
+                    <span>₹<%= (order.shipping || 0).toFixed(2) %></span>
+                  </div>
+                  <div class="flex justify-between text-gray-300">
+                    <span>Tax</span>
+                    <span>₹<%= (order.tax || 0).toFixed(2) %></span>
+                  </div>
+                  <div class="flex justify-between text-lg font-bold text-brand pt-2 border-t border-gray-700">
+                    <span>Total</span>
+                    <span>₹<%= totalAmount || order.totalAmount || 0 %></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Order History Timeline -->
+              <div class="card p-6">
+                <h2 class="text-xl font-bold mb-6 text-brand">Order History</h2>
+                
+                <div class="relative space-y-6">
+                  <% 
+                  // Build history array: status changes from tracking, plus order placed, cancellations, returns
+                  let history = [];
+                  
+                  // Always add Order Placed
+                  history.push({
+                    date: order.placedAt || order.createdAt || new Date(),
+                    status: 'Order Placed',
+                    message: 'Order received and confirmed',
+                    type: 'status'
+                  });
+                  
+                  // Add tracking events (status changes)
+                  if (order.tracking && order.tracking.length > 0) {
+                    order.tracking.forEach(event => {
+                      if (event.status && event.date) {
+                        history.push({
+                          date: new Date(event.date),
+                          status: event.status,
+                          message: event.message || `Status updated to ${event.status}`,
+                          type: 'status'
+                        });
+                      }
+                    });
+                  }
+                  
+                  // Add partial/full cancellation if applicable (from cancelStatus)
+                  if (order.cancelStatus && order.cancelStatus !== 'Active') {
+                    const cancelDate = order.cancelledAt || order.updatedAt || new Date();
+                    history.push({
+                      date: cancelDate,
+                      status: order.cancelStatus,
+                      message: `${order.cancelStatus} by user`,
+                      type: 'cancel'
+                    });
+                  }
+                  
+                  // Add return event if orderStatus is 'Returned'
+                  if (order.orderStatus === 'Returned') {
+                    const returnDate = order.updatedAt || new Date();
+                    history.push({
+                      date: returnDate,
+                      status: 'Returned',
+                      message: 'Order returned and processed',
+                      type: 'return'
+                    });
+                  }
+                  
+                  // Sort by date ascending
+                  history.sort((a, b) => a.date - b.date);
+                  %>
+                  
+                  <% if (history.length === 0) { %>
+                    <p class="text-gray-400 text-center py-4">No history available.</p>
+                  <% } else { %>
+                    <% history.forEach((event, index) => { %>
+                      <% 
+                      let dotClass = 'timeline-dot pending';
+                      let lineClass = 'timeline-line pending';
+                      let textClass = 'text-gray-500';
+                      let badgeClass = 'event-status';
+                      
+                      if (event.type === 'status' && (event.status.toLowerCase().includes('delivered') || event.status === 'Returned')) {
+                        dotClass = 'timeline-dot completed';
+                        lineClass = 'timeline-line completed';
+                        textClass = 'text-green-400';
+                      } else if (event.type === 'cancel') {
+                        dotClass = 'timeline-dot cancel';
+                        lineClass = 'timeline-line cancel';
+                        textClass = 'text-red-400';
+                        badgeClass = 'event-cancel';
+                      } else if (event.type === 'return') {
+                        dotClass = 'timeline-dot return';
+                        lineClass = 'timeline-line return';
+                        textClass = 'text-orange-400';
+                        badgeClass = 'event-return';
+                      } else if (index === history.length - 1) {
+                        dotClass = 'timeline-dot current';
+                        lineClass = 'timeline-line current';
+                        textClass = 'text-brand';
+                      }
+                      
+                      const formattedDate = event.date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' - ' + event.date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                      %>
+                      <div class="timeline-item">
+                        <div class="<%= dotClass %>"></div>
+                        <div class="flex-1">
+                          <div class="flex items-center justify-between mb-1">
+                            <p class="font-semibold <%= textClass %>"><%= event.status %></p>
+                            <span class="<%= badgeClass %> event-badge"><%= event.type.toUpperCase() %></span>
+                          </div>
+                          <p class="text-sm text-gray-400 mb-1"><%= formattedDate %></p>
+                          <% if (event.message) { %>
+                            <p class="text-sm <%= textClass === 'text-brand' ? 'text-gray-300' : 'text-gray-500' %>"><%= event.message %></p>
+                          <% } %>
+                        </div>
+                        <% if (index < history.length - 1) { %>
+                          <div class="<%= lineClass %>"></div>
+                        <% } %>
+                      </div>
+                    <% }); %>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+              <!-- Status Update -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Update Status</h3>
+                <form method="POST" action="/admin/orders/<%= order._id %>/status" class="space-y-4">
+                  <select name="status" class="bg-gray-800 p-2 rounded w-full text-white" required>
+                    <option value="">Select Status</option>
+                    <option value="Placed" <%= order.orderStatus === 'Placed' ? 'selected' : '' %>>Placed</option>
+                    <option value="Shipped" <%= order.orderStatus === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                    <option value="Out for Delivery" <%= order.orderStatus === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
+                    <option value="Delivered" <%= order.orderStatus === 'Delivered' ? 'selected' : '' %>>Delivered</option>
+                    <option value="Cancelled" <%= order.orderStatus === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                    <option value="Returned" <%= order.orderStatus === 'Returned' ? 'selected' : '' %>>Returned</option>
+                  </select>
+                  <button type="submit" class="btn btn-primary w-full">Update Status</button>
+                </form>
+              </div>
+
+              <!-- Customer Details -->
+              <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="font-bold text-brand">Customer Details</h3>
+                  <% if (user && user._id) { %>
+                    <a href="/admin/customers/<%= user._id %>" class="text-sm text-brand hover:underline flex items-center gap-1">
+                      <i data-lucide="user" class="w-4 h-4"></i>
+                      View Profile
+                    </a>
+                  <% } %>
+                </div>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <% if (user) { %>
+                    <div class="flex justify-between">
+                      <span class="font-semibold">Name:</span>
+                      <span><%= user.name || 'N/A' %></span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-semibold">Email:</span>
+                      <span><%= user.email || 'N/A' %></span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-semibold">Phone:</span>
+                      <span><%= user.phone || 'N/A' %></span>
+                    </div>
+                    <div class="flex justify-between">
+                      <span class="font-semibold">Joined:</span>
+                      <span><%= user.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A' %></span>
+                    </div>
+                    <% if (typeof user.totalOrders !== 'undefined') { %>
+                      <div class="flex justify-between">
+                        <span class="font-semibold">Total Orders:</span>
+                        <span><%= user.totalOrders %></span>
+                      </div>
+                    <% } %>
+                  <% } else { %>
+                    <p class="text-gray-400">Customer details not available.</p>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Shipping Address -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Shipping Address</h3>
+                <div class="text-sm space-y-1 text-gray-300">
+                  <% if (order.address) { %>
+                    <p class="font-semibold"><%= order.address.fullName || '' %></p>
+                    <p><%= order.address.street || order.address.address || '' %></p>
+                    <p><%= order.address.hoNo || '' %></p>
+                    <p><%= (order.address.city || '') + ', ' + (order.address.state || '') + ' ' + (order.address.pin || order.address.zipCode || '') %></p>
+                    <p><%= order.address.country || '' %></p>
+                    <p class="mt-3 text-brand"><%= order.address.phone || '' %></p>
+                  <% } else { %>
+                    <p class="text-gray-400">Shipping address not available.</p>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Payment Method -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Payment Method</h3>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <% 
+                  let paymentDisplay = 'Payment details not available.';
+                  if (order.paymentMethod) {
+                      if (typeof order.paymentMethod === 'string' && order.paymentMethod.toLowerCase() === 'cod') {
+                          paymentDisplay = 'Cash On Delivery';
+                      } else if (typeof order.paymentMethod === 'object' && order.paymentMethod.last4) {
+                          paymentDisplay = `${order.paymentMethod.type || 'Card'} ending in ${order.paymentMethod.last4}`;
+                      } else {
+                          paymentDisplay = typeof order.paymentMethod === 'string' ? order.paymentMethod : 'Payment details not available.';
+                      }
+                  }
+                  %>
+                  <p><%= paymentDisplay %></p>
+                </div>
+              </div>
+
+              <!-- Coupon -->
+              <% if (order.coupon) { %>
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Coupon</h3>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <p class="font-semibold"><%= order.coupon.code || 'Coupon Applied' %></p>
+                  <p><%= order.coupon.description || '' %></p>
+                  <% if (order.coupon.discountType === 'percentage') { %>
+                  <p class="text-brand"><%= order.coupon.discountValue %>% off</p>
+                  <% } else { %>
+                  <p class="text-brand">₹<%= order.coupon.discountValue || 0 %> off</p>
+                  <% } %>
+                </div>
+              </div>
+              <% } %>
+
+              <!-- Actions -->
+              <div class="space-y-3">
+                <button id="orderReportBtn" class="block w-full border border-gray-600 py-3 rounded font-semibold hover:border-brand transition text-center">Order Report</button>
+                <form method="POST" action="/admin/orders/delete/<%= order._id %>" class="inline" onsubmit="return confirm('Are you sure you want to delete this order?')">
+                  <button type="submit" class="block w-full btn btn-danger py-3 rounded font-semibold transition text-center">Delete Order</button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Error Popup Modal -->
+    <div
+      id="errorPopup"
+      class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span id="errorMessage">Something went wrong!</span>
+      <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Success Popup Modal -->
+    <div
+      id="successPopup"
+      class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+      <span id="successMessage">Success!</span>
+      <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <script>
+      lucide.createIcons();
+
+      // Order Report
+      const orderReportBtn = document.getElementById('orderReportBtn');
+      if (orderReportBtn) {
+        orderReportBtn.addEventListener('click', async () => {
+          try {
+            const response = await fetch(`/admin/orders/<%= order._id %>/export`);
+            if (!response.ok) throw new Error('Export failed');
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Order-${order.orderID}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          } catch (err) {
+            alert('Error exporting order: ' + err.message);
+          }
+        });
+      }
+
+      // Function to show error popup
+      function showErrorPopup(message) {
+        const popup = document.getElementById("errorPopup");
+        const messageElement = document.getElementById("errorMessage");
+
+        messageElement.textContent = message || "An unexpected error occurred.";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close manually
+      document.getElementById("closeErrorPopup").addEventListener("click", () => {
+        document.getElementById("errorPopup").classList.add("hidden");
+      });
+
+      // Function to show success popup
+      function showSuccessPopup(message) {
+        const popup = document.getElementById("successPopup");
+        const messageElement = document.getElementById("successMessage");
+
+        messageElement.textContent = message || "Success!";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close success popup manually
+      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+        document.getElementById("successPopup").classList.add("hidden");
+      });
+
+      // Display server-side flash messages on load
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        showErrorPopup("<%= errorMessage %>");
+      <% } %>
+      <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+        showSuccessPopup("<%= successMessage %>");
+      <% } %>
+    </script>
+  </body>
+</html>

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { nanoid } from "nanoid";
-import {addressSchemaExport}  from "./addressModel.js";
+import { addressSchemaExport } from "./addressModel.js";
 
 const orderedProductSchema = new mongoose.Schema({
   productId: {
@@ -9,9 +9,14 @@ const orderedProductSchema = new mongoose.Schema({
     required: true,
   },
   name: String,
-  mlSize:String,
+  mlSize: String,
   basePrice: Number,
   discoundedPrice: Number,
+  productStatus: {
+    type: String,
+    enum: ["Placed", "Delivered", "Cancelled", "Returned"],
+    default: "Placed",
+  },
   quantity: {
     type: Number,
     required: true,
@@ -22,8 +27,8 @@ const orderedProductSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema(
   {
-    orderID: { type: String, default: () => nanoid(10), unique: true }, 
-    
+    orderID: { type: String, default: () => nanoid(10), unique: true },
+
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
@@ -31,7 +36,7 @@ const orderSchema = new mongoose.Schema(
     },
 
     address: {
-      type: addressSchemaExport ,
+      type: addressSchemaExport,
       required: true,
     },
     items: [orderedProductSchema],
@@ -44,7 +49,6 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         "Placed",
-        "Confirmed",
         "Shipped",
         "Out for Delivery",
         "Delivered",
@@ -53,6 +57,12 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Placed",
     },
+    cancelStatus: {
+      type: String,
+      enum: ["Active", "Partially Cancelled", "Cancelled"],
+      default: "Active",
+    },
+
     tracking: [
       {
         status: String,
@@ -60,14 +70,14 @@ const orderSchema = new mongoose.Schema(
         message: String,
       },
     ],
- 
+
     placedAt: {
       type: Date,
       default: Date.now,
     },
-    totalAmount:{
-      type:Number,
-      required:true 
+    totalAmount: {
+      type: Number,
+      required: true,
     },
 
     deliveredAt: {
@@ -79,7 +89,6 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 
 const Order = mongoose.model("Order", orderSchema);
 export default Order;

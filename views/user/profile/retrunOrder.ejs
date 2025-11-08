@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Return</title>
+    <link rel="stylesheet" href="/style/user/header.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary: #1a1a1a;
+            --secondary: #ffffff;
+            --accent: #d4af37;
+            --light-bg: #f5f5f5;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: var(--secondary);
+        }
+        
+        .accent-text {
+            color: var(--accent);
+        }
+        
+        .accent-border {
+            border-color: var(--accent);
+        }
+        
+        .accent-bg {
+            background-color: var(--accent);
+            color: var(--primary);
+        }
+        
+        .card {
+            background-color: #2a2a2a;
+            border: 1px solid #404040;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-return {
+            background-color: #f59e0b;
+            color: white;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: var(--accent);
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--primary);
+            border: none;
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: #aaa;
+            border: 1px solid #404040;
+        }
+        
+        .btn-danger {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+        }
+        
+        .btn-edit {
+            background-color: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 6px 12px;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .estimated-refund {
+            background-color: #10b981;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        
+        .reason-textarea {
+            width: 100%;
+            padding: 8px;
+            background-color: #404040;
+            color: var(--secondary);
+            border: 1px solid #6b7280;
+            border-radius: 4px;
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .reason-textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .item-return {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid #f59e0b;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            background-color: rgba(245, 158, 11, 0.1);
+        }
+
+        .refund-section {
+            display: none;
+        }
+
+        .refund-section:not(.cod-hidden) {
+            display: block;
+        }
+
+        .payment-mode {
+            background-color: rgba(52, 211, 153, 0.1);
+            border: 1px solid #10b981;
+        }
+
+        .cod-note {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #fca5a5;
+        }
+
+        .reason-option {
+            border: 1px solid #404040;
+        }
+
+        .reason-option:hover {
+            border-color: var(--accent);
+            background-color: #404040;
+        }
+
+        .reason-option input:checked + label {
+            border-color: var(--accent);
+            background-color: rgba(212, 175, 55, 0.1);
+        }
+
+        .other-reason-div {
+            display: none;
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 14px;
+            margin-top: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <%- include("../../partials/user/header") %>
+    <div class="min-h-screen pt-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto w-full">
+            <!-- Header -->
+            <div class="mb-8">
+                <a href="/orders/<%= order._id %>" class="text-sm accent-text hover:underline mb-4 inline-block">← Back to Order Details</a>
+                <div class="flex items-start">
+                    <div class="flex-1 text-center">
+                        <h1 class="text-4xl font-bold mb-2">Confirm Return</h1>
+                        <p class="text-gray-400">Order ID: <span class="accent-text font-semibold"><%= order.orderID %></span></p>
+                    </div>
+                    <div class="flex-none ml-4">
+                        <span class="status-badge status-return">Returning</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="space-y-6">
+                <!-- Items to Return -->
+                <div class="card p-6 rounded-lg">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold accent-text">Items to Return</h2>
+                        <a href="/return/<%= order._id %>/return-select?edit=true" class="btn btn-edit">Edit Items</a>
+                    </div>
+                    <div class="space-y-4">
+                        <% if (returnItems && returnItems.length > 0) { %>
+                            <% let returnSubtotal = 0; %>
+                            <% returnItems.forEach(itemReturn => { %>
+                                <% const item = itemReturn.item; %>
+                                <% const returnQty = itemReturn.returnQty; %>
+                                <% const itemTotal = (item.basePrice || 0) * returnQty; %>
+                                <% returnSubtotal += itemTotal; %>
+                                <div class="item-return">
+                                    <% if (item.image) { %>
+                                        <img src="<%= item.image %>" alt="<%= item.name %>" class="w-16 h-16 object-cover rounded-lg flex-shrink-0">
+                                    <% } else { %>
+                                        <div class="w-16 h-16 bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span class="text-gray-400 text-xs">No Image</span>
+                                        </div>
+                                    <% } %>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
+                                        <p class="text-gray-500 text-sm">
+                                            <%= (item.mlSize || 0) + ' ml' %> • Qty: <%= returnQty %>
+                                        </p>
+                                    </div>
+                                    <div class="text-right flex-shrink-0">
+                                        <p class="font-semibold text-orange-400">₹<%= itemTotal.toFixed(2) %></p>
+                                    </div>
+                                </div>
+                            <% }); %>
+                            <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600 mt-4">
+                                <span>Return Subtotal</span>
+                                <span>₹<%= returnSubtotal.toFixed(2) %></span>
+                            </div>
+                            <p class="text-sm text-gray-400 mt-2">Note: Refund amount may be adjusted based on shipping and tax prorations. Full details will be provided post-return.</p>
+                        <% } else { %>
+                            <p class="text-gray-400 text-center py-4">No items selected for return.</p>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Payment Method (Always Visible) -->
+                <div class="card p-6 rounded-lg">
+                    <h3 class="font-bold mb-4 accent-text">Payment Method</h3>
+                    <div class="text-sm space-y-2 text-gray-300">
+                        <% if (order.paymentMethod) { %>
+                            <% if (order.paymentMethod === 'cod') { %>
+                                <div class="cod-note p-3 rounded-lg">
+                                    <p class="font-semibold text-red-300">Cash on Delivery</p>
+                                </div>
+                            <% } else { %>
+                                <div class="payment-mode p-3 rounded-lg">
+                                    <p class="font-semibold">
+                                        <%= typeof order.paymentMethod === 'string' ? order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1) : order.paymentMethod.type || 'Card' %> 
+                                        <span class="accent-text">
+                                            **** <%= order.paymentMethod.last4 ? order.paymentMethod.last4 : '' %>
+                                        </span>
+                                    </p>
+                                    <p class="text-sm text-gray-400">Refund will be processed to this method within 5-7 business days.</p>
+                                </div>
+                            <% } %>
+                        <% } else { %>
+                            <p class="text-gray-400">Payment details not available.</p>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Order Summary (Partial) - Hidden for COD -->
+                <div class="refund-section card p-6 rounded-lg <%= order.paymentMethod === 'cod' ? 'cod-hidden' : '' %>">
+                    <h2 class="text-xl font-bold mb-4 accent-text">Refund Estimate</h2>
+                    <div class="space-y-2 text-gray-300">
+                        <div class="flex justify-between">
+                            <span>Return Subtotal</span>
+                            <span>₹<%= returnSubtotal || 0 %></span>
+                        </div>
+                        <div class="flex justify-between text-red-400">
+                            <span>Prorated Shipping/Tax Adjustment</span>
+                            <span>-₹0.00</span> <!-- TODO: Calculate prorated if needed -->
+                        </div>
+                        <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600">
+                            <span>Estimated Refund</span>
+                            <span class="estimated-refund">₹<%= returnSubtotal || 0 %></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shipping Address (for reference) -->
+                <div class="card p-6 rounded-lg">
+                    <h3 class="font-bold mb-4 accent-text">Shipping Address (for Reference)</h3>
+                    <div class="text-sm space-y-1 text-gray-300">
+                        <% if (order.address) { %>
+                            <p class="font-semibold"><%= order.address.fullName || '' %></p>
+                            <p><%= order.address.street || '' %></p>
+                            <p><%= order.address.hoNo || '' %></p>
+                            <p><%= (order.address.city || '') + ', ' + (order.address.state || '') + ' ' + (order.address.pin || '') %></p>
+                            <p><%= order.address.country || '' %></p>
+                            <p class="mt-3 accent-text"><%= order.address.phone || '' %></p>
+                        <% } else { %>
+                            <p class="text-gray-400">Shipping address not available.</p>
+                        <% } %>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-2">Note: If all items are returned, the order will be fully returned. Partial returns may affect shipping.</p>
+                </div>
+
+                <!-- Reason for Return -->
+                <div class="card p-6 rounded-lg">
+                    <h3 class="font-bold mb-4 accent-text">Reason for Return</h3>
+                    <div class="text-sm text-gray-300">
+                        <p class="mb-4">Please select the reason for returning these items. <span class="text-red-400 font-semibold">*</span> (Required)</p>
+                        <div id="reasonError" class="error-message">Please select a reason for your return.</div>
+                        <div class="space-y-3">
+                            <div class="reason-option">
+                                <input type="radio" id="reason1" name="returnReason" value="Arrived damaged or broken">
+                                <label for="reason1" class="block p-3 cursor-pointer w-full">Arrived damaged or broken</label>
+                            </div>
+                            <div class="reason-option">
+                                <input type="radio" id="reason2" name="returnReason" value="Wrong item received">
+                                <label for="reason2" class="block p-3 cursor-pointer w-full">Wrong item received</label>
+                            </div>
+                            <div class="reason-option">
+                                <input type="radio" id="reason3" name="returnReason" value="Product is defective or expired">
+                                <label for="reason3" class="block p-3 cursor-pointer w-full">Product is defective or expired</label>
+                            </div>
+                            <div class="reason-option">
+                                <input type="radio" id="reason4" name="returnReason" value="Does not match description or image">
+                                <label for="reason4" class="block p-3 cursor-pointer w-full">Does not match description or image</label>
+                            </div>
+                            <div class="reason-option">
+                                <input type="radio" id="reason5" name="returnReason" value="Unwanted gift or changed mind">
+                                <label for="reason5" class="block p-3 cursor-pointer w-full">Unwanted gift or changed mind</label>
+                            </div>
+                            <div class="reason-option">
+                                <input type="radio" id="reason6" name="returnReason" value="Skin irritation or allergic reaction">
+                                <label for="reason6" class="block p-3 cursor-pointer w-full">Skin irritation or allergic reaction</label>
+                            </div>
+                            <div class="reason-option">
+                                <input type="radio" id="reason7" name="returnReason" value="Other">
+                                <label for="reason7" class="block p-3 cursor-pointer w-full">Other</label>
+                            </div>
+                            <div id="otherReasonDiv" class="other-reason-div mt-3">
+                                <textarea class="reason-textarea" id="otherReasonText" placeholder="Please specify the reason..."></textarea>
+                                <div id="otherReasonError" class="error-message"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Additional Comments -->
+                <div class="card p-6 rounded-lg">
+                    <h3 class="font-bold mb-4 accent-text">Additional Comments (Optional)</h3>
+                    <div class="text-sm text-gray-300">
+                        <p class="mb-2">Any additional information? This is optional and not required.</p>
+                        <textarea class="reason-textarea" id="comments" placeholder="e.g., Describe the issue in more detail..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex gap-4 pt-4">
+                    <a href="/order/<%= order._id %>" class="flex-1 btn btn-secondary text-center py-3">Back to Order</a>
+                    <form id="confirmReturnForm" action="/return/<%= order._id %>/return-confirm" method="POST" style="flex: 1;">
+                        <input type="hidden" name="returnItems" value="<%= JSON.stringify(returnItems || []) %>">
+                        <input type="hidden" name="returnReason" value="">
+                        <input type="hidden" name="comments" value="">
+                        <button type="submit" class="w-full btn btn-primary py-3 font-semibold">Confirm Return</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <script>
+        // Handle reason selection and other textarea
+        const reasons = document.querySelectorAll('input[name="returnReason"]');
+        const otherDiv = document.getElementById('otherReasonDiv');
+        const otherText = document.getElementById('otherReasonText');
+        const reasonError = document.getElementById('reasonError');
+        const otherError = document.getElementById('otherReasonError');
+
+        reasons.forEach(radio => {
+            radio.addEventListener('change', function() {
+                reasonError.style.display = 'none';
+                otherError.style.display = 'none';
+                if (this.value === 'Other') {
+                    otherDiv.classList.remove('other-reason-div');
+                    otherText.focus();
+                } else {
+                    otherDiv.classList.add('other-reason-div');
+                    otherText.value = '';
+                }
+            });
+        });
+
+        // Copy values to hidden inputs on submit with validation
+        document.getElementById('confirmReturnForm').addEventListener('submit', function(e) {
+            const selectedReason = document.querySelector('input[name="returnReason"]:checked');
+            let reasonValue = '';
+
+            if (!selectedReason) {
+                e.preventDefault(); // Prevent submit
+                reasonError.style.display = 'block'; // Show error message
+                reasonError.scrollIntoView({ behavior: 'smooth', block: 'center' }); // Scroll to error
+                return false;
+            }
+
+            if (selectedReason.value === 'Other') {
+                const trimmed = otherText.value.trim();
+                if (!trimmed) {
+                    e.preventDefault();
+                    otherError.textContent = 'Reason is required';
+                    otherError.style.display = 'block';
+                    otherText.focus();
+                    otherDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+                if (trimmed.length <= 5) {
+                    e.preventDefault();
+                    otherError.textContent = 'Reason must be more than 5 characters';
+                    otherError.style.display = 'block';
+                    otherText.focus();
+                    return false;
+                }
+                // Check for invalid characters: only letters and spaces allowed (no numbers, no special chars)
+                const invalidRegex = /[^a-zA-Z\s]/;
+                if (invalidRegex.test(trimmed)) {
+                    e.preventDefault();
+                    otherError.textContent = 'Only letters and spaces are allowed';
+                    otherError.style.display = 'block';
+                    otherText.focus();
+                    return false;
+                }
+                // Check character count
+                if (trimmed.length > 500) {
+                    e.preventDefault();
+                    otherError.textContent = 'Reason must not exceed 500 characters';
+                    otherError.style.display = 'block';
+                    otherText.focus();
+                    return false;
+                }
+                reasonValue = trimmed;
+            } else {
+                reasonValue = selectedReason.value;
+                otherError.style.display = 'none';
+            }
+
+            this.querySelector('input[name="returnReason"]').value = reasonValue;
+
+            const commentsValue = document.getElementById('comments').value;
+            this.querySelector('input[name="comments"]').value = commentsValue;
+        });
+    </script>
+</body>
+</html>

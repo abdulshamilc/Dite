@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/style/user/header.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles to match the design */
+        /* Custom styles to match the design and enhance attractiveness */
         .tracking-wider { letter-spacing: 0.05em; }
         .border-cyan-400 { border-color: #22d3ee; }
         .hover\:text-cyan-400:hover { color: #22d3ee; }
@@ -16,37 +16,104 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
         .border-b-2 { border-bottom-width: 2px; }
         .hover\:border-cyan-400:hover { border-color: #22d3ee; }
+
+        /* Enhanced success animation */
+        .checkmark-container {
+            position: relative;
+        }
+        .checkmark-circle {
+            animation: circleExpand 1.5s ease-out;
+            animation-fill-mode: forwards;
+        }
+        @keyframes circleExpand {
+            0% { transform: scale(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .checkmark-path {
+            stroke-dasharray: 50;
+            stroke-dashoffset: 50;
+            animation: drawCheck 4s infinite;
+        }
+        @keyframes drawCheck {
+            0% { stroke-dashoffset: 50; }
+            25% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .success-glow {
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.6);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
+            to { box-shadow: 0 0 30px rgba(34, 197, 94, 0.8), 0 0 40px rgba(34, 197, 94, 0.4); }
+        }
+
+        /* Layered button styles for depth */
+        .btn-layered {
+            position: relative;
+            background: linear-gradient(145deg, #745727, #fec575);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 4px 15px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .btn-layered::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .btn-layered:hover::before {
+            opacity: 1;
+        }
+        .btn-layered:hover {
+            transform: translateY(-2px);
+            box-shadow: 
+                0 6px 20px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            background: linear-gradient(145deg, #a69478, #fec575);
+        }
     </style>
 </head>
 <body class="min-h-screen bg-black text-white flex flex-col">
     <%- include("../../partials/user/header") %>
 
     <!-- Main Content -->
-    <main class="flex-1 flex items-center justify-center px-4 py-20">
+    <main class="flex-1 flex items-center justify-center px-4 pt-32 pb-20">
         <div class="text-center max-w-2xl">
-            <!-- Green Checkmark -->
+            <!-- Enhanced Animated Checkmark -->
             <div class="flex justify-center mb-8">
-                <div class="relative">
-                    <div class="w-40 h-40 border-4 border-cyan-400 rounded-lg flex items-center justify-center bg-black">
-                        <div class="w-32 h-32 bg-green-500 rounded-lg flex items-center justify-center animate-pulse">
-                            <!-- Simple checkmark icon using SVG -->
-                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-black" stroke-width="3">
-                                <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                <div class="checkmark-container relative">
+                    <div class="w-40 h-40 border-4 border-cyan-400 rounded-full flex items-center justify-center bg-black checkmark-circle">
+                        <div class="w-32 h-32 bg-green-500 rounded-full flex items-center justify-center success-glow relative z-10">
+                            <!-- Animated checkmark icon using SVG with looping draw animation -->
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-black">
+                                <path d="M20 6L9 17L4 12" class="checkmark-path" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
                             </svg>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Thank You Message -->
-            <h1 class="text-3xl md:text-4xl font-bold mb-8 tracking-wider">THANK YOU FOR ORDERING</h1>
+            <!-- Thank You Message with subtle glow -->
+            <h1 class="text-3xl md:text-4xl font-bold mb-8 tracking-wider bg-gradient-to-r from-[#745727] to-[#fec575] bg-clip-text text-transparent drop-shadow-lg">
+                THANK YOU FOR ORDERING
+            </h1>
 
-            <!-- Action Buttons -->
+            <!-- Enhanced Layered Action Buttons -->
             <div class="flex flex-col sm:flex-row gap-8 justify-center items-center">
-                <a href="/orders" class="text-lg font-semibold tracking-wider hover:text-cyan-400 transition border-b-2 border-transparent hover:border-cyan-400 pb-2">
+                <a href="/orders" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300">
                     VIEW ORDERS
                 </a>
-                <a href="/" class="text-lg font-semibold tracking-wider hover:text-cyan-400 transition border-b-2 border-transparent hover:border-cyan-400 pb-2">
+                <a href="/" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300">
                     CONTINUE SHOPPING
                 </a>
             </div>

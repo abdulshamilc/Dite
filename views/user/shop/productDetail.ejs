@@ -41,14 +41,14 @@
   <body class="min-h-screen bg-black text-white px-10">
     <!-- Header -->
 
-    <!-- Error Alert -->
-    <% if (typeof error !== 'undefined' && error) { %>
-    <div class="text-red-500 text-center py-4">
-      <%= error %>
-    </div>
-    <% } %>
-
     <main class="pt-20">
+      <!-- Error Alert -->
+      <% if (typeof error !== 'undefined' && error) { %>
+      <div class="text-red-500 text-center py-4 mb-4">
+        <%= error %>
+      </div>
+      <% } %>
+
       <div class="max-w-7xl mx-auto px-6 py-12">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <!-- Product Images -->
@@ -253,115 +253,116 @@
             </div>
           </div>
         </section>
-      </main>
+      </div>
+    </main>
 
-      <!-- Footer -->
-      <footer class="mt-16">
-        <%- include("../../partials/user/footer") %>
-      </footer>
+    <!-- Footer -->
+    <footer class="mt-16">
+      <%- include("../../partials/user/footer") %>
+    </footer>
 
-      <!-- JS -->
-      <script>
-        function changeImage(src, index) {
-          document.getElementById("mainImage").src = src;
-          document.querySelectorAll(".thumbnail").forEach((thumb, i) => {
-            thumb.classList.remove("border-yellow-500");
-            thumb.classList.add("border-gray-700");
-            if (i === index) {
-              thumb.classList.add("border-yellow-500");
-              thumb.classList.remove("border-gray-700");
-            }
-          });
-        }
-
-        function updatePriceDisplay(discountedPrice, basePrice, stock, quantity) {
-          const priceSection = document.getElementById("priceSection");
-          const addButton = document.getElementById("addToCartBtn");
-          const isOutOfStock = (stock === 0 || quantity > stock);
-          if (isOutOfStock) {
-            priceSection.innerHTML = '<span class="text-red-600 font-semibold">Out of Stock</span>';
-            addButton.disabled = true;
-            addButton.textContent = 'Out of Stock';
-            addButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
-            addButton.classList.add('bg-gray-600', 'cursor-not-allowed');
-          } else {
-            let html = `<span class="text-yellow-500">₹${discountedPrice ? discountedPrice.toFixed(2) : 'N/A'}</span>`;
-            if (discountedPrice < basePrice) {
-              html += `<span class="line-through text-gray-500 ml-2">₹${basePrice ? basePrice.toFixed(2) : 'N/A'}</span>`;
-            }
-            priceSection.innerHTML = html;
-            addButton.disabled = false;
-            addButton.textContent = 'ADD TO CART';
-            addButton.classList.remove('bg-gray-600', 'cursor-not-allowed');
-            addButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+    <!-- JS -->
+    <script>
+      function changeImage(src, index) {
+        document.getElementById("mainImage").src = src;
+        document.querySelectorAll(".thumbnail").forEach((thumb, i) => {
+          thumb.classList.remove("border-yellow-500");
+          thumb.classList.add("border-gray-700");
+          if (i === index) {
+            thumb.classList.add("border-yellow-500");
+            thumb.classList.remove("border-gray-700");
           }
-        }
+        });
+      }
 
-        function selectSize(size, discountedPrice, basePrice, stock) {
-          document.querySelectorAll(".size-btn").forEach((btn) => {
-            btn.classList.remove(
+      function updatePriceDisplay(discountedPrice, basePrice, stock, quantity) {
+        const priceSection = document.getElementById("priceSection");
+        const addButton = document.getElementById("addToCartBtn");
+        const isOutOfStock = (stock === 0 || quantity > stock);
+        if (isOutOfStock) {
+          priceSection.innerHTML = '<span class="text-red-600 font-semibold">Out of Stock</span>';
+          addButton.disabled = true;
+          addButton.textContent = 'Out of Stock';
+          addButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+          addButton.classList.add('bg-gray-600', 'cursor-not-allowed');
+        } else {
+          let html = `<span class="text-yellow-500">₹${discountedPrice ? discountedPrice.toFixed(2) : 'N/A'}</span>`;
+          if (discountedPrice < basePrice) {
+            html += `<span class="line-through text-gray-500 ml-2">₹${basePrice ? basePrice.toFixed(2) : 'N/A'}</span>`;
+          }
+          priceSection.innerHTML = html;
+          addButton.disabled = false;
+          addButton.textContent = 'ADD TO CART';
+          addButton.classList.remove('bg-gray-600', 'cursor-not-allowed');
+          addButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+        }
+      }
+
+      function selectSize(size, discountedPrice, basePrice, stock) {
+        document.querySelectorAll(".size-btn").forEach((btn) => {
+          btn.classList.remove(
+            "bg-yellow-500",
+            "text-black",
+            "border-yellow-500"
+          );
+          btn.classList.add("bg-gray-800", "text-white", "border-gray-600");
+          if (btn.dataset.size === size) {
+            btn.classList.add(
               "bg-yellow-500",
               "text-black",
               "border-yellow-500"
             );
-            btn.classList.add("bg-gray-800", "text-white", "border-gray-600");
-            if (btn.dataset.size === size) {
-              btn.classList.add(
-                "bg-yellow-500",
-                "text-black",
-                "border-yellow-500"
-              );
-            }
-          });
+          }
+        });
 
-          window.currentDiscounted = discountedPrice;
-          window.currentBase = basePrice;
-          window.currentStock = stock;
+        window.currentDiscounted = discountedPrice;
+        window.currentBase = basePrice;
+        window.currentStock = stock;
 
-          const quantityInput = document.getElementById('quantityInput');
-          const quantity = parseInt(quantityInput.value) || 1;
-          updatePriceDisplay(discountedPrice, basePrice, stock, quantity);
+        const quantityInput = document.getElementById('quantityInput');
+        const quantity = parseInt(quantityInput.value) || 1;
+        updatePriceDisplay(discountedPrice, basePrice, stock, quantity);
 
-          document.getElementById("selectedVariantSize").value = size;
-        }
+        document.getElementById("selectedVariantSize").value = size;
+      }
 
-        document.addEventListener('DOMContentLoaded', function() {
-          const tabs = document.querySelectorAll('.tab-btn');
-          const contents = document.querySelectorAll('.tab-content');
+      document.addEventListener('DOMContentLoaded', function() {
+        const tabs = document.querySelectorAll('.tab-btn');
+        const contents = document.querySelectorAll('.tab-content');
 
-          tabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-              const target = this.id.replace('Tab', 'Content');
-              tabs.forEach(t => {
-                t.classList.remove('border-yellow-500', 'text-yellow-500');
-                t.classList.add('text-gray-400', 'border-transparent');
-              });
-              this.classList.add('border-yellow-500', 'text-yellow-500');
-              this.classList.remove('text-gray-400', 'border-transparent');
-              contents.forEach(content => content.classList.add('hidden'));
-              const targetContent = document.getElementById(target);
-              if (targetContent) targetContent.classList.remove('hidden');
+        tabs.forEach(tab => {
+          tab.addEventListener('click', function() {
+            const target = this.id.replace('Tab', 'Content');
+            tabs.forEach(t => {
+              t.classList.remove('border-yellow-500', 'text-yellow-500');
+              t.classList.add('text-gray-400', 'border-transparent');
             });
-          });
-
-          // Initialize current values for first variant
-          window.currentDiscounted = <%= product.variants.length > 0 ? product.variants[0].discountedPrice : 0 %>;
-          window.currentBase = <%= product.variants.length > 0 ? product.variants[0].basePrice : 0 %>;
-          window.currentStock = <%= product.variants.length > 0 ? product.variants[0].stock : 0 %>;
-
-          // Quantity input handler
-          const quantityInput = document.getElementById('quantityInput');
-          quantityInput.addEventListener('input', function() {
-            let q = parseInt(this.value) || 1;
-            if (q < 1) {
-              q = 1;
-              this.value = 1;
-            }
-            if (window.currentStock !== undefined) {
-              updatePriceDisplay(window.currentDiscounted, window.currentBase, window.currentStock, q);
-            }
+            this.classList.add('border-yellow-500', 'text-yellow-500');
+            this.classList.remove('text-gray-400', 'border-transparent');
+            contents.forEach(content => content.classList.add('hidden'));
+            const targetContent = document.getElementById(target);
+            if (targetContent) targetContent.classList.remove('hidden');
           });
         });
-      </script>
-    </body>
+
+        // Initialize current values for first variant
+        window.currentDiscounted = <%= product.variants.length > 0 ? product.variants[0].discountedPrice : 0 %>;
+        window.currentBase = <%= product.variants.length > 0 ? product.variants[0].basePrice : 0 %>;
+        window.currentStock = <%= product.variants.length > 0 ? product.variants[0].stock : 0 %>;
+
+        // Quantity input handler
+        const quantityInput = document.getElementById('quantityInput');
+        quantityInput.addEventListener('input', function() {
+          let q = parseInt(this.value) || 1;
+          if (q < 1) {
+            q = 1;
+            this.value = 1;
+          }
+          if (window.currentStock !== undefined) {
+            updatePriceDisplay(window.currentDiscounted, window.currentBase, window.currentStock, q);
+          }
+        });
+      });
+    </script>
+  </body>
 </html>

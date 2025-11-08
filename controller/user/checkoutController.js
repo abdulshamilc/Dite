@@ -1,16 +1,22 @@
-import {Address} from "../../models/addressModel.js";
+import { Address } from "../../models/addressModel.js";
 import Cart from "../../models/cartModel.js";
 import { User } from "../../models/userModels.js";
 import Order from "../../models/ordersModel.js";
 import { nanoid } from "nanoid";
+import Products from "../../models/productsModels.js";
 
 const getCheckout = async (req, res) => {
   const userEmail = req.session.user;
   if (!userEmail) return res.redirect("/login");
 
   const user = await User.findOne({ email: userEmail });
+  if (!user) return res.redirect("/login");
   const cart = await Cart.findOne({ userId: user._id });
-
+  if (!cart) return res.redirect("/cart");
+  if (cart.items.length <= 0) {
+    req.session.error = "The Cart Does Not Have Any Product To CheckOut";
+    return res.redirect("/cart");
+  }
   const addresses = await Address.find({ userId: user._id });
 
   let subtotal = 0;
@@ -20,7 +26,7 @@ const getCheckout = async (req, res) => {
       (acc, item) => acc + item.basePrice * item.quantity,
       0
     );
-    total = subtotal; 
+    total = subtotal;
   }
 
   res.render("user/checkout/selectAddress", {
@@ -88,7 +94,6 @@ const addNewAddress = async (req, res) => {
     });
 
     if (existingAddress) {
-    
       return res.redirect("/checkout/address");
     }
 
@@ -135,7 +140,7 @@ const getPaymentpage = async (req, res) => {
 const placeOrder = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.session.user });
-    if (!user) return res.redirect('/login');
+    if (!user) return res.redirect("/login");
 
     const { addressId, items, paymentMethod } = req.body;
 
@@ -145,12 +150,10 @@ const placeOrder = async (req, res) => {
       return res.status(400).json({ message: "Invalid address ID" });
     }
 
-   
     const totalAmount = items.reduce((acc, item) => {
-      const price = item.discoundedPrice ?? item.basePrice; 
+      const price = item.discoundedPrice ?? item.basePrice;
       return acc + price * item.quantity;
     }, 0);
-
     const newOrder = new Order({
       orderID: `ORD-${nanoid(8)}`,
       userId: user._id,
@@ -158,7 +161,7 @@ const placeOrder = async (req, res) => {
       items: items.map((item) => ({
         productId: item.productId,
         name: item.name,
-        mlSize:item.mlsize,
+        mlSize: item.size,
         basePrice: item.basePrice,
         discoundedPrice: item.discountedPrice,
         quantity: item.quantity,
@@ -176,43 +179,58 @@ const placeOrder = async (req, res) => {
       placedAt: new Date(),
     });
 
-    req.session.orderplaced = true ;
+    req.session.orderplaced = true;
     await newOrder.save();
-    
-    res.json({ success: true });
 
+    res.json({ success: true });
   } catch (error) {
     console.error("Error in placeOrder:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
 
+const getSuccessPage = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.session.user });
+    if (!user) return res.redirect("/login");
 
-const getSuccessPage = async(req,res)=>{
-  
-  const user = await User.findOne({email:req.session.user}) ;
-  if(!user)res.redirect('/login') ;
-  
-  if(!req.session.orderplaced)res.redirect('/cart') ;
-  
-  await Cart.deleteMany({userId: user._id})
+    if (!req.session.orderplaced) return res.redirect("/cart");
 
-  res.render('user/checkout/succuss')
-}
+    // Decrease stock for the latest placed order
+    const latestOrder = await Order.findOne({ userId: user._id }).sort({ placedAt: -1 });
+    if (latestOrder && latestOrder.orderStatus === "Placed") {
+      for (const item of latestOrder.items) {
+        const product = await Products.findById(item.productId);
+        if (product && product.variants) {
+          const mlSizeNum = parseInt(item.mlSize);
+          const variantIndex = product.variants.findIndex(v => v.mlSize === mlSizeNum);
+          if (variantIndex !== -1) {
+            product.variants[variantIndex].stock -= item.quantity;
+            await product.save();
+          }
+        }
+      }
+    }
 
+    await Cart.deleteMany({ userId: user._id });
 
-const getFailedPage = async(req,res)=>{
-  
-  const user = await User.findOne({email:req.session.user}) ;
-  if(!user)res.redirect('/login') ;
-  
-  if(!req.session.orderplaced)res.redirect('/cart') ;
-  
-  await Cart.deleteMany({userId: user._id})
+    delete req.session.orderplaced;
+    res.render("user/checkout/succuss");
+  } catch (error) {
+    console.log(error)
+  }
+};
 
-  res.render('user/checkout/failed')
-}
+const getFailedPage = async (req, res) => {
+  const user = await User.findOne({ email: req.session.user });
+  if (!user) res.redirect("/login");
 
+  if (!req.session.orderplaced) res.redirect("/cart");
+
+  await Cart.deleteMany({ userId: user._id });
+
+  res.render("user/checkout/failed");
+};
 
 export {
   getCheckout,
@@ -224,4 +242,3 @@ export {
   getSuccessPage,
   getFailedPage,
 };
-

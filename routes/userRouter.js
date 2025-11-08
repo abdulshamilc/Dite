@@ -33,6 +33,16 @@ import {
   postDeletetAdress,
   getOrders,
   getOrderDetails,
+  getCancelOrder,
+  postCancelOrder,
+  getCancelSelect,
+  postCancelSelect,
+  getorderInvoce,
+  getReturn,
+  postReturn,
+  postReturnConfired,
+  getReturnSelect,
+  postReturnSelect,
   getSecurity,
   getDeleteAcount,
   userlogOut,
@@ -163,7 +173,17 @@ router.get("/security/delete-account-confirm", isAuthenticatedUser, isBlocked, g
 
 router.get("/orders", isAuthenticatedUser, isBlocked, getOrders);
 router.get("/order/:id", isAuthenticatedUser, isBlocked, getOrderDetails);
-
+router.get("/cancelOrder/:id", isAuthenticatedUser, isBlocked, getCancelOrder);
+router.post("/cancelOrder/:id", isAuthenticatedUser, isBlocked, postCancelOrder);
+router.get("/cancelOrder/:id/cancel-select", isAuthenticatedUser, isBlocked, getCancelSelect);
+router.post("/cancelOrder/:id/cancel-select", isAuthenticatedUser, isBlocked, postCancelSelect);
+router.get("/invoice/:id", isAuthenticatedUser, isBlocked, getorderInvoce);
+router.get("/return/:id", isAuthenticatedUser, isBlocked, getReturn);
+router.post("/return/:id", isAuthenticatedUser, isBlocked, postReturn);
+router.post("/return/:id/return-confirm", isAuthenticatedUser, isBlocked, postReturnConfired);
+router.get("/return/:id/return-select", isAuthenticatedUser, isBlocked, getReturnSelect);
+router.post("/return/:id/return-select", isAuthenticatedUser, isBlocked, postReturnSelect);
+ 
 router.get('/checkout/address',isAuthenticatedUser,isBlocked,getCheckout);
 router.post('/checkout/address/save-location/:id',isAuthenticatedUser,isBlocked,addGeolocation);
 router.post('/checkout/address/clear-location/:id',isAuthenticatedUser,isBlocked,clearGeolocation);

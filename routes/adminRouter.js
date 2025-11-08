@@ -10,7 +10,10 @@ import {
     PostOtpVerification,
     getResetPasword,
     postResetPassword,
-    getDashboard,getOrders, 
+    getDashboard,
+    getOrders,
+    getViewOrders, 
+    updateOrderStatus,
     getProducts ,
     getAddProducts,
     postAddProducts,
@@ -49,6 +52,8 @@ router.post('/reset-password/:token',postResetPassword)
 router.get('/dashboard',isAuthenticatedAdmin,getDashboard) 
 
 router.get('/orders',isAuthenticatedAdmin,pagination,getOrders) 
+router.get('/orders/view/:id',isAuthenticatedAdmin,pagination,getViewOrders) 
+router.post('/orders/:id/status',isAuthenticatedAdmin,pagination,updateOrderStatus) 
 
 router.get('/products',isAuthenticatedAdmin,pagination,getProducts) 
 router.get('/products/add-product',isAuthenticatedAdmin,getAddProducts)
