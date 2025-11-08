@@ -292,6 +292,14 @@
             font-size: 10px;
             font-weight: bold;
         }
+
+        .timeline-dot.canceled {
+            background-color: #ef4444;
+        }
+
+        .timeline-line.canceled {
+            background-color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -328,25 +336,8 @@
                         }
                     }
                     %>
-                    <% 
-                    let cancelStatusClass = 'status-active';
-                    let cancelStatusText = 'Active';
-                    if (order.cancelStatus) {
-                        if (order.cancelStatus === 'Active') {
-                            cancelStatusClass = 'status-active';
-                            cancelStatusText = 'Active';
-                        } else if (order.cancelStatus === 'Partially Cancelled') {
-                            cancelStatusClass = 'status-partial';
-                            cancelStatusText = 'Partially Cancelled';
-                        } else if (order.cancelStatus === 'Cancelled') {
-                            cancelStatusClass = 'status-cancelled';
-                            cancelStatusText = 'Cancelled';
-                        }
-                    }
-                    %>
                     <div class="flex items-center gap-4 ml-4">
                         <span class="status-badge <%= statusClass %>"><%= statusText %></span>
-                        <span class="status-badge <%= cancelStatusClass %>"><%= cancelStatusText %></span>
                     </div>
                 </div>
             </div>
@@ -461,29 +452,49 @@
                         <p class="text-gray-400 mb-4">Estimated delivery: <span class="accent-text">3-5 business days from order placement</span> (Expected arrival: <%= new Date((order.createdAt || Date.now()) + (4 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>)</p>
                         
                         <div class="relative space-y-6">
-                            <!-- Standard Timeline Steps -->
+                            <!-- Dynamic Timeline Steps -->
                             <% 
-                            const statusMap = {
-                                placed: 0,
-                                shipped: 1,
-                                'out for delivery': 2,
-                                delivered: 3
-                            };
-                            const currentStatus = order.orderStatus?.toLowerCase() || 'placed';
-                            const currentStepIndex = statusMap[currentStatus] || 0;
-                            const steps = [
-                                { id: 0, title: 'Order Placed', completed: true },
-                                { id: 1, title: 'Shipped', completed: currentStepIndex >= 1 },
-                                { id: 2, title: 'Out for Delivery', completed: currentStepIndex >= 2 },
-                                { id: 3, title: 'Delivered', completed: currentStepIndex >= 3 }
+                            let steps = [{ id: 0, title: 'Order Placed', completed: true }];
+                            let currentStepIndex;
+                            
+                            if (order.cancelStatus === 'Cancelled') {
+                                steps.push({ id: 1, title: 'Canceled', completed: true });
+                                currentStepIndex = 1;
+                            } else {
+                                const statusMap = {
+                                    placed: 0,
+                                    shipped: 1,
+                                    'out for delivery': 2,
+                                    delivered: 3
+                                };
+                                currentStepIndex = statusMap[order.orderStatus?.toLowerCase()] || 0;
+                            }
+                            
+                            // Add remaining steps (always, but completed=false if canceled)
+                            const remainingSteps = [
+                                { title: 'Shipped' },
+                                { title: 'Out for Delivery' },
+                                { title: 'Delivered' }
                             ];
+                            remainingSteps.forEach((baseStep, relIndex) => {
+                                const absIndex = steps.length;
+                                const completed = (order.cancelStatus !== 'Cancelled' && currentStepIndex >= (relIndex + 1));
+                                steps.push({ id: absIndex, title: baseStep.title, completed: completed });
+                            });
                             %>
+                            
                             <% steps.forEach((step, index) => { %>
                                 <% 
                                 let dotClass = 'timeline-dot pending';
                                 let lineClass = 'timeline-line pending';
                                 let textClass = 'text-gray-500';
-                                if (index < currentStepIndex) {
+                                
+                                // Special handling for Canceled step (always red, overrides other logic)
+                                if (step.title === 'Canceled') {
+                                    dotClass = 'timeline-dot canceled';
+                                    textClass = 'text-red-400';
+                                    lineClass = 'timeline-line pending'; // Line to next step remains pending (gray dotted)
+                                } else if (index < currentStepIndex) {
                                     dotClass = 'timeline-dot completed';
                                     lineClass = 'timeline-line completed';
                                     textClass = 'text-green-400';
@@ -508,12 +519,14 @@
                                                 }
                                             }
                                             %>
-                                            <p class="text-sm <%= textClass === 'accent-text' ? 'text-gray-400' : 'text-gray-500' %>"><%= formattedDate %></p>
+                                            <p class="text-sm <%= textClass === 'accent-text' ? 'text-gray-400' : (step.title === 'Canceled' ? 'text-red-400' : 'text-gray-500') %>"><%= formattedDate %></p>
                                             <% if (matchingEvent && matchingEvent.message && !matchingEvent.message.includes('by admin')) { %>
-                                            <p class="text-sm <%= textClass === 'accent-text' ? 'text-gray-300' : 'text-gray-500' %> mt-1"><%= matchingEvent.message %></p>
+                                            <p class="text-sm <%= textClass === 'accent-text' ? 'text-gray-300' : (step.title === 'Canceled' ? 'text-red-300' : 'text-gray-500') %> mt-1"><%= matchingEvent.message %></p>
                                             <% } %>
                                         <% } else { %>
-                                            <p class="text-sm <%= textClass === 'accent-text' ? 'text-gray-400' : 'text-gray-500' %>">Pending</p>
+                                            <p class="text-sm <%= textClass === 'accent-text' ? 'text-gray-400' : (step.title === 'Canceled' ? 'text-red-400' : 'text-gray-500') %>">
+                                                <% if (step.title === 'Canceled') { %>Canceled on <%= new Date(order.updatedAt || order.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %><% } else { %>Pending<% } %>
+                                            </p>
                                         <% } %>
                                     </div>
                                     <% if (index < steps.length - 1) { %>

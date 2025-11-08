@@ -338,6 +338,12 @@
         color: #d4c5a9;
       }
 
+      .form-label.required::after {
+        content: ' *';
+        color: #ff6b6b;
+        font-weight: bold;
+      }
+
       .form-input {
         padding: 0.75rem;
         border: 1px solid #666;
@@ -419,6 +425,14 @@
 
       .proceed-btn:hover {
         background-color: #22c55e;
+      }
+
+      /* Error Styles */
+      .error {
+        color: #ff6b6b;
+        font-size: 0.8rem;
+        margin-top: 0.25rem;
+        display: none;
       }
 
       /* Modal Styles */
@@ -652,7 +666,6 @@
                   class="address-radio"
                   name="address"
                   value="<%= address._id %>"
-                  required
                 />
                 <div class="address-details">
                   <div class="address-info">
@@ -690,95 +703,98 @@
                 <span class="add-new-icon">+</span>
                 <span>Add New Address</span>
               </label>
-              <form class="new-address-form" id="newAddressForm">
+              <form class="new-address-form" id="newAddressForm" novalidate>
                 <div class="address-form">
                   <div class="form-group">
-                    <label class="form-label" for="newFullName"
+                    <label class="form-label required" for="newFullName"
                       >Full Name</label
                     >
                     <input
                       type="text"
                       id="newFullName"
                       class="form-input"
-                      required
                     />
+                    <span class="error" id="error-newFullName"></span>
                   </div>
                   <div class="form-row">
                     <div class="form-group">
-                      <label class="form-label" for="newPhone">Phone</label>
+                      <label class="form-label required" for="newPhone">Phone</label>
                       <input
                         type="tel"
                         id="newPhone"
                         class="form-input"
-                        required
                       />
+                      <span class="error" id="error-newPhone"></span>
                     </div>
                     <div class="form-group">
                       <label class="form-label" for="newAltPhone"
                         >Alternate Phone (Optional)</label
                       >
                       <input type="tel" id="newAltPhone" class="form-input" />
+                      <span class="error" id="error-newAltPhone"></span>
                     </div>
                   </div>
                   <div class="form-row">
                     <div class="form-group">
-                      <label class="form-label" for="newHoNo">House No.</label>
+                      <label class="form-label required" for="newHoNo">House No.</label>
                       <input
                         type="text"
                         id="newHoNo"
                         class="form-input"
-                        required
                       />
+                      <span class="error" id="error-newHoNo"></span>
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="newStreet">Street</label>
+                      <label class="form-label required" for="newStreet">Street</label>
                       <input
                         type="text"
                         id="newStreet"
                         class="form-input"
-                        required
                       />
+                      <span class="error" id="error-newStreet"></span>
                     </div>
                   </div>
                   <div class="form-row">
                     <div class="form-group">
-                      <label class="form-label" for="newCity">City</label>
+                      <label class="form-label required" for="newCity">City</label>
                       <input
                         type="text"
                         id="newCity"
                         class="form-input"
-                        required
                       />
+                      <span class="error" id="error-newCity"></span>
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="newState">State</label>
+                      <label class="form-label required" for="newState">State</label>
                       <input
                         type="text"
                         id="newState"
                         class="form-input"
-                        required
                       />
+                      <span class="error" id="error-newState"></span>
                     </div>
                   </div>
                   <div class="form-row">
                     <div class="form-group">
-                      <label class="form-label" for="newPin">Pin Code</label>
+                      <label class="form-label required" for="newPin">Pin Code</label>
                       <input
                         type="text"
                         id="newPin"
                         class="form-input"
-                        required
                       />
+                      <span class="error" id="error-newPin"></span>
                     </div>
                     <div class="form-group">
-                      <label class="form-label" for="newCountry">Country</label>
-                      <select id="newCountry" class="form-select" required>
+                      <label class="form-label required" for="newCountry">Country</label>
+                      <select id="newCountry" class="form-select">
+                        <option value="">Select Country</option>
                         <option value="India">India</option>
                         <option value="USA">USA</option>
                         <option value="UAE">UAE</option>
                         <option value="Canada">Canada</option>
                         <option value="UK">UK</option>
                       </select>
+                      <span class="error" id="error-newCountry"></span>
                     </div>
                   </div>
                   <div class="form-actions">
@@ -863,34 +879,135 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+      const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
+
+      // Pincode auto-fill
+      document.getElementById('newPin').addEventListener('keyup', async function () {
+        const pin = this.value.trim();
+        if (pin.length === 6 && /^\d{6}$/.test(pin)) {
+          const country = document.getElementById('newCountry').value;
+          if (country !== 'India') return; // Only for India
+          try {
+            const response = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            const data = await response.json();
+            if (data[0].Status === "Success") {
+              const postOffice = data[0].PostOffice[0];
+              document.getElementById('newCity').value = postOffice.District || '';
+              document.getElementById('newState').value = postOffice.State || '';
+              // Clear any errors
+              document.getElementById('error-newCity').style.display = 'none';
+              document.getElementById('error-newState').style.display = 'none';
+              document.getElementById('error-newPin').style.display = 'none';
+            } else {
+              document.getElementById('newCity').value = '';
+              document.getElementById('newState').value = '';
+              const pinError = document.getElementById('error-newPin');
+              pinError.textContent = 'Invalid Pincode';
+              pinError.style.display = 'block';
+            }
+          } catch (error) {
+            document.getElementById('newCity').value = '';
+            document.getElementById('newState').value = '';
+            const pinError = document.getElementById('error-newPin');
+            pinError.textContent = 'Unable to fetch location';
+            pinError.style.display = 'block';
+          }
+        }
+      });
+
+      // Validation functions
+      function clearNewErrors() {
+        const errorEls = document.querySelectorAll('.new-address-form .error');
+        errorEls.forEach(el => {
+          el.textContent = '';
+          el.style.display = 'none';
+        });
+      }
+
+      function validateNewAddressForm() {
+        clearNewErrors();
+        const requiredFields = ['newFullName', 'newPhone', 'newHoNo', 'newStreet', 'newCity', 'newState', 'newPin'];
+        let hasError = false;
+        requiredFields.forEach(id => {
+          const input = document.getElementById(id);
+          const value = input.value.trim();
+          const errorEl = document.getElementById(`error-${id}`);
+          if (!value) {
+            hasError = true;
+            errorEl.textContent = 'This field is required';
+            errorEl.style.display = 'block';
+          } else if (id === 'newPhone' && !phoneRegex.test(value)) {
+            hasError = true;
+            errorEl.textContent = 'Enter Valid Phone Number';
+            errorEl.style.display = 'block';
+          }
+        });
+        // Country
+        const country = document.getElementById('newCountry').value;
+        const countryError = document.getElementById('error-newCountry');
+        if (!country) {
+          hasError = true;
+          countryError.textContent = 'Please select a country';
+          countryError.style.display = 'block';
+        }
+        // Alt Phone (optional but validate if filled)
+        const altPhoneValue = document.getElementById('newAltPhone').value.trim();
+        const altError = document.getElementById('error-newAltPhone');
+        if (altPhoneValue && !phoneRegex.test(altPhoneValue)) {
+          hasError = true;
+          altError.textContent = 'Enter Valid Alternate Phone Number';
+          altError.style.display = 'block';
+        }
+        return !hasError;
+      }
+
       // Toggle new address form
       function toggleNewAddressForm() {
         const form = document.getElementById("newAddressForm");
         form.classList.toggle("show");
+        if (!form.classList.contains('show')) {
+          document.getElementById("newAddressForm").reset();
+          document.getElementById("newCountry").value = "India";
+          clearNewErrors();
+        }
       }
 
-      // Handle new address save (stub - integrate with backend POST to /address/save)
+      // Handle new address save
       document
         .getElementById("newAddressForm")
-        .addEventListener("submit", function (e) {
+        .addEventListener("submit", async function (e) {
           e.preventDefault();
-          // Collect form data and send POST
+          if (!validateNewAddressForm()) {
+            return;
+          }
+          // Collect form data
           const formData = {
-            fullName: document.getElementById("newFullName").value,
-            phone: document.getElementById("newPhone").value,
-            altPhone: document.getElementById("newAltPhone").value || null,
-            hoNo: document.getElementById("newHoNo").value,
-            street: document.getElementById("newStreet").value,
-            city: document.getElementById("newCity").value,
-            state: document.getElementById("newState").value,
-            pin: document.getElementById("newPin").value,
+            fullName: document.getElementById("newFullName").value.trim(),
+            phone: document.getElementById("newPhone").value.trim(),
+            altPhone: document.getElementById("newAltPhone").value.trim() || null,
+            hoNo: document.getElementById("newHoNo").value.trim(),
+            street: document.getElementById("newStreet").value.trim(),
+            city: document.getElementById("newCity").value.trim(),
+            state: document.getElementById("newState").value.trim(),
+            pin: document.getElementById("newPin").value.trim(),
             country: document.getElementById("newCountry").value,
           };
-          fetch('/checkout/address/add-newaddress', { method: 'POST', body: JSON.stringify(formData), headers: { 'Content-Type': 'application/json' } })
-         
-          toggleNewAddressForm();
-          this.reset();
-          document.getElementById("newCountry").value = "India";
+          try {
+            const response = await fetch('/checkout/address/add-newaddress', {
+              method: 'POST',
+              body: JSON.stringify(formData),
+              headers: { 'Content-Type': 'application/json' }
+            });
+            if (response.ok) {
+              alert('Address added successfully!');
+              location.reload();
+            } else {
+              const errorText = await response.text();
+              alert('Error adding address: ' + errorText);
+            }
+          } catch (err) {
+            alert('Network error: ' + err.message);
+          }
         });
 
       
