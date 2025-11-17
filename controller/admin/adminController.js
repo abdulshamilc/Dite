@@ -781,7 +781,6 @@ const getSaleReport = async (req, res) => {
 // Category fields
 const getCategories = async (req, res) => {
   try {
-    // ✅ Move flash messages from session → res.locals
     const errorMessage = req.session.errorMessage;
     const successMessage = req.session.successMessage;
 
@@ -929,6 +928,202 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+
+const getReturn = async(req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Total Returns Count
+    const totalReturnsResult = await Orders.aggregate([
+      { $unwind: '$returndProduct' },
+      { $count: 'total' }
+    ]);
+    const totalReturns = totalReturnsResult[0]?.total || 0;
+
+    // Requested Returns Count
+    const requestedResult = await Orders.aggregate([
+      { $unwind: '$returndProduct' },
+      { $match: { 'returndProduct.adminApproved': 'Requested' } },
+      { $count: 'count' }
+    ]);
+    const requestedReturnsCount = requestedResult[0]?.count || 0;
+
+    // Approved Returns Count
+    const approvedResult = await Orders.aggregate([
+      { $unwind: '$returndProduct' },
+      { $match: { 'returndProduct.adminApproved': 'Approved' } },
+      { $count: 'count' }
+    ]);
+    const approvedReturnsCount = approvedResult[0]?.count || 0;
+
+    // Total Refund Amount 
+    const totalRefundResult = await Orders.aggregate([
+      { $unwind: '$returndProduct' },
+      { $match: { 'returndProduct.adminApproved': 'Approved' } },
+      {
+        $group: {
+          _id: null,
+          totalRefund: {
+            $sum: {
+              $multiply: ['$returndProduct.discountedPrice', '$returndProduct.returndQuantity']
+            }
+          }
+        }
+      }
+    ]);
+    const totalRefundAmount = totalRefundResult.length > 0 
+      ? [{ totalRefund: totalRefundResult[0].totalRefund }] 
+      : [{ totalRefund: 0 }];
+
+    // Fixed Pipeline (added _id projection as before)
+    const returnsPipeline = [
+      { $unwind: '$returndProduct' },
+      {
+        $sort: { 'returndProduct.returnedAt': -1 }
+      },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $project: {
+          _id: '$returndProduct._id',  // Preserve for view routes
+          orderId: '$_id',
+          returnID: { $toString: '$returndProduct._id' },
+          orderID: '$orderID',
+          address: '$address',
+          returnedAt: '$returndProduct.returnedAt',
+          refundAmount: {
+            $multiply: ['$returndProduct.discountedPrice', '$returndProduct.returndQuantity']
+          },
+          name: '$returndProduct.name',
+          mlSize: '$returndProduct.mlSize',
+          quantity: '$returndProduct.returndQuantity',
+          adminApproved: '$returndProduct.adminApproved',
+          reason: '$returndProduct.reason',
+          image: '$returndProduct.image',
+          productId: '$returndProduct.productId',
+          basePrice: '$returndProduct.basePrice',
+          discountedPrice: '$returndProduct.discountedPrice'
+        }
+      }
+    ];
+
+    const returns = await Orders.aggregate(returnsPipeline);
+    console.log('Debug Returns:', returns);  // Check console for data (remove after testing)
+
+    const totalPages = Math.ceil(totalReturns / limit);
+
+    res.render('admin/return', { 
+      title: 'Returns Management',
+      totalReturns,
+      requestedReturnsCount,
+      approvedReturnsCount,
+      totalRefundAmount,
+      returns,
+      currentPage: page,
+      totalPages,
+      limit
+      // Add if using flash: , successMessage: req.flash('success')[0], errorMessage: req.flash('error')[0]
+    });
+  } catch (error) {
+    console.error('Error fetching returns:', error);
+    res.status(500).render('admin/return', {
+      title: 'Returns Management',
+      errorMessage: 'Failed to load returns data.',
+      totalReturns: 0,
+      requestedReturnsCount: 0,
+      approvedReturnsCount: 0,
+      totalRefundAmount: [{ totalRefund: 0 }],
+      returns: [],  // Empty array prevents EJS loop errors
+      currentPage: 1,
+      totalPages: 1,
+      limit: 10
+    });
+  }
+};
+
+
+
+const getReturnDetials = async(req,res)=>{
+  try {
+    const { orderId, returnId } = req.params;
+
+    // Fetch order with populated user
+    const order = await Order.findById(orderId)
+      .populate('userId', 'name email phone') // Populate basic user fields
+      .lean(); // Use lean() for faster queries on read-only pages
+
+    if (!order) {
+      req.flash('errorMessage', 'Order not found.');
+      return res.redirect('/admin/returns'); // Redirect to returns list or handle 404
+    }
+
+    // Extract specific returnItem from returndProduct array by _id
+    let returnItem = order.returndProduct?.find(r => r._id.toString() === returnId);
+    if (!returnItem) {
+      req.flash('errorMessage', 'Return request not found.');
+      return res.redirect(`/admin/returns/${orderId}`); // Or back to order details
+    }
+
+    // Remap fields to match EJS expectations (handle schema discrepancies without updates)
+    // Fix price typo: schema uses 'discoundedPrice', template expects 'discountedPrice'
+    returnItem.discountedPrice = returnItem.discountedPrice || returnItem.discoundedPrice || returnItem.basePrice || 0;
+
+    // Fallback for missing fields in schema
+    returnItem.rejectReason = returnItem.rejectReason || '';
+    returnItem.images = returnItem.images || [];
+    returnItem.returnId = returnItem.returnId || returnItem._id.toString().slice(-6); // Short ID fallback
+
+    // Fallback timestamps (use returnedAt or current date if missing)
+    returnItem.approvedAt = returnItem.approvedAt || (returnItem.adminApproved === 'Approved' ? new Date() : null);
+    returnItem.rejectedAt = returnItem.rejectedAt || (returnItem.adminApproved === 'Rejected' ? new Date() : null);
+    returnItem.processingAt = returnItem.processingAt || (returnItem.adminApproved === 'Processing' ? new Date() : null);
+    returnItem.completedAt = returnItem.completedAt || (returnItem.adminApproved === 'Completed' ? new Date() : null);
+
+    // Note: adminApproved enum in schema is limited to ["Requested", "Approved", "Rejected"];
+    // If "Processing" or "Completed" are used in app logic, ensure they are set dynamically elsewhere.
+    // Here, we pass as-is; EJS handles via conditionals.
+
+    // Fix price in order.items to match template (discountedPrice)
+    if (order.items) {
+      order.items = order.items.map(item => ({
+        ...item,
+        discountedPrice: item.discountedPrice || item.discoundedPrice || item.basePrice || 0
+      }));
+    }
+
+    // Compute totalOrders (since not in schema; aggregate count)
+    const userId = order.userId?._id || order.userId;
+    let totalOrders = 0;
+    if (userId) {
+      totalOrders = await Order.countDocuments({ userId });
+    }
+    const user = {
+      ...order.userId,
+      totalOrders // Attach computed field
+    };
+
+    // Handle flash messages
+    const errorMessage = req.flash('errorMessage')[0];
+    const successMessage = req.flash('successMessage')[0];
+
+    // Render the EJS view with prepared data
+    res.render('admin/returns/details', { // Adjust to your EJS path, e.g., 'admin/return-details'
+      title: 'Return Details - Admin',
+      returnItem,
+      order,
+      user,
+      errorMessage,
+      successMessage
+    });
+  } catch (error) {
+    console.error('Error fetching return details:', error);
+    req.flash('errorMessage', 'An error occurred while loading return details.');
+    res.redirect('/admin/returns');
+  }
+}
+
 const logOut = (req, res) => {
   try {
     delete req.session.admin;
@@ -969,5 +1164,7 @@ export {
   editCategory,
   DeactivateCategory,
   deleteCategory,
+  getReturn,
+  getReturnDetials,
   logOut,
 };

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm Return</title>
+    <title>Confirm Return Request</title>
     <link rel="stylesheet" href="/style/user/header.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -180,6 +180,15 @@
             margin-top: 4px;
             display: none;
         }
+
+        .warning-note {
+            background-color: rgba(245, 158, 11, 0.1);
+            border: 1px solid #f59e0b;
+            color: #f59e0b;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
     </style>
 </head>
 <body>
@@ -188,16 +197,22 @@
         <div class="max-w-4xl mx-auto w-full">
             <!-- Header -->
             <div class="mb-8">
-                <a href="/orders/<%= order._id %>" class="text-sm accent-text hover:underline mb-4 inline-block">← Back to Order Details</a>
+                <a href="/order/<%= order._id %>" class="text-sm accent-text hover:underline mb-4 inline-block">← Back to Order Details</a>
                 <div class="flex items-start">
                     <div class="flex-1 text-center">
-                        <h1 class="text-4xl font-bold mb-2">Confirm Return</h1>
+                        <h1 class="text-4xl font-bold mb-2">Submit Return Request</h1>
                         <p class="text-gray-400">Order ID: <span class="accent-text font-semibold"><%= order.orderID %></span></p>
                     </div>
                     <div class="flex-none ml-4">
-                        <span class="status-badge status-return">Returning</span>
+                        <span class="status-badge status-return">Return Request</span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Warning Note: Awaiting Approval -->
+            <div class="warning-note">
+                <p class="font-semibold mb-1">Important:</p>
+                <p>This is a return request. It will be reviewed by our team and approved or rejected within 2-3 business days. You will be notified via email and in your order details once a decision is made. Refunds (if approved) will be processed within 5-7 business days after approval.</p>
             </div>
 
             <!-- Main Content -->
@@ -205,16 +220,16 @@
                 <!-- Items to Return -->
                 <div class="card p-6 rounded-lg">
                     <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-bold accent-text">Items to Return</h2>
+                        <h2 class="text-xl font-bold accent-text">Items for Return Request</h2>
                         <a href="/return/<%= order._id %>/return-select?edit=true" class="btn btn-edit">Edit Items</a>
                     </div>
                     <div class="space-y-4">
+                        <% let returnSubtotal = 0; %>
                         <% if (returnItems && returnItems.length > 0) { %>
-                            <% let returnSubtotal = 0; %>
                             <% returnItems.forEach(itemReturn => { %>
                                 <% const item = itemReturn.item; %>
                                 <% const returnQty = itemReturn.returnQty; %>
-                                <% const itemTotal = (item.basePrice || 0) * returnQty; %>
+                                <% const itemTotal = (item.discountedPrice || item.basePrice || 0) * returnQty; %>
                                 <% returnSubtotal += itemTotal; %>
                                 <div class="item-return">
                                     <% if (item.image) { %>
@@ -227,7 +242,7 @@
                                     <div class="flex-1 min-w-0">
                                         <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
                                         <p class="text-gray-500 text-sm">
-                                            <%= (item.mlSize || 0) + ' ml' %> • Qty: <%= returnQty %>
+                                            <%= (item.mlSize || 'N/A') %> ml • Qty: <%= returnQty %>
                                         </p>
                                     </div>
                                     <div class="text-right flex-shrink-0">
@@ -236,12 +251,12 @@
                                 </div>
                             <% }); %>
                             <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600 mt-4">
-                                <span>Return Subtotal</span>
+                                <span>Requested Subtotal</span>
                                 <span>₹<%= returnSubtotal.toFixed(2) %></span>
                             </div>
-                            <p class="text-sm text-gray-400 mt-2">Note: Refund amount may be adjusted based on shipping and tax prorations. Full details will be provided post-return.</p>
+                            <p class="text-sm text-gray-400 mt-2">Note: If approved, refund amount may be adjusted based on shipping and tax prorations. Full details will be provided upon approval.</p>
                         <% } else { %>
-                            <p class="text-gray-400 text-center py-4">No items selected for return.</p>
+                            <p class="text-gray-400 text-center py-4">No items selected for return request.</p>
                         <% } %>
                     </div>
                 </div>
@@ -254,16 +269,14 @@
                             <% if (order.paymentMethod === 'cod') { %>
                                 <div class="cod-note p-3 rounded-lg">
                                     <p class="font-semibold text-red-300">Cash on Delivery</p>
+                                    <p class="text-sm">For COD orders, refunds (if approved) will be processed via bank transfer or your preferred method after verification.</p>
                                 </div>
                             <% } else { %>
                                 <div class="payment-mode p-3 rounded-lg">
                                     <p class="font-semibold">
-                                        <%= typeof order.paymentMethod === 'string' ? order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1) : order.paymentMethod.type || 'Card' %> 
-                                        <span class="accent-text">
-                                            **** <%= order.paymentMethod.last4 ? order.paymentMethod.last4 : '' %>
-                                        </span>
+                                        <%= order.paymentMethod.charAt(0).toUpperCase() + order.paymentMethod.slice(1) %> Payment
                                     </p>
-                                    <p class="text-sm text-gray-400">Refund will be processed to this method within 5-7 business days.</p>
+                                    <p class="text-sm text-gray-400">Refund (if approved) will be processed to this method within 5-7 business days after approval.</p>
                                 </div>
                             <% } %>
                         <% } else { %>
@@ -274,11 +287,11 @@
 
                 <!-- Order Summary (Partial) - Hidden for COD -->
                 <div class="refund-section card p-6 rounded-lg <%= order.paymentMethod === 'cod' ? 'cod-hidden' : '' %>">
-                    <h2 class="text-xl font-bold mb-4 accent-text">Refund Estimate</h2>
+                    <h2 class="text-xl font-bold mb-4 accent-text">Estimated Refund (If Approved)</h2>
                     <div class="space-y-2 text-gray-300">
                         <div class="flex justify-between">
-                            <span>Return Subtotal</span>
-                            <span>₹<%= returnSubtotal || 0 %></span>
+                            <span>Requested Subtotal</span>
+                            <span>₹<%= returnSubtotal.toFixed(2) %></span>
                         </div>
                         <div class="flex justify-between text-red-400">
                             <span>Prorated Shipping/Tax Adjustment</span>
@@ -286,9 +299,10 @@
                         </div>
                         <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600">
                             <span>Estimated Refund</span>
-                            <span class="estimated-refund">₹<%= returnSubtotal || 0 %></span>
+                            <span class="estimated-refund">₹<%= returnSubtotal.toFixed(2) %></span>
                         </div>
                     </div>
+                    <p class="text-sm text-yellow-400 mt-2">This is an estimate. Final amount will be confirmed upon approval.</p>
                 </div>
 
                 <!-- Shipping Address (for reference) -->
@@ -306,7 +320,7 @@
                             <p class="text-gray-400">Shipping address not available.</p>
                         <% } %>
                     </div>
-                    <p class="text-sm text-gray-400 mt-2">Note: If all items are returned, the order will be fully returned. Partial returns may affect shipping.</p>
+                    <p class="text-sm text-gray-400 mt-2">Please ensure the items are in original condition with packaging for approval. Instructions will be sent via email if approved.</p>
                 </div>
 
                 <!-- Reason for Return -->
@@ -356,8 +370,8 @@
                 <div class="card p-6 rounded-lg">
                     <h3 class="font-bold mb-4 accent-text">Additional Comments (Optional)</h3>
                     <div class="text-sm text-gray-300">
-                        <p class="mb-2">Any additional information? This is optional and not required.</p>
-                        <textarea class="reason-textarea" id="comments" placeholder="e.g., Describe the issue in more detail..."></textarea>
+                        <p class="mb-2">Any additional information to help with your return request? This is optional.</p>
+                        <textarea class="reason-textarea" id="comments" placeholder="e.g., Describe the issue in more detail, include photos if possible..."></textarea>
                     </div>
                 </div>
 
@@ -368,7 +382,8 @@
                         <input type="hidden" name="returnItems" value="<%= JSON.stringify(returnItems || []) %>">
                         <input type="hidden" name="returnReason" value="">
                         <input type="hidden" name="comments" value="">
-                        <button type="submit" class="w-full btn btn-primary py-3 font-semibold">Confirm Return</button>
+                        <input type="hidden" name="confirm" value="true">
+                        <button type="submit" class="w-full btn btn-primary py-3 font-semibold">Submit Return Request</button>
                     </form>
                 </div>
             </div>

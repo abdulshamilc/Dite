@@ -35,7 +35,9 @@
         transform: scale(1.1);
       }
     </style>
-     <link rel="stylesheet" href="/style/user/header.css">
+    <!-- Moved header-specific head content here to avoid nesting issues -->
+    <link rel="stylesheet" href="/style/user/header.css">
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
   </head>
   <%- include("../../partials/user/header") %>
   <body class="min-h-screen bg-black text-white px-10">

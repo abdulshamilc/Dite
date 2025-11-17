@@ -10,6 +10,7 @@
       rel="stylesheet"
     />
     <style>
+      /* Your existing styles remain unchanged */
       * {
         margin: 0;
         padding: 0;
@@ -140,7 +141,7 @@
         flex-wrap: wrap;
       }
 
-      .filter-dropdown {
+      .filter-dropdown, .filter-btn {
         background-color: #1a1a1a;
         color: #ffffff;
         border: 1px solid #555;
@@ -154,10 +155,17 @@
         background-repeat: no-repeat;
         background-position: right 15px center;
         min-width: 160px;
+        cursor: pointer;
+      }
+
+      .filter-btn {
+        background-image: none;
+        padding: 12px 20px;
       }
 
       .filter-dropdown:hover,
-      .filter-dropdown:focus {
+      .filter-dropdown:focus,
+      .filter-btn:hover {
         border-color: #d4af37;
         background-color: #222222;
         transform: translateY(-2px);
@@ -330,11 +338,16 @@
         transition: all 0.3s ease;
       }
 
-      .pagination-btn:hover {
+      .pagination-btn:hover:not(:disabled) {
         color: #d4af37;
         border-color: #d4af37;
         transform: translateY(-2px);
         box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
+      }
+
+      .pagination-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
 
       .pagination-dot {
@@ -343,11 +356,200 @@
         background-color: #666;
         border-radius: 50%;
         transition: all 0.3s ease;
+        cursor: pointer;
+      }
+
+      .pagination-dot:hover {
+        background-color: #d4af37;
+        transform: scale(1.3);
       }
 
       .pagination-dot.active {
         background-color: #d4af37;
         transform: scale(1.3);
+      }
+
+      /* Error Message */
+      .error-message {
+        color: #ff6b6b;
+        text-align: center;
+        margin: 20px 0;
+        font-size: 16px;
+      }
+
+      /* Modal Styles */
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(5px);
+      }
+
+      .modal-content {
+        background-color: #1a1a1a;
+        margin: 5% auto;
+        padding: 0;
+        border: 1px solid #555;
+        border-radius: 16px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+      }
+
+      .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid #555;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .modal-header h2 {
+        color: #d4af37;
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .close {
+        color: #999;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: color 0.3s;
+      }
+
+      .close:hover {
+        color: #d4af37;
+      }
+
+      .filter-group {
+        padding: 20px;
+        border-bottom: 1px solid #555;
+      }
+
+      .filter-group:last-child {
+        border-bottom: none;
+      }
+
+      .filter-group h3 {
+        color: #d4af37;
+        margin-bottom: 15px;
+        font-size: 18px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .price-selects {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .price-select-group {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .price-select-group label {
+        color: #e0e0e0;
+        font-size: 14px;
+        min-width: 40px;
+      }
+
+      .price-select {
+        flex: 1;
+        background-color: #1a1a1a;
+        color: #ffffff;
+        border: 1px solid #555;
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .price-select:focus {
+        border-color: #d4af37;
+        outline: none;
+        box-shadow: 0 0 5px rgba(212, 175, 55, 0.3);
+      }
+
+      .checkbox-label {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        color: #ffffff;
+        cursor: pointer;
+        border-bottom: 1px solid #333;
+        transition: background 0.3s;
+      }
+
+      .checkbox-label:hover {
+        background: #222222;
+      }
+
+      .checkbox-label input[type="checkbox"] {
+        margin-right: 10px;
+        accent-color: #d4af37;
+      }
+
+      .show-more-btn {
+        background: none;
+        border: none;
+        color: #d4af37;
+        cursor: pointer;
+        font-size: 14px;
+        text-decoration: underline;
+        padding: 10px;
+        text-align: center;
+        width: 100%;
+        transition: color 0.3s;
+      }
+
+      .show-more-btn:hover {
+        color: #b8941f;
+      }
+
+      .brands-hidden {
+        display: none;
+      }
+
+      .modal-footer {
+        padding: 20px;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        border-top: 1px solid #555;
+      }
+
+      .modal-footer button {
+        padding: 10px 20px;
+        border: 1px solid #555;
+        background: transparent;
+        color: #ffffff;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .modal-footer button:hover {
+        border-color: #d4af37;
+        color: #d4af37;
+        box-shadow: 0 4px 10px rgba(212, 175, 55, 0.3);
       }
 
       /* Responsive Design */
@@ -381,13 +583,23 @@
           align-items: center;
         }
 
-        .filter-dropdown {
+        .filter-dropdown, .filter-btn {
           width: 100%;
           max-width: 300px;
         }
 
         .search-bar {
           max-width: 400px;
+        }
+
+        .modal-content {
+          width: 95%;
+          margin: 10% auto;
+        }
+
+        .price-select-group {
+          flex-direction: column;
+          align-items: stretch;
         }
       }
 
@@ -426,87 +638,331 @@
 
     <!-- Main Content -->
     <main class="container">
+      <% if (error) { %>
+        <div class="error-message"><%= error %></div>
+      <% } %>
+
       <!-- Search Section -->
       <div class="search-section">
-        <div class="search-bar">
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Search products..."
-          />
-          <i class="fas fa-search search-icon"></i>
-        </div>
+        <form id="searchForm" style="width: 100%; max-width: 500px; margin: 0 auto;">
+          <div class="search-bar">
+            <input
+              type="text"
+              class="search-input"
+              id="searchInput"
+              name="search"
+              placeholder="Search products..."
+              value="<%= search %>"
+            />
+            <i class="fas fa-search search-icon" onclick="performSearch();"></i>
+          </div>
+        </form>
       </div>
 
       <!-- Filter Section -->
       <div class="filter-section">
-        <select class="filter-dropdown">
-          <option>ALL</option>
-          <option>MEN</option>
-          <option>WOMEN</option>
-          <option>UNISEX</option>
-        </select>
-        <select class="filter-dropdown">
-          <option>SORT BY</option>
-          <option>Price: Low to High</option>
-          <option>Price: High to Low</option>
-          <option>Newest</option>
-          <option>Most Popular</option>
-        </select>
-        <select class="filter-dropdown">
-          <option>FILTER</option>
-          <option>In Stock</option>
-          <option>On Sale</option>
-          <option>New Arrivals</option>
-        </select>
+        <form id="filterForm" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%;">
+          <!-- Gender Filter -->
+          <select class="filter-dropdown" id="genderFilter" name="gender">
+            <option value="ALL" <%= gender === 'ALL' ? 'selected' : '' %>>ALL</option>
+            <option value="MEN" <%= gender === 'MEN' ? 'selected' : '' %>>MEN</option>
+            <option value="WOMEN" <%= gender === 'WOMEN' ? 'selected' : '' %>>WOMEN</option>
+            <option value="UNISEX" <%= gender === 'UNISEX' ? 'selected' : '' %>>UNISEX</option>
+          </select>
+          <!-- Sort Filter -->
+          <select class="filter-dropdown" id="sortFilter" name="sort">
+            <option value="" <%= sort === '' ? 'selected' : '' %>>SORT BY</option>
+            <option value="price_asc" <%= sort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
+            <option value="price_desc" <%= sort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
+            <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest</option>
+            <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>Most Popular</option>
+          </select>
+          <!-- Filter Button to Open Modal -->
+          <button type="button" class="filter-btn" onclick="openFilterModal()">FILTER</button>
+        </form>
       </div>
 
       <!-- Product Grid -->
       <div class="product-grid">
-        <% products.forEach(product => { %>
-        <a href="shop/<%=product._id%>">
-          <div class="product-card">
-          <button class="wishlist-btn" title="Add to Wishlist" onclick="toggleWishlist(this)">
-            <i class="far fa-heart"></i>
-          </button>
-          <img
-            src="<%= product.images[0] %>"
-            alt="<%= product.name %>"
-            class="product-image"
-          />
-          <div class="product-info">
-            <h3 class="product-name"><%= product.name %></h3>
-            <div class="product-price">
-              <span class="base-price"><%= product.variants[0].basePrice %> Rs</span>
-              <span class="discounted-price"><%= product.variants[0].discountedPrice %> Rs</span>
-            </div>
-            <button class="shop-now-btn">Shop Now</button>
+        <% if (products && products.length > 0) { %>
+          <% products.forEach(product => { %>
+            <a href="/shop/<%= product._id %>">
+              <div class="product-card">
+                <button class="wishlist-btn" title="Add to Wishlist" onclick="toggleWishlist(event); return false;">
+                  <i class="far fa-heart"></i>
+                </button>
+                <img
+                  src="<%= product.images[0] %>"
+                  alt="<%= product.name %>"
+                  class="product-image"
+                />
+                <div class="product-info">
+                  <h3 class="product-name"><%= product.name %></h3>
+                  <div class="product-price">
+                    <span class="base-price"><%= product.variants[0].basePrice %> Rs</span>
+                    <span class="discounted-price"><%= product.variants[0].discountedPrice %> Rs</span>
+                  </div>
+                  <button class="shop-now-btn">Shop Now</button>
+                </div>
+              </div>
+            </a>
+          <% }); %>
+        <% } else { %>
+          <div style="grid-column: 1 / -1; text-align: center; padding: 50px; color: #999;">
+            No products found matching your criteria.
           </div>
-        </div>
-        <% }); %>
-        </a>
+        <% } %>
       </div>
 
       <!-- Pagination -->
-      <div class="pagination">
-        <button class="pagination-btn">‹ Previous</button>
-        <div class="pagination-dot active"></div>
-        <div class="pagination-dot"></div>
-        <div class="pagination-dot"></div>
-        <div class="pagination-dot"></div>
-        <button class="pagination-btn">Next ›</button>
-      </div>
+      <% if (totalPages > 1) { %>
+        <div class="pagination">
+          <button 
+            class="pagination-btn" 
+            <%= page === 1 ? 'disabled' : '' %>
+            onclick="updatePage('<%= page - 1 %>')"
+          >‹ Previous</button>
+          
+          <% for (let i = 1; i <= totalPages; i++) { %>
+            <div 
+              class="pagination-dot <%= i === page ? 'active' : '' %>" 
+              onclick="updatePage('<%= i %>')"
+              title="Page <%= i %>"
+            ></div>
+          <% } %>
+          
+          <button 
+            class="pagination-btn" 
+            <%= page === totalPages ? 'disabled' : '' %>
+            onclick="updatePage('<%= page + 1 %>')"
+          >Next ›</button>
+        </div>
+      <% } %>
     </main>
+
+    <!-- Filter Modal -->
+    <div id="filterModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Filters</h2>
+          <span class="close" onclick="closeFilterModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+          <!-- Price Range -->
+          <div class="filter-group">
+            <h3>Price Range</h3>
+            <div class="price-selects">
+              <div class="price-select-group">
+                <label>From:</label>
+                <select id="minPriceSelect" class="price-select">
+                  <option value="" <%= (!queryMinPrice || queryMinPrice === '') ? 'selected' : '' %>>Lowest</option>
+                  <% minPriceOptions.slice(1).forEach(option => { %>
+                    <option value="<%= option %>" <%= (queryMinPrice == option) ? 'selected' : '' %>><%= option %> Rs</option>
+                  <% }); %>
+                </select>
+              </div>
+              <div class="price-select-group">
+                <label>To:</label>
+                <select id="maxPriceSelect" class="price-select">
+                  <% maxPriceOptions.slice(0, -1).forEach(option => { %>
+                    <option value="<%= option %>" <%= (queryMaxPrice == option) ? 'selected' : '' %>><%= option %> Rs</option>
+                  <% }); %>
+                  <option value="" <%= (!queryMaxPrice || queryMaxPrice === '') ? 'selected' : '' %>>Highest</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <!-- Brands -->
+          <div class="filter-group">
+            <h3>Brands</h3>
+            <% topBrands.forEach(brand => { %>
+              <label class="checkbox-label">
+                <input type="checkbox" value="<%= brand.toLowerCase() %>" <%= selectedBrands.map(b => b.toLowerCase()).includes(brand.toLowerCase()) ? 'checked' : '' %>>
+                <%= brand %>
+              </label>
+            <% }); %>
+            <div id="moreBrands" class="brands-hidden">
+              <% otherBrands.forEach(brand => { %>
+                <label class="checkbox-label">
+                  <input type="checkbox" value="<%= brand.toLowerCase() %>" <%= selectedBrands.map(b => b.toLowerCase()).includes(brand.toLowerCase()) ? 'checked' : '' %>>
+                  <%= brand %>
+                </label>
+              <% }); %>
+            </div>
+            <% if (otherBrands.length > 0) { %>
+              <button type="button" class="show-more-btn" onclick="toggleMoreBrands(event)">Show More</button>
+            <% } %>
+          </div>
+          <!-- Concentrations -->
+          <div class="filter-group">
+            <h3>Concentration</h3>
+            <% concentrations.forEach(conc => { %>
+              <label class="checkbox-label">
+                <input type="checkbox" value="<%= conc.toLowerCase() %>" <%= selectedConcentrations.map(c => c.toLowerCase()).includes(conc.toLowerCase()) ? 'checked' : '' %>>
+                <%= conc %>
+              </label>
+            <% }); %>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button onclick="clearFilters()">Clear</button>
+          <button onclick="applyFilters()">Apply</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
 
     <script>
-      function toggleWishlist(button) {
+      // Preserve current params for updates
+      const currentParams = new URLSearchParams(window.location.search);
+      const currentPage = '<%= page %>';
+      let searchTimer;
+
+      function buildQuery(newParams = {}) {
+        const params = new URLSearchParams(currentParams);
+        let shouldResetPage = false;
+        Object.entries(newParams).forEach(([key, value]) => {
+          if (value === 'ALL' || value === '' || value === null || value === undefined || !value) {
+            params.delete(key);
+          } else {
+            params.set(key, value);
+          }
+          if (key !== 'page') {
+            shouldResetPage = true;
+          }
+        });
+        if (shouldResetPage) {
+          params.set('page', 1);
+        }
+        return `?${params.toString()}`;
+      }
+
+      function performSearch() {
+        clearTimeout(searchTimer);
+        const searchVal = document.getElementById('searchInput').value;
+        const newParams = { search: searchVal };
+        window.location.search = buildQuery(newParams);
+      }
+
+      function debounceSearch() {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(() => {
+          performSearch();
+        }, 500); // 500ms delay
+      }
+
+      function updatePage(newPage) {
+        const params = new URLSearchParams(currentParams);
+        params.set('page', newPage);
+        window.location.search = params.toString();
+      }
+
+      // Search input events
+      document.getElementById('searchInput').addEventListener('input', debounceSearch);
+
+      document.getElementById('searchInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          performSearch();
+        }
+      });
+
+      // Filter changes
+      document.getElementById('genderFilter').addEventListener('change', function() {
+        const newParams = { gender: this.value };
+        window.location.search = buildQuery(newParams);
+      });
+
+      document.getElementById('sortFilter').addEventListener('change', function() {
+        const newParams = { sort: this.value };
+        window.location.search = buildQuery(newParams);
+      });
+
+      // Modal functions
+      function openFilterModal() {
+        document.getElementById('filterModal').style.display = 'block';
+      }
+
+      function closeFilterModal() {
+        document.getElementById('filterModal').style.display = 'none';
+      }
+
+      // Close modal on outside click
+      window.onclick = function(event) {
+        const modal = document.getElementById('filterModal');
+        if (event.target === modal) {
+          closeFilterModal();
+        }
+      }
+
+      function toggleMoreBrands(event) {
+        const moreBrands = document.getElementById('moreBrands');
+        const btn = event.target;
+        if (moreBrands.classList.contains('brands-hidden')) {
+          moreBrands.classList.remove('brands-hidden');
+          btn.textContent = 'Show Less';
+        } else {
+          moreBrands.classList.add('brands-hidden');
+          btn.textContent = 'Show More';
+        }
+      }
+
+      function applyFilters() {
+        const minP = document.getElementById('minPriceSelect').value;
+        const maxP = document.getElementById('maxPriceSelect').value;
+        const checkboxes = document.querySelectorAll('.filter-group input[type="checkbox"]:checked');
+        let selectedBrands = [];
+        let selectedConcs = [];
+        checkboxes.forEach(cb => {
+          const group = cb.closest('.filter-group').querySelector('h3').textContent;
+          if (group === 'Brands') {
+            selectedBrands.push(cb.value);
+          } else if (group === 'Concentration') {
+            selectedConcs.push(cb.value);
+          }
+        });
+
+        let newParams = {};
+        if (minP && minP !== '') newParams.minPrice = minP;
+        if (maxP && maxP !== '') newParams.maxPrice = maxP;
+        if (selectedBrands.length > 0) {
+          newParams.brands = selectedBrands.join(',');
+        }
+        if (selectedConcs.length > 0) {
+          newParams.concentrations = selectedConcs.join(',');
+        }
+
+        window.location.search = buildQuery(newParams);
+        closeFilterModal();
+      }
+
+      function clearFilters() {
+        // Reset selects
+        document.getElementById('minPriceSelect').selectedIndex = 0;
+        document.getElementById('maxPriceSelect').selectedIndex = 0;
+        // Reset checkboxes
+        document.querySelectorAll('.filter-group input[type="checkbox"]').forEach(cb => {
+          cb.checked = false;
+        });
+        // Hide more brands
+        document.getElementById('moreBrands').classList.add('brands-hidden');
+        const showMoreBtn = document.querySelector('.show-more-btn');
+        if (showMoreBtn) showMoreBtn.textContent = 'Show More';
+        // Clear params
+        const clearParams = { minPrice: '', maxPrice: '', brands: '', concentrations: '' };
+        window.location.search = buildQuery(clearParams);
+        closeFilterModal();
+      }
+
+      function toggleWishlist(event) {
+        event.stopPropagation(); // Prevent link navigation
+        const button = event.currentTarget;
         button.classList.toggle('active');
         const icon = button.querySelector('i');
         icon.classList.toggle('far');
         icon.classList.toggle('fas');
+        // Optional: Add AJAX to save wishlist to backend
       }
     </script>
   </body>

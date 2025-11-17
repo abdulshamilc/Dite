@@ -297,9 +297,10 @@
                 <!-- Actions -->
                 <div class="flex gap-4 pt-4">
                     <a href="/order/<%= order._id %>" class="flex-1 btn btn-secondary text-center py-3">Back to Order</a>
-                    <form id="confirmCancelForm" action="/cancelOrder/<%= order._id %>/cancel-select" method="POST" style="flex: 1;">
+                    <form id="confirmCancelForm" action="/cancelOrder/<%= order._id %>/confirm" method="POST" style="flex: 1;">
                         <input type="hidden" name="cancelledItems" value="<%= JSON.stringify(cancelledItems || []) %>">
                         <input type="hidden" name="cancellationReason" value="">
+                        <input type="hidden" name="confirm" value="true">
                         <button type="submit" class="w-full btn btn-danger py-3 font-semibold">Confirm Cancellation</button>
                     </form>
                 </div>

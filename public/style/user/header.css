@@ -59,6 +59,31 @@
   color: #d4af37;
 }
 
+/* Cart Badge Styling */
+.cart-count {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #000000; /* Black background */
+  color: #ffffff; /* White text for contrast */
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: bold;
+  z-index: 1001;
+  border: 2px solid #ffffff; /* Optional: white border for better visibility */
+  transition: background-color 0.3s ease;
+}
+
+.cart-count:hover {
+  background-color: #d4af37; /* Optional: hover effect matching theme */
+  color: #000000;
+}
+
 /* Hamburger Menu */
 .hamburger {
   display: none;
@@ -189,5 +214,14 @@
   .nav-icons .group ul {
     right: 0;
     min-width: 150px;
+  }
+
+  /* Adjust cart badge on mobile */
+  .cart-count {
+    top: -6px;
+    right: -6px;
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
   }
 }

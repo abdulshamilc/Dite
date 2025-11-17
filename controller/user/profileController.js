@@ -2,9 +2,10 @@ import { User, UserOtpVerification } from "../../models/userModels.js";
 import { Address } from "../../models/addressModel.js";
 import Order from "../../models/ordersModel.js";
 import UserLog from "../../models/userLogModel.js";
-import Return from "../../models/returnModel.js";
+import Product from '../../models/productsModels.js' ;
 import { generateOTP } from "../../utils/genarateOtp.js";
 import generateInvoice from "../../services/OrderPdfGenarator.js";
+
 
 const getProfile = async (req, res) => {
   try {
@@ -410,7 +411,6 @@ const getOrders = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
-
 const getOrderDetails = async (req, res) => {
   const orderId = req.params.id;
   if (!orderId) return res.redirect("/login");
@@ -426,14 +426,16 @@ const getOrderDetails = async (req, res) => {
     0
   );
 
-  const totalAmount = order.items.reduce(
-    (acc, ele) => acc + ele.discoundedPrice * ele.quantity,
+  const itemTotal = order.items.reduce(
+    (acc, ele) => acc + (ele.discountedPrice || ele.basePrice) * ele.quantity,
     0
   );
 
-  const discount = subTotal - totalAmount;
+  const discount = subTotal - itemTotal;
 
-  const hasActiveItems = order.items.some((item) => !item.canceled);
+  const totalAmount = itemTotal + (order.shipping || 0) + (order.tax || 0);
+
+  const hasActiveItems = order.items.some((item) => item.quantity > 0);
 
   res.render("user/profile/orderDetails", {
     order,
@@ -443,6 +445,7 @@ const getOrderDetails = async (req, res) => {
     hasActiveItems,
   });
 };
+
 const getCancelOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -461,7 +464,7 @@ const getCancelOrder = async (req, res) => {
     cancelledItems.forEach((itemCancel) => {
       const item = itemCancel.item;
       const cancelQty = itemCancel.cancelQty;
-      const itemTotal = (item.basePrice || 0) * cancelQty;
+      const itemTotal = (item.discountedPrice || item.basePrice || 0) * cancelQty;
       cancelSubtotal += itemTotal;
     });
 
@@ -478,19 +481,13 @@ const getCancelOrder = async (req, res) => {
 
 const postCancelOrder = async (req, res) => {
   try {
-    const orderId = req.params.id;
-    const {
-      cancelledItems: cancelledItemsStr,
-      cancellationReason,
-      confirm,
-    } = req.body;
+    const userEmail = req.session.user;
+    if (!userEmail) return res.redirect("/login");
 
-    console.log(
-      "POST /cancelOrder: Received confirm=",
-      confirm,
-      "Body:",
-      req.body
-    ); // DEBUG
+    const orderId = req.params.id;
+    if (!orderId) return res.redirect("/orders");
+
+    const { cancelledItems: cancelledItemsStr } = req.body;
 
     if (!cancelledItemsStr) {
       return res.redirect(`/order/${orderId}`);
@@ -516,30 +513,151 @@ const postCancelOrder = async (req, res) => {
       return res.redirect(`/order/${orderId}`);
     }
 
+    // Save enriched items to session
+    req.session.cancelledItems = fullCancelledItems;
+    req.session.orderId = orderId;
+
+    res.redirect(`/cancelOrder/${orderId}`);
+  } catch (error) {
+    console.error("Cancel select error:", error);
+    res.status(500).redirect(`/order/${req.params.id}`);
+  }
+};
+const confirmCancel = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) return res.redirect('/login');
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.redirect('/login');
+    const orderId = req.params.id;
+    if (!orderId) return res.redirect('/orders');
+    const order = await Order.findById(orderId);
+    if (!order) return res.redirect('/orders');
+
+    // Security: Ensure user owns the order
+    if (order.userId.toString() !== user._id.toString()) {
+      return res.redirect('/orders');
+    }
+
+    const { cancelledItems: cancelledItemsStr, cancellationReason, confirm } = req.body;
+
+    if (!cancelledItemsStr) {
+      return res.redirect(`/cancelOrder/${orderId}/cancel-select`);
+    }
+
+    const parsedCancelledItems = JSON.parse(cancelledItemsStr);
+
+    const fullCancelledItems = parsedCancelledItems
+      .map((pi) => {
+        const item = order.items.find(
+          (i) => i._id.toString() === (pi.item?._id || pi.productId)?.toString()
+        );
+        if (!item) return null;
+        const cancelQty = parseInt(pi.cancelQty);
+        if (cancelQty < 1) return null;
+        let approvedReturnQty = 0;
+        if (order.returndProduct && order.returndProduct.length > 0) {
+          approvedReturnQty = order.returndProduct
+            .filter(rp => rp.adminApproved === 'Approved' &&
+              rp.productId.toString() === item.productId.toString() &&
+              rp.mlSize === item.mlSize)
+            .reduce((sum, rp) => sum + (rp.returndQuantity || 0), 0);
+        }
+        const currentEffectiveQty = (item.quantity || 0) - approvedReturnQty;
+        if (cancelQty > currentEffectiveQty) return null;
+        return { item, cancelQty };
+      })
+      .filter(Boolean);
+
+    if (fullCancelledItems.length === 0) {
+      return res.redirect(`/cancelOrder/${orderId}/cancel-select`);
+    }
+
     // Confirmation step
     if (confirm === "true") {
-      console.log("Entering confirmation: Updating DB..."); // DEBUG
       let cancelSubtotal = 0;
-      const updatedItems = [...order.items];
 
       fullCancelledItems.forEach(({ item, cancelQty }) => {
-        const matchingItemIndex = updatedItems.findIndex(
-          (i) => i._id.toString() === item._id.toString()
+        const itemTotal = (item.discountedPrice || item.basePrice || 0) * cancelQty;
+        cancelSubtotal += itemTotal;
+
+        let existingCancel = order.cancelProducts.find(
+          (cp) => cp.productId.toString() === item.productId.toString() && cp.mlSize === item.mlSize
         );
 
-        if (matchingItemIndex !== -1) {
-          const currentItem = updatedItems[matchingItemIndex];
-          const itemTotal = (currentItem.basePrice || 0) * cancelQty;
-          cancelSubtotal += itemTotal;
+        if (existingCancel) {
+          existingCancel.canceledQuantity += cancelQty;
+          existingCancel.reason = cancellationReason || "";
+          existingCancel.canceledAt = new Date();
+        } else {
+          
+          const canceledProduct = {
+            productId: item.productId,
+            name: item.name,
+            mlSize: item.mlSize,
+            basePrice: item.basePrice,
+            discountedPrice: item.discountedPrice || 0,
+            canceledQuantity: cancelQty,
+            image: item.image,
+            reason: cancellationReason || "",
+            canceledAt: new Date(),
+          };
 
-          updatedItems[matchingItemIndex].productStatus = "Cancelled";
-          updatedItems[matchingItemIndex].quantity -= cancelQty;
-
-          if (updatedItems[matchingItemIndex].quantity <= 0) {
-            updatedItems[matchingItemIndex].quantity = 0;
-          }
+          order.cancelProducts.push(canceledProduct);
         }
+
+        // Update item quantity to reflect cancellation (remove from active)
+        item.quantity -= cancelQty;
       });
+
+      // Remove items with zero or negative quantity
+      order.items = order.items.filter(item => (item.quantity || 0) > 0);
+
+      // Compute effective total quantity after cancels and approved returns
+      let totalEffectiveQty = 0;
+      order.items.forEach((item) => {
+        let approvedReturnForThis = 0;
+        if (order.returndProduct && order.returndProduct.length > 0) {
+          approvedReturnForThis = order.returndProduct
+            .filter(rp => rp.adminApproved === 'Approved' &&
+              rp.productId.toString() === item.productId.toString() &&
+              rp.mlSize === item.mlSize)
+            .reduce((sum, rp) => sum + (rp.returndQuantity || 0), 0);
+        }
+        totalEffectiveQty += Math.max(0, (item.quantity || 0) - approvedReturnForThis);
+      });
+      const allCancelled = totalEffectiveQty <= 0;
+
+      // Update order status
+      order.orderStatus = allCancelled ? "Cancelled" : order.orderStatus;
+      order.cancelledAt = new Date();
+
+      order.tracking.push({
+        status: allCancelled ? "Cancelled" : "Partially Cancelled",
+        date: new Date(),
+        message: `Cancellation processed by user. ${allCancelled ? 'Full' : 'Partial'} order affected. Reason: ${
+          cancellationReason || "Not provided"
+        }. Subtotal cancelled: ₹${cancelSubtotal.toFixed(2)}`,
+      });
+
+      // Compute remainingSubtotal based on effective quantities (cancels already subtracted from items)
+      let remainingSubtotal = 0;
+      order.items.forEach((item) => {
+        let approvedReturnForThis = 0;
+        if (order.returndProduct && order.returndProduct.length > 0) {
+          approvedReturnForThis = order.returndProduct
+            .filter(rp => rp.adminApproved === 'Approved' &&
+              rp.productId.toString() === item.productId.toString() &&
+              rp.mlSize === item.mlSize)
+            .reduce((sum, rp) => sum + (rp.returndQuantity || 0), 0);
+        }
+        let effQty = Math.max(0, (item.quantity || 0) - approvedReturnForThis);
+        remainingSubtotal += ((item.discountedPrice || item.basePrice || 0) * effQty);
+      });
+      order.subTotal = remainingSubtotal;  // Set subTotal for consistency
+      order.totalAmount = remainingSubtotal + (order.shipping || 0) + (order.tax || 0);
+
+      await order.save();
 
       // Stock restoration (wrapped for safety)
       try {
@@ -547,70 +665,34 @@ const postCancelOrder = async (req, res) => {
           fullCancelledItems.map(async ({ item, cancelQty }) => {
             const product = await Product.findById(item.productId);
             if (product && cancelQty > 0) {
-              product.stock = (product.stock || 0) + cancelQty;
+
+              product.variants.map(v=> {
+                if(v.mlSize == item.mlSize){
+                  v.stock = (v.stock || 0 ) + cancelQty ;
+                }
+              })
               await product.save();
             }
           })
         );
       } catch (stockErr) {
-        console.error("Stock update error:", stockErr); // Log but don't block
+        console.error("Stock update error:", stockErr); 
       }
 
-      // Update order
-      order.items = updatedItems;
-      order.cancelStatus = "Active";
-      const allCancelled = updatedItems.every(
-        (item) => item.productStatus === "Cancelled" || item.quantity <= 0
-      );
-      order.orderStatus = allCancelled ? "Cancelled" : "Partially Cancelled";
-      order.cancelledAt = new Date();
-
-      order.tracking.push({
-        status: "Cancelled",
-        date: new Date(),
-        message: `Partial/Full cancellation requested by user. Reason: ${
-          cancellationReason || "Not provided"
-        }. Subtotal cancelled: ₹${cancelSubtotal.toFixed(2)}`,
-      });
-
-      if (order.paymentMethod === "cod") {
-        console.log(
-          `COD order ${order.orderID} partially cancelled. Handle manual adjustment.`
-        );
-      }
-
-      const remainingSubtotal = updatedItems.reduce((sum, item) => {
-        return (
-          sum + (item.discountedPrice || item.basePrice || 0) * item.quantity
-        );
-      }, 0);
-      order.totalAmount = remainingSubtotal;
-
-      await order.save();
-      console.log("Order saved successfully."); // DEBUG
-
-      // Clear session explicitly
+      // Clear session 
       delete req.session.cancelledItems;
       delete req.session.orderId;
-      await req.session.save(); // ENSURE SESSION PERSISTED
 
-      console.log(
-        `Redirecting to /order/${orderId}?cancelled=true&subtotal=${cancelSubtotal}`
-      ); // DEBUG
+      await req.session.save(); 
+
       return res.redirect(
         `/order/${orderId}?cancelled=true&subtotal=${cancelSubtotal}`
       );
     }
 
-    // Selection step
-    console.log("Selection step: Saving to session..."); // DEBUG
-    req.session.cancelledItems = fullCancelledItems;
-    req.session.orderId = orderId;
-    await req.session.save(); // ENSURE SESSION PERSISTED
-
-    res.redirect(`/cancelOrder/${orderId}`);
+    res.redirect(`/cancelOrder/${orderId}/cancel-select`);
   } catch (error) {
-    console.error("Cancel order error:", error);
+    console.error("Confirm cancel error:", error);
     res.status(500).redirect(`/order/${req.params.id}`);
   }
 };
@@ -694,6 +776,7 @@ const postCancelSelect = async (req, res) => {
             name: pi.item.name,
             mlSize: orderItem.mlSize || 0,
             basePrice: orderItem.basePrice || 0,
+            discountedPrice: orderItem.discountedPrice || 0,
             image: orderItem.image || pi.item.image,
           },
           cancelQty: cancelQty,
@@ -813,73 +896,6 @@ const postReturn = async (req, res) => {
   }
 };
 
-const postReturnConfired = async (req, res) => {
-  try {
-    const orderId = req.params.orderId;
-    const { returnItems: itemsJson, returnReason, comments } = req.body;
-
-    if (!orderId || !req.user?._id) {
-      return res.status(400).redirect(`/orders/${orderId}?error=missing_data`);
-    }
-
-    const items = JSON.parse(itemsJson || "[]");
-    if (items.length === 0) {
-      return res.status(400).redirect(`/orders/${orderId}?error=no_items`);
-    }
-
-    // Process items to match schema
-    const processedItems = [];
-    let subtotal = 0;
-
-    for (const itemReturn of items) {
-      const { item: orderItem, returnQty } = itemReturn;
-      if (!orderItem?._id || !orderItem.basePrice || !returnQty) {
-        return res
-          .status(400)
-          .redirect(`/orders/${orderId}?error=invalid_item`);
-      }
-
-      const itemId = new mongoose.Types.ObjectId(orderItem._id);
-      const basePrice = parseFloat(orderItem.basePrice);
-      const itemTotal = basePrice * returnQty;
-
-      processedItems.push({
-        item: itemId,
-        returnQty: parseInt(returnQty),
-        basePrice,
-      });
-
-      subtotal += itemTotal;
-    }
-
-    // Validate reason
-    if (!returnReason) {
-      return res.status(400).redirect(`/orders/${orderId}?error=no_reason`);
-    }
-
-    const newReturn = new Return({
-      order: new mongoose.Types.ObjectId(orderId),
-      user: req.user._id,
-      items: processedItems,
-      subtotal,
-      reason: returnReason,
-      comments: comments || "",
-      status: "pending",
-      estimatedRefund: subtotal,
-    });
-
-    await newReturn.save();
-
-
-    res.redirect(`/orders/${orderId}`);
-  } catch (error) {
-    console.error("Error creating return:", error);
-    res
-      .status(500)
-      .redirect(`/orders/${req.params.orderId || ""}?error=server_error`);
-  }
-};
-
 const getReturnSelect = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -979,6 +995,114 @@ const postReturnSelect = async (req, res) => {
     req.session.error = "An error occurred. Please try again.";
     res.status(500).redirect(`/orders/${req.params.id}`);
   }
+};const confirmReturn = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) return res.redirect('/login');
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.redirect('/login');
+    const orderId = req.params.id;
+    if (!orderId) return res.redirect('/orders');
+    const order = await Order.findById(orderId);
+    if (!order) return res.redirect('/orders');
+
+    // Security: Ensure user owns the order
+    if (order.userId.toString() !== user._id.toString()) {
+      return res.redirect('/orders');
+    }
+
+    const { returnItems: returnItemsStr, returnReason, confirm } = req.body;
+
+    if (!returnItemsStr) {
+      return res.redirect(`/return/${orderId}/return-select`);
+    }
+
+    const parsedReturnItems = JSON.parse(returnItemsStr);
+
+    const fullReturnItems = parsedReturnItems
+      .map((pi) => {
+        const item = order.items.find(
+          (i) => i._id.toString() === (pi.item?._id || pi.productId)?.toString()
+        );
+        if (!item) return null;
+        const returnQty = parseInt(pi.returnQty);
+        if (returnQty < 1 || returnQty > item.quantity) return null;
+        return { item, returnQty };
+      })
+      .filter(Boolean);
+
+    if (fullReturnItems.length === 0) {
+      return res.redirect(`/return/${orderId}/return-select`);
+    }
+
+    // Confirmation step
+    if (confirm === "true") {
+      if (!returnReason) {
+        return res.redirect(`/return/${orderId}/return-select?error=reason`);
+      }
+
+      let returnSubtotal = 0;
+
+      fullReturnItems.forEach(({ item, returnQty }) => {
+        const itemTotal = (item.discountedPrice || item.basePrice || 0) * returnQty;
+        returnSubtotal += itemTotal;
+
+        // Check for existing return request for this product variant
+        let existingReturn = order.returndProduct.find(
+          (rp) => rp.productId.toString() === item.productId.toString() && 
+                  rp.mlSize === item.mlSize &&
+                  rp.adminApproved === "Requested" // Only append to pending requests
+        );
+
+        if (existingReturn) {
+          // Append to existing pending request
+          existingReturn.returndQuantity += returnQty;
+          existingReturn.reason = returnReason; // Update reason if needed
+          existingReturn.returnedAt = new Date();
+        } else {
+          // Create new return request
+          const returnedProduct = {
+            productId: item.productId,
+            name: item.name,
+            mlSize: item.mlSize,
+            basePrice: item.basePrice,
+            discountedPrice: item.discountedPrice || 0,
+            returndQuantity: returnQty,
+            image: item.image,
+            reason: returnReason,
+            returnedAt: new Date(),
+            adminApproved: "Requested", // Set as requested
+          };
+
+          order.returndProduct.push(returnedProduct);
+        }
+      });
+      // Add to tracking
+      order.tracking.push({
+        status: "Return Requested",
+        date: new Date(),
+        message: `Return request submitted for ${fullReturnItems.length} item(s). Reason: ${returnReason}. Estimated subtotal: ₹${returnSubtotal.toFixed(2)}. Awaiting admin approval.`,
+      });
+
+      await order.save();
+
+      // Clear session 
+      delete req.session.returnItems;
+      delete req.session.orderId;
+
+      await req.session.save(); 
+
+      return res.redirect(
+        `/order/${orderId}?returnRequested=true&subtotal=${returnSubtotal}`
+      );
+    }
+
+    // If not confirmed, redirect back to select
+    return res.redirect(`/return/${orderId}/return-select`);
+  } catch (error) {
+    console.error("Return request submission error:", error);
+    return res.redirect(`/orders?error=return`);
+  }
 };
 
 const getSecurity = async (req, res) => {
@@ -1050,12 +1174,13 @@ export {
   getOrderDetails,
   getCancelOrder,
   postCancelOrder,
+  confirmCancel,
   getCancelSelect,
   postCancelSelect,
   getorderInvoce,
   getReturn,
   postReturn,
-  postReturnConfired,
+  confirmReturn,
   getReturnSelect,
   postReturnSelect,
   getSecurity,

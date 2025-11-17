@@ -10,7 +10,18 @@ import session from "express-session";
 import passport from "passport";
 import flash  from 'connect-flash';
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { limiter } from "./security/rateLimiter.js";
+import helmetConfig from "./security/helmet.js";
+import { sanitizeInputs } from "./security/sanitizer.js";
 const app = express();
+
+//Setting limit for the requst
+
+app.use(limiter);
+
+// Setting Secure Http Headers
+helmetConfig(app)
+
 
 // Setting Paths
 const __filename = fileURLToPath(import.meta.url);
@@ -36,7 +47,6 @@ app.use(
 );
 //No Cashe
 app.use(nocache());
-
 
 
 // To accesss the session over all the ejs file 
@@ -76,6 +86,9 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, "public")));
+
+//Sanitizing the INput Files 
+app.use(sanitizeInputs);
 
 //Setup Router
 app.use("/admin", adminRouter); //admin router

@@ -16,6 +16,7 @@ const orderedProductSchema = new mongoose.Schema({
     type: String,
     enum: ["Placed", "Delivered", "Cancelled", "Returned"],
     default: "Placed",
+    required: true,
   },
   quantity: {
     type: Number,
@@ -23,6 +24,92 @@ const orderedProductSchema = new mongoose.Schema({
     min: 1,
   },
   image: String,
+});
+
+const canceledProductSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  mlSize: {
+    type: String,
+    required: true,
+  },
+  basePrice: {
+    type: Number,
+    required: true,
+  },
+  discountedPrice: {
+    type: Number,
+    required: true,
+  },
+  canceledQuantity: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+  image: {
+    type: String,
+  },
+  reason: {
+    type: String,
+    default: "",
+  },
+  canceledAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const returndProductSchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  mlSize: {
+    type: String,
+    required: true,
+  },
+  basePrice: {
+    type: Number,
+    required: true,
+  },
+  discountedPrice: {
+    type: Number,
+    required: true,
+  },
+  returndQuantity: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+  image: {
+    type: String,
+  },
+  reason: {
+    type: String,
+    required: true,
+  },
+  returnedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  adminApproved: {
+    type: String,
+    enum: ["Requested", "Approved", "Rejected"],
+    required: true,
+    default: "Requested",
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -57,11 +144,9 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "Placed",
     },
-    cancelStatus: {
-      type: String,
-      enum: ["Active", "Partially Cancelled", "Cancelled"],
-      default: "Active",
-    },
+    cancelProducts: [canceledProductSchema],
+
+    returndProduct: [returndProductSchema],
 
     tracking: [
       {

@@ -7,8 +7,12 @@ import * as UAParser from "ua-parser-js";
 import passwordSchema from "../../validators/resetPasswordValidator.js";
 import { generateOTP } from "../../utils/genarateOtp.js";
 import jwt from "jsonwebtoken";
+import Cart from '../../models/cartModel.js' ;
 const notLogginedHome = (req, res) => {
-  res.render("user/home");
+  const cartLength = 0 ;
+  
+
+  res.render("user/home" , {cartLength});
 };
 const getSignup = (req, res) => {
   if (req.session.user) return res.redirect("/");

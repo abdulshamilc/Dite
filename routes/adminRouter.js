@@ -29,6 +29,8 @@ import {
     DeactivateCategory,
     deleteCategory,
     editCategory,
+    getReturnDetials,
+    getReturn,
     logOut,
 } from '../controller/admin/adminController.js'
 import { pagination } from '../middlewares/paginationMiddleware.js';
@@ -76,7 +78,10 @@ router.post('/categories/edit/:id',isAuthenticatedAdmin,editCategory)
 
 
 router.get('/coupons',isAuthenticatedAdmin,pageNotFound)  
-router.get('/refunds',isAuthenticatedAdmin,pageNotFound)  
+
+router.get('/return',isAuthenticatedAdmin,getReturn) 
+router.get('/return/:orderId/:returnId',isAuthenticatedAdmin,getReturnDetials) 
+
 router.get('/banners',isAuthenticatedAdmin,pageNotFound)  
 router.get('/referrals',isAuthenticatedAdmin,pageNotFound)  
 

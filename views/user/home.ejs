@@ -15,9 +15,14 @@
         box-sizing: border-box;
       }
 
+      html, body {
+        width: 100%;
+        overflow-x: hidden;
+      }
+
       body {
         font-family: "Arial", sans-serif;
-        background-color: #0a0a0a;
+        background-color: #000000;
         color: #ffffff;
         line-height: 1.6;
       }
@@ -31,9 +36,11 @@
       /* Carousel */
       .carousel {
         position: relative;
-        margin-top: 70px;
-        height: 600px; /* Adjust based on your images' typical height */
-        width: 100%;
+        margin-top: 100px; /* Increased to add more space and prevent header overlap */
+        height: 600px; /* Keep as is */
+        width: 100vw; /* Full viewport width */
+        max-width: none; /* Override any max-width */
+        margin-left: calc(-50vw + 50%); /* Center it full-width */
         overflow: hidden;
       }
 
@@ -41,62 +48,17 @@
         display: flex;
         width: 300%; /* Three slides */
         height: 100%;
-        animation: slide 12s infinite;
+        transition: transform 0.5s ease;
       }
 
       .carousel-inner img {
         width: 33.333%; /* Each slide takes 1/3 of the container */
         height: 100%;
-        object-fit: contain; /* Preserve actual size and aspect ratio */
+        object-fit: contain; /* Fit the image without cropping or zooming */
         object-position: center;
         flex-shrink: 0;
         display: block;
         max-width: 100%;
-      }
-
-      @keyframes slide {
-        0% {
-          transform: translateX(0);
-        }
-        30% {
-          transform: translateX(0);
-        }
-        35% {
-          transform: translateX(-33.333%);
-        }
-        65% {
-          transform: translateX(-33.333%);
-        }
-        70% {
-          transform: translateX(-66.666%);
-        }
-        100% {
-          transform: translateX(-66.666%);
-        }
-      }
-
-      .carousel-controls {
-        position: absolute;
-        top: 50%;
-        width: 100%;
-        display: flex;
-        justify-content: space-between;
-        transform: translateY(-50%);
-        z-index: 10;
-      }
-
-      .carousel-controls button {
-        background: rgba(0, 0, 0, 0.5);
-        border: none;
-        color: #ffffff;
-        font-size: 24px;
-        padding: 10px;
-        cursor: pointer;
-        transition: background 0.3s ease;
-      }
-
-      .carousel-controls button:hover {
-        background: rgba(212, 175, 55, 0.8);
       }
 
       .carousel-dots {
@@ -141,7 +103,7 @@
 
       /* Collections Section */
       .collections {
-        padding: 80px 0;
+        padding: 40px 0;
         background-color: #111111;
       }
 
@@ -292,9 +254,13 @@
         }
 
         .carousel-inner img {
-          object-fit: contain;
+          object-fit: contain; /* Fit the image without cropping or zooming on mobile too */
           height: 100%;
           width: 33.333%;
+        }
+
+        .carousel {
+          margin-top: 80px; /* Adjusted for mobile if needed */
         }
       }
     </style>
@@ -307,25 +273,17 @@
     <section class="carousel" id="home">
       <div class="carousel-inner" id="carouselInner">
         <img
-          src="/images/Stock colections/Dior homme.jpg"
+          src="/images/Carosal/2.jpg"
           alt="Carousel Image 1"
         />
         <img
-          src="/images/Stock colections/Absolu-Aventus-Creed.jpg"
+          src="/images/Carosal/3.jpg"
           alt="Carousel Image 2"
         />
         <img
-          src="/images/Stock colections/Dior homme instense.jpg"
+          src="/images/Carosal/dior-black-sauvage-024molas2h6aptt5.jpg"
           alt="Carousel Image 3"
         />
-      </div>
-      <div class="carousel-controls">
-        <button onclick="prevSlide()">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <button onclick="nextSlide()">
-          <i class="fas fa-chevron-right"></i>
-        </button>
       </div>
       <div class="carousel-dots">
         <span class="dot active" onclick="showSlide(0)"></span>
@@ -452,9 +410,10 @@
 
     <script>
       let currentSlide = 0;
-      const slides = document.querySelectorAll(".carousel-inner img");
-      const totalSlides = slides.length;
+      const totalSlides = 3;
       const dots = document.querySelectorAll(".carousel-dots .dot");
+      const carouselInner = document.getElementById("carouselInner");
+      let autoSlideInterval;
 
       function updateDots() {
         dots.forEach((dot, index) => {
@@ -463,28 +422,30 @@
       }
 
       function showSlide(index) {
-        const carouselInner = document.getElementById("carouselInner");
-        carouselInner.style.transform = `translateX(-${index * 33.333}%)`;
-        carouselInner.style.animation = "none"; // Pause animation
-        setTimeout(() => {
-          carouselInner.style.animation = "slide 12s infinite"; // Resume animation
-        }, 100);
+        stopAutoSlide();
+        carouselInner.style.transform = `translateX(-${index * (100 / totalSlides)}%)`;
         currentSlide = index;
         updateDots();
+        startAutoSlide();
       }
 
-      function nextSlide() {
-        currentSlide = (currentSlide + 1) % totalSlides;
-        showSlide(currentSlide);
+      function startAutoSlide() {
+        autoSlideInterval = setInterval(() => {
+          currentSlide = (currentSlide + 1) % totalSlides;
+          showSlide(currentSlide);
+        }, 4000); // 4 seconds per slide to match original 12s cycle
       }
 
-      function prevSlide() {
-        currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
-        showSlide(currentSlide);
+      function stopAutoSlide() {
+        if (autoSlideInterval) {
+          clearInterval(autoSlideInterval);
+        }
       }
 
-      // Initialize dots
+      // Initialize
       updateDots();
+      showSlide(0);
+      startAutoSlide();
     </script>
   </body>
 </html>

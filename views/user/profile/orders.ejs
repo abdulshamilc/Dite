@@ -32,6 +32,8 @@
         .status-pending { background-color: rgba(212, 175, 55, 0.1); color: var(--accent); }
         .status-shipped { background-color: rgba(100, 200, 100, 0.1); color: #64c864; }
         .status-delivered { background-color: rgba(100, 200, 100, 0.1); color: #64c864; }
+        .status-canceled { background-color: rgba(255, 100, 100, 0.1); color: #ff6464; }
+        .status-returned { background-color: rgba(255, 100, 100, 0.1); color: #ff6464; }
         .pagination-btn { @apply px-3 py-2 rounded-md font-medium transition-colors; }
         .pagination-btn:hover:not(.disabled) { @apply bg-gray-700 text-accent; }
         .pagination-btn.active { @apply bg-accent text-primary font-semibold; }
@@ -73,35 +75,46 @@
                     // Format ID from _id
                     const formattedId = `#ORD-${order._id.toString().slice(-8).toUpperCase()}`;
                     
-                    // Map status
-                    let statusText = order.status || 'Processing';
+                    // Map status (using consistent orderStatus property)
+                    let statusText = order.orderStatus || 'Processing';
                     let statusClass = 'pending';
-                    if (order.status === 'shipped' || order.status === 'Shipped') {
+                    if (order.orderStatus === 'Shipped' || order.orderStatus === 'shipped') {
                         statusText = 'Shipped';
                         statusClass = 'shipped';
-                    } else if (order.status === 'delivered' || order.status === 'Delivered') {
+                    } else if (order.orderStatus === 'Delivered' || order.orderStatus === 'delivered') {
                         statusText = 'Delivered';
                         statusClass = 'delivered';
+                    } else if (order.orderStatus === 'Canceled' || order.orderStatus === 'cancelled' || order.orderStatus === 'cancelled') {
+                        statusText = 'Canceled';
+                        statusClass = 'canceled';
+                    } else if (order.orderStatus === 'Returned' || order.orderStatus === 'returned') {
+                        statusText = 'Returned';
+                        statusClass = 'returned';
                     }
                     
-                    // Date logic (current date: Oct 24, 2025)
-                    const today = new Date('2025-10-24');
+                    // Date logic: Always calculate estimated delivery as 7 days from placedAt (no hardcoded today)
                     let dateLabel = 'Estimated Delivery';
                     let dateValue;
                     if (statusText === 'Delivered' && order.deliveredAt) {
                         dateLabel = 'Delivered On';
-                        dateValue = order.deliveredAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                        dateValue = new Date(order.deliveredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    } else if (statusText === 'Canceled' && order.updatedAt) {
+                        dateLabel = 'Canceled On';
+                        dateValue = new Date(order.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                    } else if (statusText === 'Returned' && order.updatedAt) {
+                        dateLabel = 'Returned On';
+                        dateValue = new Date(order.updatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     } else {
-                        const placedDate = new Date(order.placedAt || today);
+                        const placedDate = new Date(order.placedAt);
                         const estimatedDate = new Date(placedDate);
-                        estimatedDate.setDate(estimatedDate.getDate() + 7);  // +7 days
+                        estimatedDate.setDate(estimatedDate.getDate() + 7);  // Exactly +7 days from placedAt
                         dateValue = estimatedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
                     }
                     
                     // Other formats
                     const totalFormatted = `${parseFloat(order.totalAmount || 0).toFixed(2)} RS`;
                     const itemsCount = order.items ? order.items.length : 0;
-                    const tracking = order.trackingNumber || 'Pending';
+                    const tracking = order.tracking ? order.tracking[order.tracking.length - 1]?.status || 'Pending' : 'Pending';  // Use latest tracking status if available
                 %>
                 <!-- Order Card - Wrapped in Link -->
                 <a href="/order/<%= order._id %>" class="order-link">
@@ -119,6 +132,10 @@
                                 <p class="text-gray-400 text-sm mb-1">
                                     <% if (statusText === 'Delivered') { %>
                                         Delivered On
+                                    <% } else if (statusText === 'Canceled') { %>
+                                        Canceled On
+                                    <% } else if (statusText === 'Returned') { %>
+                                        Returned On
                                     <% } else { %>
                                         Estimated Delivery
                                     <% } %>
