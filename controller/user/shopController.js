@@ -1,10 +1,10 @@
 import Categories from "../../models/categories.js";
 import Products from "../../models/productsModels.js";
+import Wishlist from '../../models/wishlistModel.js' ;
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
-
 const getShop = async (req, res) => {
   try {
     const {
@@ -189,11 +189,21 @@ const getShop = async (req, res) => {
         .populate("category");
     }
 
+    // Fetch wishlist if user is authenticated
+    let wishlist = [];
+    if (req.user) {
+      const wishlistDoc = await Wishlist.findOne({ userId: req.user._id }).populate('items.productId');
+      if (wishlistDoc) {
+        wishlist = wishlistDoc.items.map(item => ({ product: item.productId }));
+      }
+    }
+
     const totalPages = Math.ceil(total / parseInt(limit));
     const currentPage = parseInt(page);
 
     res.render("user/shop/shop", {
       products,
+      wishlist,
       search,
       gender,
       sort,
@@ -220,6 +230,7 @@ const getShop = async (req, res) => {
     console.error(error);
     res.status(500).render("user/shop/shop", {
       products: [],
+      wishlist: [],
       error: "Something went wrong!",
       minPrice: 0,
       maxPrice: 10000,

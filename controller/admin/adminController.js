@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import addCategoryValidation from "../../validators/addCatogoryValidation.js";
 import jwt from "jsonwebtoken";
 import passwordSchema from "../../validators/resetPasswordValidator.js";
+import { nanoid } from "nanoid";
 const secret = process.env.JWT_SECRET;
 
 const pageNotFound = (req, res) => {
@@ -343,13 +344,13 @@ const getViewOrders = async (req, res) => {
       req.session.error = "Order Not Found";
       return res.redirect("/orders");
     }
-    const user = await User.findById(order.userId) ;
+    const user = await User.findById(order.userId);
 
     let subTotal = 0;
     let discountedPriceTotal = 0;
 
     if (order.items && order.items.length > 0) {
-      // Base price subtotal 
+      // Base price subtotal
       subTotal = order.items
         .filter((item) => !item.canceled)
         .reduce(
@@ -357,7 +358,7 @@ const getViewOrders = async (req, res) => {
           0
         );
 
-      // Discounted price subtotal 
+      // Discounted price subtotal
       discountedPriceTotal = order.items
         .filter((item) => !item.canceled)
         .reduce(
@@ -369,8 +370,8 @@ const getViewOrders = async (req, res) => {
 
     const discount = subTotal - discountedPriceTotal || 0; // Or compute if needed
 
-    const totalAmount = subTotal + (order.shipping || 0) + (order.tax || 0) - discount;
-
+    const totalAmount =
+      subTotal + (order.shipping || 0) + (order.tax || 0) - discount;
 
     res.render("admin/orderDetails", {
       user,
@@ -384,8 +385,7 @@ const getViewOrders = async (req, res) => {
   }
 };
 
-
-const updateOrderStatus = async(req,res)=>{
+const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -397,10 +397,10 @@ const updateOrderStatus = async(req,res)=>{
       "Out for Delivery",
       "Delivered",
       "Cancelled",
-      "Returned"
+      "Returned",
     ];
     if (!validStatuses.includes(status)) {
-      req.session.error = 'Invalid status provided.';
+      req.session.error = "Invalid status provided.";
       return res.redirect(`/admin/orders/${id}`);
     }
 
@@ -413,32 +413,33 @@ const updateOrderStatus = async(req,res)=>{
         tracking: {
           status: status,
           date: new Date(),
-          message: `Status updated to ${status} by admin`
-        }
-      }
+          message: `Status updated to ${status} by admin`,
+        },
+      },
     };
 
     // Handle special timestamps
-    if (status === 'Cancelled') {
+    if (status === "Cancelled") {
       updateData.cancelledAt = new Date();
-    } else if (status === 'Delivered') {
+    } else if (status === "Delivered") {
       updateData.deliveredAt = new Date();
     }
 
-    const order = await Orders.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('userId', 'name email').populate('items.productId'); // Populate as needed
+    const order = await Orders.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("userId", "name email")
+      .populate("items.productId"); // Populate as needed
 
     if (!order) {
-      req.session.error = 'Order not found.';
-      return res.redirect('/admin/orders');
+      req.session.error = "Order not found.";
+      return res.redirect("/admin/orders");
     }
 
     // Optional: Handle special logic for certain statuses
     // Example: If Cancelled or Returned, adjust totalAmount or add refund logic
-    if (status === 'Cancelled' || status === 'Returned') {
+    if (status === "Cancelled" || status === "Returned") {
       // Optional: Set totalAmount to 0 or trigger refund
       order.totalAmount = 0;
       await order.save();
@@ -447,13 +448,11 @@ const updateOrderStatus = async(req,res)=>{
     req.session.success = `Order status updated to ${status}.`;
     res.redirect(`/admin/orders/view/${id}`);
   } catch (error) {
-    console.error('Error updating order status:', error);
-    req.session.error = 'Failed to update order status. Please try again.';
+    console.error("Error updating order status:", error);
+    req.session.error = "Failed to update order status. Please try again.";
     res.redirect(`/admin/orders/${id}`);
   }
-}
-
-
+};
 
 // Product Field
 
@@ -523,159 +522,402 @@ const getProducts = async (req, res) => {
     console.error(error);
     res.status(500).send("Server Error");
   }
-};
-
-const getAddProducts = async (req, res) => {
+};const getAddProducts = async (req, res) => {
   try {
     const categories = await Categories.find({ isDeleted: false }).lean();
-    res.render("admin/addProducts", { categories });
-  } catch (error) {}
+    const products = await Products.find({ isDeleted: false }).select('name').lean();
+    res.render("admin/addProducts", { categories, products });
+  } catch (error) {
+    console.error('Error fetching categories and products:', error);
+    res.status(500).json({ success: false, error: 'Failed to load page data.' });
+  }
 };
 
 const toNumber = (val, zero = 0) => {
   const parsed = parseInt(val);
   return isNaN(parsed) ? zero : parsed;
 };
-
 const postAddProducts = async (req, res) => {
   try {
     const {
       name,
       description,
       notes,
-      categories,
+      category: rawCategory, // Single category ID from frontend
       brand,
       gender,
       concentration,
       variants,
     } = req.body;
+    const imageUrls = req.files?.map((file) => file.path) || [];
 
-    const imageUrls = req.files.map((file) => file.path);
-
-    // parsing varint if it single then its object if it comes in collection it will be an array
-    let parsedVariant;
-
-    if (Array.isArray(variants)) {
-      parsedVariant = variants.map((variants) => ({
-        mlSize: toNumber(variants.mlSize),
-        stock: toNumber(variants.stock),
-        basePrice: toNumber(variants.basePrice),
-        discountedPrice: toNumber(variants.discountedPrice),
-      }));
-    } else {
-      parsedVariant = [
-        {
-          mlSize: toNumber(variants.mlSize),
-          stock: toNumber(variants.stock) || 0,
-          basePrice: toNumber(variants.basePrice),
-          discountedPrice: toNumber(variants.discountedPrice),
-        },
-      ];
+    // Specific validation for product name
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: "Product name is required." });
     }
 
-    // Catogory splitting and making an array
-    let category = [];
-    if (categories) category = categories.split(",");
+    // Specific validation for product description
+    if (!description || !description.trim()) {
+      return res.status(400).json({ success: false, error: "Product description is required." });
+    }
 
-    const newProdducts = new Products({
-      name,
-      description,
-      notes,
-      brand,
-      category,
+    // Specific validation for category
+    const category = rawCategory ? rawCategory.trim() : '';
+    if (!category) {
+      return res.status(400).json({ success: false, error: "Category is required." });
+    }
+
+    // Specific validation for gender
+    if (!gender) {
+      return res.status(400).json({ success: false, error: "Gender is required." });
+    }
+
+    // Specific validation for concentration
+    if (!concentration) {
+      return res.status(400).json({ success: false, error: "Concentration is required." });
+    }
+
+    // Specific validation for variants existence
+    if (!variants) {
+      return res.status(400).json({ success: false, error: "Variants are required." });
+    }
+
+    // Specific validation for images
+    if (imageUrls.length !== 4) {
+      return res.status(400).json({ success: false, error: "Exactly 4 images are required." });
+    }
+
+    // Parse variants - frontend sends as array of objects
+    let parsedVariants = [];
+    if (Array.isArray(variants)) {
+      parsedVariants = variants
+        .map((v, index) => {
+          // Check structure first
+          if (!v || !v.mlSize || !v.stock || !v.basePrice || !v.discountedPrice) {
+            return null;
+          }
+          return {
+            mlSize: toNumber(v.mlSize),
+            stock: toNumber(v.stock),
+            basePrice: parseFloat(v.basePrice) || 0,
+            discountedPrice: parseFloat(v.discountedPrice) || 0,
+            index, // Keep original index for error reporting
+          };
+        })
+        .filter(v => v !== null);
+    } else if (variants && variants.mlSize && variants.stock && variants.basePrice && variants.discountedPrice) {
+      // Fallback for single object
+      const singleVariant = {
+        mlSize: toNumber(variants.mlSize),
+        stock: toNumber(variants.stock),
+        basePrice: parseFloat(variants.basePrice) || 0,
+        discountedPrice: parseFloat(variants.discountedPrice) || 0,
+        index: 0,
+      };
+      parsedVariants = [singleVariant];
+    }
+
+    // Per-variant validation (mirroring frontend field checks)
+    let variantErrors = [];
+    parsedVariants.forEach((v) => {
+      const variantNum = v.index + 1;
+      if (v.mlSize <= 0) {
+        variantErrors.push(`Variant ${variantNum} size must be greater than 0.`);
+      }
+      if (v.stock < 1) {
+        variantErrors.push(`Variant ${variantNum} stock must be at least 1.`);
+      }
+      if (v.basePrice <= 1) {
+        variantErrors.push(`Variant ${variantNum} base price must be greater than 1.`);
+      }
+      if (v.discountedPrice < 0) {
+        variantErrors.push(`Variant ${variantNum} discounted price must be at least 0.`);
+      }
+      if (v.discountedPrice > v.basePrice) {
+        variantErrors.push(`Variant ${variantNum} discounted price must be less than or equal to base price.`);
+      }
+    });
+
+    if (variantErrors.length > 0) {
+      return res.status(400).json({ success: false, error: variantErrors.join(' ') });
+    }
+
+    if (parsedVariants.length === 0) {
+      return res.status(400).json({ success: false, error: "At least one valid variant is required." });
+    }
+
+    // Description word count validation
+    const wordCountDesc = description.trim().split(/\s+/).length;
+    if (wordCountDesc < 10 || wordCountDesc > 150) {
+      return res.status(400).json({ success: false, error: "Description must be between 10 and 150 words." });
+    }
+
+    // Notes word count validation
+    const wordCountNotes = notes ? notes.trim().split(/\s+/).length : 0;
+    if (wordCountNotes > 150 || (wordCountNotes > 0 && wordCountNotes < 5)) {
+      return res.status(400).json({ success: false, error: "Notes must be either empty or at least 5 words, and no more than 150 words." });
+    }
+
+    // Brand validation
+    if (brand && !/^[A-Z\s]+$/.test(brand.trim())) {
+      return res.status(400).json({ success: false, error: "Brand name must be uppercase letters only." });
+    }
+
+    // Check duplicate name (case-insensitive, only non-deleted products)
+    const existingProduct = await Products.findOne({ 
+      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+      isDeleted: false 
+    });
+    if (existingProduct) {
+      return res.status(400).json({ success: false, error: "Product name already exists. Please choose a unique name." });
+    }
+
+    const newProduct = new Products({
+      name: name.trim(),
+      description: description.trim(),
+      notes: notes ? notes.trim() : '',
+      brand: brand ? brand.trim() : '',
+      category, // Single string (ObjectId)
       gender,
       concentration,
       images: imageUrls,
-      variants: parsedVariant,
+      variants: parsedVariants.map(v => ({ // Strip index for save
+        mlSize: v.mlSize,
+        stock: v.stock,
+        basePrice: v.basePrice,
+        discountedPrice: v.discountedPrice,
+      })),
     });
+    await newProduct.save();
 
-    await newProdducts.save();
-
-    //adding this product to catogory
-    if (categories) {
-      const categoriesIds = categories.split(",");
-      await Categories.updateMany(
-        { _id: { $in: categoriesIds } },
-        { $push: { products: newProdducts._id } }
+    // Update category with product reference (single category)
+    if (category) {
+      await Categories.findByIdAndUpdate(
+        category,
+        { $push: { products: newProduct._id } }
       );
     }
 
-    req.session.successMessage = "New Product Has Been Added";
-    res.redirect("/admin/products");
+    res.json({ success: true, message: "New Product Has Been Added Successfully" });
   } catch (error) {
-    console.error(error);
-    req.session.errorMessage = "Something Went Wrong";
-    res.redirect("/admin/products");
+    console.error('Error adding product:', error);
+    res.status(500).json({ success: false, error: "Something went wrong while adding the product. Please try again." });
   }
 };
-
 const getEditProducts = async (req, res) => {
   try {
     const categories = await Categories.find({ isDeleted: false }).lean();
     const product = await Products.findById(req.params.id);
-
-    res.render("admin/editProducts", { categories, product });
+    if (!product || product.isDeleted) {
+      req.session.errorMessage = "Product not found.";
+      return res.redirect("/admin/products");
+    }
+    const products = await Products.find({ isDeleted: false }).select('name _id').lean();
+    res.render("admin/editProducts", { categories, product, products });
   } catch (err) {
-    console.error(error);
+    console.error(err);
     req.session.errorMessage = "Something Went Wrong";
     res.redirect("/admin/products");
   }
-};
-
-const postEditProduct = async (req, res) => {
+};const postEditProduct = async (req, res) => {
   try {
     const productId = req.params.id;
-    let parsedVariants = [];
-    if (req.body.variants) {
-      if (Array.isArray(req.body.variants)) {
-        parsedVariants = req.body.variants.map((v) => ({
-          mlSize: parseInt(v.mlSize),
-          stock: parseInt(v.stock),
-          basePrice: parseFloat(v.basePrice),
-          discountedPrice: parseFloat(v.discountedPrice),
-        }));
-      } else {
-        parsedVariants = Object.values(req.body.variants).map((v) => ({
-          mlSize: parseInt(v.mlSize),
-          stock: parseInt(v.stock),
-          basePrice: parseFloat(v.basePrice),
-          discountedPrice: parseFloat(v.discountedPrice),
-        }));
+    const oldProduct = await Products.findById(productId);
+    if (!oldProduct) {
+      return res.status(404).json({ success: false, error: 'Product not found' });
+    }
+
+    const {
+      name,
+      description,
+      notes,
+      category: rawCategory,
+      brand,
+      gender,
+      concentration,
+      variants: rawVariants,
+    } = req.body;
+    const imageFiles = req.files?.map((file) => file.path) || [];
+    const existingImages = Array.isArray(req.body.existingImages) ? req.body.existingImages : [];
+
+    // Build updated images
+    let updatedImages = [...(oldProduct.images || [])];
+    imageFiles.forEach((filePath, index) => {
+      if (index < 4) {
+        updatedImages[index] = filePath;
+      }
+    });
+    // Fill remaining slots with existing images if available
+    let existingIdx = 0;
+    for (let i = 0; i < 4; i++) {
+      if (!updatedImages[i] && existingIdx < existingImages.length) {
+        updatedImages[i] = existingImages[existingIdx++];
+      }
+    }
+    // Trim to exactly 4
+    updatedImages = updatedImages.slice(0, 4);
+
+    // Validate images: exactly 4 valid paths
+    if (updatedImages.length !== 4 || updatedImages.some(img => !img)) {
+      return res.status(400).json({ success: false, error: "Exactly 4 valid images are required." });
+    }
+
+    // Validate required fields (final values)
+    const finalName = name ? name.trim() : oldProduct.name;
+    if (!finalName) {
+      return res.status(400).json({ success: false, error: "Product name is required." });
+    }
+
+    const finalDescription = description ? description.trim() : oldProduct.description;
+    if (!finalDescription) {
+      return res.status(400).json({ success: false, error: "Product description is required." });
+    }
+
+    const finalCategory = rawCategory ? rawCategory.trim() : oldProduct.category;
+    if (!finalCategory) {
+      return res.status(400).json({ success: false, error: "Category is required." });
+    }
+
+    const finalGender = gender || oldProduct.gender;
+    if (!finalGender) {
+      return res.status(400).json({ success: false, error: "Gender is required." });
+    }
+
+    const finalConcentration = concentration || oldProduct.concentration;
+    if (!finalConcentration) {
+      return res.status(400).json({ success: false, error: "Concentration is required." });
+    }
+
+    // Parse variants if provided, else keep old
+    let parsedVariants = [...oldProduct.variants];
+    if (rawVariants) {
+      if (Array.isArray(rawVariants)) {
+        parsedVariants = rawVariants
+          .map((v, index) => {
+            if (!v || !v.mlSize || !v.stock || !v.basePrice || !v.discountedPrice) {
+              return null;
+            }
+            return {
+              mlSize: parseInt(v.mlSize),
+              stock: parseInt(v.stock),
+              basePrice: parseFloat(v.basePrice) || 0,
+              discountedPrice: parseFloat(v.discountedPrice) || 0,
+              index, // For error reporting
+            };
+          })
+          .filter(v => v !== null);
+      } else if (rawVariants && rawVariants.mlSize && rawVariants.stock && rawVariants.basePrice && rawVariants.discountedPrice) {
+        // Fallback for single object (unlikely in edit, but handle)
+        const singleVariant = {
+          mlSize: parseInt(rawVariants.mlSize),
+          stock: parseInt(rawVariants.stock),
+          basePrice: parseFloat(rawVariants.basePrice) || 0,
+          discountedPrice: parseFloat(rawVariants.discountedPrice) || 0,
+          index: 0,
+        };
+        parsedVariants = [singleVariant];
       }
     }
 
-    const product = await Products.findById(productId);
-    // Handle images
-    let updatedImages = [...product.images];
+    // Per-variant validation
+    let variantErrors = [];
+    parsedVariants.forEach((v) => {
+      const variantNum = v.index + 1;
+      if (v.mlSize <= 0) {
+        variantErrors.push(`Variant ${variantNum} size must be greater than 0.`);
+      }
+      if (v.stock < 1) {
+        variantErrors.push(`Variant ${variantNum} stock must be at least 1.`);
+      }
+      if (v.basePrice <= 1) {
+        variantErrors.push(`Variant ${variantNum} base price must be greater than 1.`);
+      }
+      if (v.discountedPrice < 0) {
+        variantErrors.push(`Variant ${variantNum} discounted price must be at least 0.`);
+      }
+      if (v.discountedPrice > v.basePrice) {
+        variantErrors.push(`Variant ${variantNum} discounted price must be less than or equal to base price.`);
+      }
+    });
 
-    if (req.files && req.files.length > 0) {
-      req.files.forEach((file, index) => {
-        // Update the slot with the new file if provided
-        updatedImages[index] = file.path;
+    if (variantErrors.length > 0) {
+      return res.status(400).json({ success: false, error: variantErrors.join(' ') });
+    }
+
+    if (parsedVariants.length === 0) {
+      return res.status(400).json({ success: false, error: "At least one valid variant is required." });
+    }
+
+    // Description word count
+    const wordCountDesc = finalDescription.split(/\s+/).length;
+    if (wordCountDesc < 10 || wordCountDesc > 150) {
+      return res.status(400).json({ success: false, error: "Description must be between 10 and 150 words." });
+    }
+
+    // Notes word count
+    const finalNotes = notes ? notes.trim() : oldProduct.notes;
+    const wordCountNotes = finalNotes.split(/\s+/).length;
+    if (wordCountNotes > 150 || (wordCountNotes > 0 && wordCountNotes < 5)) {
+      return res.status(400).json({ success: false, error: "Notes must be either empty or at least 5 words, and no more than 150 words." });
+    }
+
+    // Brand validation
+    const finalBrand = brand ? brand.trim() : oldProduct.brand;
+    if (finalBrand && !/^[A-Z\s]+$/.test(finalBrand)) {
+      return res.status(400).json({ success: false, error: "Brand name must be uppercase letters only." });
+    }
+
+    // Check duplicate name (exclude current product)
+    if (finalName.toLowerCase() !== oldProduct.name.toLowerCase()) {
+      const existingProduct = await Products.findOne({ 
+        name: { $regex: new RegExp(`^${finalName}$`, 'i') },
+        _id: { $ne: productId },
+        isDeleted: false 
       });
+      if (existingProduct) {
+        return res.status(400).json({ success: false, error: "Product name already exists. Please choose a unique name." });
+      }
     }
 
     // Update product
-    product.name = req.body.name;
-    product.description = req.body.description;
-    product.notes = req.body.notes;
-    product.brand = req.body.brand;
-    product.gender = req.body.gender;
-    product.concentration = req.body.concentration;
-    product.images = updatedImages;
-    product.variants = parsedVariants;
+    oldProduct.name = finalName;
+    oldProduct.description = finalDescription;
+    oldProduct.notes = finalNotes;
+    oldProduct.brand = finalBrand;
+    oldProduct.category = finalCategory;
+    oldProduct.gender = finalGender;
+    oldProduct.concentration = finalConcentration;
+    oldProduct.images = updatedImages;
+    oldProduct.variants = parsedVariants.map(v => ({ // Strip index
+      mlSize: v.mlSize,
+      stock: v.stock,
+      basePrice: v.basePrice,
+      discountedPrice: v.discountedPrice,
+    }));
 
-    await product.save();
+    await oldProduct.save();
 
-    req.session.successMessage = "Product Has Been Edited ";
-    res.redirect("/admin/products");
+    // Handle category change
+    const oldCategory = oldProduct.category; // Already saved, but was set before save
+    if (oldCategory && oldCategory !== finalCategory) {
+      // Remove from old category
+      await Categories.findByIdAndUpdate(
+        oldCategory,
+        { $pull: { products: productId } }
+      );
+      // Add to new category
+      await Categories.findByIdAndUpdate(
+        finalCategory,
+        { $push: { products: productId } }
+      );
+    }
+
+    res.json({ success: true, message: 'Product Has Been Edited' });
   } catch (err) {
-    console.error(error);
-    req.session.errorMessage = "Something Went Wrong";
-    res.redirect("/admin/products");
+    console.error('Error editing product:', err);
+    res.status(500).json({ success: false, error: 'Something went wrong while editing the product. Please try again.' });
   }
 };
-
 const unlistProduct = async (req, res) => {
   try {
     const product = await Products.findOne({ _id: req.params.id });
@@ -928,94 +1170,116 @@ const deleteCategory = async (req, res) => {
   }
 };
 
-
-const getReturn = async(req, res) => {
+const getReturn = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Total Returns Count
+    // Prepare messages from session
+    const successMessage = req.session.success;
+    const errorMessage = req.session.error;
+    delete req.session.success;
+    delete req.session.error;
+
+    // Total Returns Count (only those with returndProduct)
     const totalReturnsResult = await Orders.aggregate([
-      { $unwind: '$returndProduct' },
-      { $count: 'total' }
+      {
+        $unwind: { path: "$returndProduct", preserveNullAndEmptyArrays: false },
+      },
+      { $match: { "returndProduct.adminApproved": { $exists: true } } },
+      { $count: "total" },
     ]);
     const totalReturns = totalReturnsResult[0]?.total || 0;
 
     // Requested Returns Count
     const requestedResult = await Orders.aggregate([
-      { $unwind: '$returndProduct' },
-      { $match: { 'returndProduct.adminApproved': 'Requested' } },
-      { $count: 'count' }
+      {
+        $unwind: { path: "$returndProduct", preserveNullAndEmptyArrays: false },
+      },
+      { $match: { "returndProduct.adminApproved": "Requested" } },
+      { $count: "count" },
     ]);
     const requestedReturnsCount = requestedResult[0]?.count || 0;
 
     // Approved Returns Count
     const approvedResult = await Orders.aggregate([
-      { $unwind: '$returndProduct' },
-      { $match: { 'returndProduct.adminApproved': 'Approved' } },
-      { $count: 'count' }
+      {
+        $unwind: { path: "$returndProduct", preserveNullAndEmptyArrays: false },
+      },
+      { $match: { "returndProduct.adminApproved": "Approved" } },
+      { $count: "count" },
     ]);
     const approvedReturnsCount = approvedResult[0]?.count || 0;
 
-    // Total Refund Amount 
+    // Total Refund Amount
     const totalRefundResult = await Orders.aggregate([
-      { $unwind: '$returndProduct' },
-      { $match: { 'returndProduct.adminApproved': 'Approved' } },
+      {
+        $unwind: { path: "$returndProduct", preserveNullAndEmptyArrays: false },
+      },
+      { $match: { "returndProduct.adminApproved": "Approved" } },
       {
         $group: {
           _id: null,
           totalRefund: {
             $sum: {
-              $multiply: ['$returndProduct.discountedPrice', '$returndProduct.returndQuantity']
-            }
-          }
-        }
-      }
-    ]);
-    const totalRefundAmount = totalRefundResult.length > 0 
-      ? [{ totalRefund: totalRefundResult[0].totalRefund }] 
-      : [{ totalRefund: 0 }];
-
-    // Fixed Pipeline (added _id projection as before)
-    const returnsPipeline = [
-      { $unwind: '$returndProduct' },
-      {
-        $sort: { 'returndProduct.returnedAt': -1 }
+              $multiply: [
+                "$returndProduct.discountedPrice",
+                "$returndProduct.returndQuantity",
+              ],
+            },
+          },
+        },
       },
+    ]);
+    const totalRefundAmount =
+      totalRefundResult.length > 0
+        ? [{ totalRefund: totalRefundResult[0].totalRefund.toFixed(2) }]
+        : [{ totalRefund: "0.00" }];
+
+    // Returns Pipeline (fixed: unwind with preserve false, match exists, sort before skip/limit, project order_id for EJS link)
+    const returnsPipeline = [
+      {
+        $unwind: { path: "$returndProduct", preserveNullAndEmptyArrays: false },
+      },
+      { $match: { "returndProduct.adminApproved": { $exists: true } } },
+      { $sort: { "returndProduct.returnedAt": -1 } },
       { $skip: skip },
       { $limit: limit },
       {
         $project: {
-          _id: '$returndProduct._id',  // Preserve for view routes
-          orderId: '$_id',
-          returnID: { $toString: '$returndProduct._id' },
-          orderID: '$orderID',
-          address: '$address',
-          returnedAt: '$returndProduct.returnedAt',
+          _id: "$returndProduct._id", // Subdoc _id for potential use
+          order_id: "$_id", // Order's MongoDB _id for EJS link (/admin/return/<%= returnItem.order_id %>)
+          returnID: { $concat: ["R-", { $toString: "$returndProduct._id" }] }, // Enhanced returnID for display
+          orderID: "$orderID", // Original orderID (nanoid)
+          address: "$address",
+          returnedAt: "$returndProduct.returnedAt",
           refundAmount: {
-            $multiply: ['$returndProduct.discountedPrice', '$returndProduct.returndQuantity']
+            $multiply: [
+              "$returndProduct.discountedPrice",
+              "$returndProduct.returndQuantity",
+            ],
           },
-          name: '$returndProduct.name',
-          mlSize: '$returndProduct.mlSize',
-          quantity: '$returndProduct.returndQuantity',
-          adminApproved: '$returndProduct.adminApproved',
-          reason: '$returndProduct.reason',
-          image: '$returndProduct.image',
-          productId: '$returndProduct.productId',
-          basePrice: '$returndProduct.basePrice',
-          discountedPrice: '$returndProduct.discountedPrice'
-        }
-      }
+          name: "$returndProduct.name",
+          mlSize: "$returndProduct.mlSize",
+          quantity: "$returndProduct.returndQuantity",
+          adminApproved: "$returndProduct.adminApproved",
+          reason: "$returndProduct.reason",
+          image: "$returndProduct.image",
+          productId: "$returndProduct.productId",
+          basePrice: "$returndProduct.basePrice",
+          discountedPrice: "$returndProduct.discountedPrice",
+        },
+      },
     ];
 
     const returns = await Orders.aggregate(returnsPipeline);
-    console.log('Debug Returns:', returns);  // Check console for data (remove after testing)
+    // console.log('Debug Returns:', returns);  // Remove after testing
 
     const totalPages = Math.ceil(totalReturns / limit);
 
-    res.render('admin/return', { 
-      title: 'Returns Management',
+    res.render("admin/return", {
+      title: "Returns Management",
       totalReturns,
       requestedReturnsCount,
       approvedReturnsCount,
@@ -1023,107 +1287,125 @@ const getReturn = async(req, res) => {
       returns,
       currentPage: page,
       totalPages,
-      limit
-      // Add if using flash: , successMessage: req.flash('success')[0], errorMessage: req.flash('error')[0]
+      limit,
+      successMessage,
+      errorMessage,
     });
   } catch (error) {
-    console.error('Error fetching returns:', error);
-    res.status(500).render('admin/return', {
-      title: 'Returns Management',
-      errorMessage: 'Failed to load returns data.',
-      totalReturns: 0,
-      requestedReturnsCount: 0,
-      approvedReturnsCount: 0,
-      totalRefundAmount: [{ totalRefund: 0 }],
-      returns: [],  // Empty array prevents EJS loop errors
-      currentPage: 1,
-      totalPages: 1,
-      limit: 10
-    });
+    console.error("Error fetching returns:", error);
+    req.session.error = "Failed to load returns data.";
+    res.redirect("/admin/return");
   }
 };
 
-
-
-const getReturnDetials = async(req,res)=>{
+const getReturnDetails = async (req, res) => {
   try {
-    const { orderId, returnId } = req.params;
-
-    // Fetch order with populated user
-    const order = await Order.findById(orderId)
-      .populate('userId', 'name email phone') // Populate basic user fields
-      .lean(); // Use lean() for faster queries on read-only pages
-
+    const { orderId } = req.params;
+    const order = await Orders.findById(orderId).populate('userId', 'name email phone');
     if (!order) {
-      req.flash('errorMessage', 'Order not found.');
-      return res.redirect('/admin/returns'); // Redirect to returns list or handle 404
+      req.session.error = 'Order not found';
+      return res.redirect('/admin/returns');
     }
 
-    // Extract specific returnItem from returndProduct array by _id
-    let returnItem = order.returndProduct?.find(r => r._id.toString() === returnId);
+    const user = order.userId;
+    const returnItem = order.returndProduct[0];
     if (!returnItem) {
-      req.flash('errorMessage', 'Return request not found.');
-      return res.redirect(`/admin/returns/${orderId}`); // Or back to order details
+      req.session.error = 'Return not found';
+      return res.redirect('/admin/returns');
     }
 
-    // Remap fields to match EJS expectations (handle schema discrepancies without updates)
-    // Fix price typo: schema uses 'discoundedPrice', template expects 'discountedPrice'
-    returnItem.discountedPrice = returnItem.discountedPrice || returnItem.discoundedPrice || returnItem.basePrice || 0;
-
-    // Fallback for missing fields in schema
-    returnItem.rejectReason = returnItem.rejectReason || '';
-    returnItem.images = returnItem.images || [];
-    returnItem.returnId = returnItem.returnId || returnItem._id.toString().slice(-6); // Short ID fallback
-
-    // Fallback timestamps (use returnedAt or current date if missing)
-    returnItem.approvedAt = returnItem.approvedAt || (returnItem.adminApproved === 'Approved' ? new Date() : null);
-    returnItem.rejectedAt = returnItem.rejectedAt || (returnItem.adminApproved === 'Rejected' ? new Date() : null);
-    returnItem.processingAt = returnItem.processingAt || (returnItem.adminApproved === 'Processing' ? new Date() : null);
-    returnItem.completedAt = returnItem.completedAt || (returnItem.adminApproved === 'Completed' ? new Date() : null);
-
-    // Note: adminApproved enum in schema is limited to ["Requested", "Approved", "Rejected"];
-    // If "Processing" or "Completed" are used in app logic, ensure they are set dynamically elsewhere.
-    // Here, we pass as-is; EJS handles via conditionals.
-
-    // Fix price in order.items to match template (discountedPrice)
-    if (order.items) {
-      order.items = order.items.map(item => ({
-        ...item,
-        discountedPrice: item.discountedPrice || item.discoundedPrice || item.basePrice || 0
-      }));
-    }
-
-    // Compute totalOrders (since not in schema; aggregate count)
-    const userId = order.userId?._id || order.userId;
-    let totalOrders = 0;
-    if (userId) {
-      totalOrders = await Order.countDocuments({ userId });
-    }
-    const user = {
-      ...order.userId,
-      totalOrders // Attach computed field
+    // Add missing fields virtually
+    const enhancedReturnItem = {
+      ...returnItem.toObject(),
+      returnId: nanoid(6),
+      images: [],
+      rejectReason: returnItem.adminApproved === 'Rejected' ? 'No reason provided' : '',
+      approvedAt: returnItem.adminApproved === 'Approved' ? new Date() : null,
+      rejectedAt: returnItem.adminApproved === 'Rejected' ? new Date() : null,
+      processingAt: returnItem.adminApproved === 'Processing' ? new Date() : null,
+      completedAt: returnItem.adminApproved === 'Completed' ? new Date() : null,
+      returndQuantity: returnItem.returndQuantity || 1,
     };
 
-    // Handle flash messages
-    const errorMessage = req.flash('errorMessage')[0];
-    const successMessage = req.flash('successMessage')[0];
+    const successMessage = req.session.success;
+    const errorMessage = req.session.error;
 
-    // Render the EJS view with prepared data
-    res.render('admin/returns/details', { // Adjust to your EJS path, e.g., 'admin/return-details'
-      title: 'Return Details - Admin',
-      returnItem,
+    delete req.session.success;
+    delete req.session.error;
+
+    res.render('admin/returnDetails', {
       order,
+      returnItem: enhancedReturnItem,
       user,
+      successMessage,
       errorMessage,
-      successMessage
     });
   } catch (error) {
-    console.error('Error fetching return details:', error);
-    req.flash('errorMessage', 'An error occurred while loading return details.');
+    console.error(error);
+    req.session.error = 'Failed to fetch return details';
     res.redirect('/admin/returns');
   }
 }
 
+const returnApprove = async (req, res) => {
+  const { orderId } = req.params;
+  try {
+    const order = await Orders.findById(orderId);
+    if (!order) {
+      req.session.error = 'Order not found';
+      return res.redirect(`/admin/return/${orderId}`);
+    }
+
+    const returnItem = order.returndProduct[0];
+    if (!returnItem || returnItem.adminApproved !== 'Requested') {
+      req.session.error = 'Invalid return or already processed';
+      return res.redirect(`/admin/return/${orderId}`);
+    }
+
+    // Update return status
+    returnItem.adminApproved = 'Approved';
+
+    // Update order status to Returned
+    order.orderStatus = 'Returned';
+
+    // Update original item status to Returned and reduce quantity
+    const originalItem = order.items.find(item => 
+      item.productId.toString() === returnItem.productId.toString() && 
+      item.mlSize === returnItem.mlSize
+    );
+    if (originalItem) {
+      originalItem.productStatus = 'Returned';
+      originalItem.quantity -= returnItem.returndQuantity;
+    }
+
+    // Add tracking entry for return approval
+    order.tracking.push({
+      status: 'Return Approved',
+      date: new Date(),
+      message: 'Return approved by admin and stock updated'
+    });
+
+    // Increase stock in specific variant
+    await Products.findOneAndUpdate(
+      { 
+        _id: returnItem.productId, 
+        'variants.mlSize': returnItem.mlSize 
+      },
+      { 
+        $inc: { 'variants.$.stock': returnItem.returndQuantity } 
+      }
+    );
+
+    await order.save();
+
+    req.session.success = 'Return approved, order status updated, and stock restored successfully';
+    res.redirect(`/admin/return/${orderId}`);
+  } catch (error) {
+    console.error(error);
+    req.session.error = 'Failed to approve return';
+    res.redirect(`/admin/return/${orderId}`);
+  }
+};
 const logOut = (req, res) => {
   try {
     delete req.session.admin;
@@ -1165,6 +1447,7 @@ export {
   DeactivateCategory,
   deleteCategory,
   getReturn,
-  getReturnDetials,
+  getReturnDetails,
+  returnApprove,
   logOut,
 };

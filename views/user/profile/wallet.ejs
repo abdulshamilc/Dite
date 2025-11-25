@@ -1,0 +1,688 @@
+<%- include("../../partials/user/header") %>
+<style>
+  :root {
+    --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+    --text:#f5f5f5;
+    --surface:#ffffff;
+    --accent:#d3a35b;
+    --radius:14px;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color .25s; }
+  a:hover { color: #b5823d; }
+  .container {
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: 10px 0px;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 2rem;
+    margin: 20px 0;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  @media (min-width: 960px) {
+    .layout { flex-direction: row; }
+  }
+  .card {
+    flex: 1;
+    background: var(--surface);
+    color: #1a1a1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+    text-align: center;
+  }
+  .balance-section {
+    background: linear-gradient(135deg, var(--accent), #b5823d);
+    color: #fff;
+    padding: 32px;
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .balance-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+    opacity: 0.1;
+  }
+  .balance-amount {
+    font-size: 3rem;
+    font-weight: 800;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .balance-currency {
+    font-size: 1.2rem;
+    opacity: 0.9;
+    margin-left: 8px;
+  }
+  .balance-label {
+    font-size: 1.1rem;
+    margin-top: 8px;
+    opacity: 0.8;
+  }
+  .balance-add-btn {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s, transform .25s;
+    margin-top: 20px;
+    display: inline-block;
+  }
+  .balance-add-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-2px);
+  }
+  .balance-add-btn.primary {
+    background: rgba(255,255,255,0.9);
+    color: var(--accent);
+  }
+  .balance-add-btn.primary:hover {
+    background: #fff;
+  }
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .action-btn {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s, transform .25s;
+    min-width: 140px;
+  }
+  .action-btn:hover {
+    background: rgba(255,255,255,0.3);
+    transform: translateY(-2px);
+  }
+  .action-btn.primary {
+    background: rgba(255,255,255,0.9);
+    color: var(--accent);
+  }
+  .action-btn.primary:hover {
+    background: #fff;
+  }
+  .transaction-history {
+    margin-top: 24px;
+  }
+  .transaction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    font-weight: 700;
+    color: #3a2e22;
+  }
+  .transactions-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #caa880;
+    border-radius: 10px;
+    background: #fafafa;
+  }
+  .transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px;
+    border-bottom: 1px solid #e0e0e0;
+    transition: background .25s;
+  }
+  .transaction-item:hover {
+    background: #f0f0f0;
+  }
+  .transaction-item:last-child {
+    border-bottom: none;
+  }
+  .transaction-desc {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    font-size: 15px;
+    margin-right: 16px;
+  }
+  .transaction-desc > div:first-child {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .transaction-amount {
+    font-weight: 700;
+    font-size: 16px;
+    white-space: nowrap;
+    margin-left: auto;
+  }
+  .transaction-amount.positive {
+    color: #28a745;
+  }
+  .transaction-amount.negative {
+    color: #dc3545;
+  }
+  .transaction-date {
+    font-size: 14px;
+    opacity: 0.7;
+    text-align: left;
+    margin-top: auto;
+  }
+  .add-money-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+  }
+  .add-money-content {
+    background-color: var(--surface);
+    color: #1a1a1a;
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: var(--radius);
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    box-shadow: 0 12px 30px rgba(0,0,0,.3);
+  }
+  .close-modal {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+  }
+  .close-modal:hover {
+    color: var(--accent);
+  }
+  .modal-title {
+    text-align: center;
+    color: var(--accent);
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .amount-field {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid #caa880;
+    border-radius: 10px;
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 20px;
+    background: #fafafa;
+  }
+  .amount-field:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .modal-btn {
+    flex: 1;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s;
+    min-width: 100px;
+  }
+  .modal-btn:hover:not(:disabled) {
+    background: #b5823d;
+  }
+  .modal-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  /* Message Styles */
+  .message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    max-width: 350px;
+  }
+  .message {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  .message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  /* Quick Actions */
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .quick-action-card {
+    background: #fafafa;
+    border: 1px solid #caa880;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform .25s, box-shadow .25s;
+  }
+  .quick-action-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .quick-action-icon {
+    font-size: 2rem;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .quick-action-title {
+    font-weight: 700;
+    color: #3a2e22;
+    margin-bottom: 4px;
+  }
+  .quick-action-desc {
+    font-size: 14px;
+    opacity: 0.7;
+  }
+  /* Payment Status Overlay */
+  .payment-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.2rem;
+  }
+  .payment-overlay.show {
+    display: flex;
+  }
+</style>
+<body>
+  <div class="container">
+    <h1 class="page-title">WALLET</h1>
+    <section class="layout" aria-label="Wallet layout">
+      <%- include("../../partials/user/profileSideBar") %>
+      <main class="card" aria-labelledby="wallet-details-title">
+        <div class="balance-section">
+          <h2 class="balance-label">Available Balance</h2>
+          <p class="balance-amount">
+            ₹<%= wallet.balance.toFixed(2) %><span class="balance-currency">INR</span>
+          </p>
+          <button class="balance-add-btn primary" onclick="openAddMoneyModal()">Add Funds</button>
+        </div>
+        <div class="action-buttons">
+          <button class="action-btn" onclick="showMessage('Withdraw feature coming soon!', 'info')">Withdraw</button>
+          <button class="action-btn" onclick="showMessage('Transfer feature coming soon!', 'info')">Transfer</button>
+        </div>
+        <div class="quick-actions">
+          <div class="quick-action-card" onclick="openAddMoneyModal()">
+            <div class="quick-action-icon">💳</div>
+            <div class="quick-action-title">Add Funds</div>
+            <div class="quick-action-desc">Top up your wallet instantly</div>
+          </div>
+          <div class="quick-action-card" onclick="viewTransactions()">
+            <div class="quick-action-icon">📊</div>
+            <div class="quick-action-title">View History</div>
+            <div class="quick-action-desc">See all your transactions</div>
+          </div>
+          <div class="quick-action-card" onclick="showMessage('Rewards feature coming soon!', 'info')">
+            <div class="quick-action-icon">⭐</div>
+            <div class="quick-action-title">Rewards</div>
+            <div class="quick-action-desc">Earn and redeem points</div>
+          </div>
+        </div>
+        <div class="transaction-history">
+          <div class="transaction-header">
+            <span>Recent Transactions</span>
+            <a href="#" onclick="viewAllTransactions()">View All</a>
+          </div>
+          <div class="transactions-list" id="transactionsList">
+            <% if (wallet.transactions && wallet.transactions.length > 0) { %>
+              <% wallet.transactions.slice(0, 5).forEach(function(transaction) { %>
+                <div class="transaction-item">
+                  <div class="transaction-desc">
+                    <div><%= transaction.description %></div>
+                    <div class="transaction-date"><%= new Date(transaction.date).toLocaleDateString() %></div>
+                  </div>
+                  <div class="transaction-amount <%= transaction.amount > 0 ? 'positive' : 'negative' %>">
+                    <%= transaction.amount > 0 ? '+' : '' %>₹<%= Math.abs(transaction.amount).toFixed(2) %>
+                  </div>
+                </div>
+              <% }); %>
+            <% } else { %>
+              <div class="transaction-item" style="justify-content: center; color: #666;">
+                No transactions yet. Add money to get started!
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </main>
+    </section>
+  </div>
+  <!-- Add Money Modal -->
+  <div id="addMoneyModal" class="add-money-modal">
+    <div class="add-money-content">
+      <span class="close-modal" onclick="closeAddMoneyModal()">&times;</span>
+      <h2 class="modal-title">Add Funds</h2>
+      <p style="text-align: center; color: #666; margin-bottom: 20px;">Enter amount to add (min ₹100)</p>
+      <form id="addMoneyForm" onsubmit="handleAddMoney(event)">
+        <input type="number" class="amount-field" id="addAmount" name="amount" placeholder="100.00" step="0.01" value="100" required />
+        <div class="modal-buttons">
+          <button type="button" class="modal-btn" onclick="closeAddMoneyModal()">Cancel</button>
+          <button type="submit" class="modal-btn primary" id="addMoneyBtn">Add ₹<span id="amountDisplay">100</span></button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- Payment Status Overlay -->
+  <div class="payment-overlay" id="paymentOverlay">
+    <div id="paymentMessage">Processing payment...</div>
+  </div>
+  <!-- Message Container -->
+  <div class="message-container" id="messageContainer"></div>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    // Pass data from EJS to JS
+    const userEmail = '<%= user ? user.email : "" %>';
+    let razorpayInstance = null;
+
+    // Assume wallet data is passed from server: window.walletData = <%= JSON.stringify(wallet) %>;
+    // For demo, we'll use the EJS variables, but extend for dynamic updates if needed.
+    function showMessage(message, type = 'success') {
+      const container = document.getElementById('messageContainer');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = message;
+      container.appendChild(msgDiv);
+      setTimeout(() => msgDiv.remove(), 5000);
+    }
+    function openAddMoneyModal() {
+      document.getElementById('addMoneyModal').style.display = 'block';
+      document.getElementById('addAmount').focus();
+      updateAmountDisplay();
+    }
+    function closeAddMoneyModal() {
+      document.getElementById('addMoneyModal').style.display = 'none';
+      document.getElementById('addMoneyForm').reset();
+      updateAmountDisplay();
+      const addBtn = document.getElementById('addMoneyBtn');
+      addBtn.disabled = false;
+      addBtn.innerHTML = 'Add ₹<span id="amountDisplay">100</span>';
+      hidePaymentStatus();
+    }
+    function updateAmountDisplay() {
+      const amount = document.getElementById('addAmount').value || 100;
+      document.getElementById('amountDisplay').textContent = amount;
+    }
+    document.getElementById('addAmount').addEventListener('input', updateAmountDisplay);
+    function showPaymentStatus(message, isError = false) {
+      const overlay = document.getElementById('paymentOverlay');
+      const msgEl = document.getElementById('paymentMessage');
+      msgEl.textContent = message;
+      if (isError) {
+        msgEl.style.color = '#ff6b6b';
+      } else {
+        msgEl.style.color = '#4ade80';
+      }
+      overlay.classList.add('show');
+    }
+    function hidePaymentStatus() {
+      document.getElementById('paymentOverlay').classList.remove('show');
+    }
+    function handleAddMoney(event) {
+      event.preventDefault();
+      const amount = parseFloat(document.getElementById('addAmount').value);
+      if (isNaN(amount) || amount < 100) {
+        showMessage('Minimum amount is ₹100.', 'error');
+        document.getElementById('addAmount').focus();
+        return;
+      }
+      const addBtn = document.getElementById('addMoneyBtn');
+      addBtn.disabled = true;
+      addBtn.innerHTML = 'Initiating Payment...';
+      showPaymentStatus('Initiating Razorpay...');
+      initiateRazorpay(amount);
+    }
+    async function initiateRazorpay(amount) {
+      if (!amount || amount < 100) {
+        const errorMsg = 'Invalid amount. Minimum is ₹100.';
+        showPaymentStatus(errorMsg, true);
+        showMessage(errorMsg, 'error');
+        resetAddButton();
+        return;
+      }
+      try {
+        const response = await fetch('/createOrder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount })
+        });
+        const data = await response.json();
+        if (data.success && data.order) {
+          showPaymentStatus('Opening payment modal...');
+          openRazorpayCheckout(data.order, amount);
+        } else {
+          throw new Error(data.message || 'Failed to create order');
+        }
+      } catch (error) {
+        console.error('Error creating order:', error);
+        const errorMsg = error.message || 'Failed to initiate payment. Please try again.';
+        showPaymentStatus(errorMsg, true);
+        showMessage(errorMsg, 'error');
+        resetAddButton();
+      }
+    }
+    function openRazorpayCheckout(order, amount) {
+      const options = {
+        key: '<%= process.env.RAZORPAY_KEY_ID || "rzp_test_your_key" %>',
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: 'Dité Wallet',
+        description: `Add ₹${amount.toFixed(2)} to Wallet`,
+        order_id: order.id,
+        handler: function(response) {
+          verifyRazorpayPayment(response, amount);
+        },
+        prefill: {
+          name: '<%= user ? user.name || "" : "" %>',
+          email: userEmail,
+          contact: ''
+        },
+        theme: {
+          color: '#d3a35b'
+        },
+        modal: {
+          ondismiss: function() {
+            const errorMsg = 'Payment was cancelled.';
+            showPaymentStatus(errorMsg, true);
+            showMessage(errorMsg, 'error');
+            resetAddButton();
+          }
+        }
+      };
+      try {
+        razorpayInstance = new Razorpay(options);
+        razorpayInstance.open();
+      } catch (err) {
+        console.error('Razorpay init error:', err);
+        const errorMsg = 'Payment modal failed to load. Please refresh and try again.';
+        showPaymentStatus(errorMsg, true);
+        showMessage(errorMsg, 'error');
+        resetAddButton();
+      }
+    }
+    async function verifyRazorpayPayment(response, amount) {
+      showPaymentStatus('Verifying payment...');
+      try {
+        const res = await fetch('/verifyPayment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_signature: response.razorpay_signature
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          addFundsAfterPayment(amount, response.razorpay_payment_id, response.razorpay_order_id);
+        } else {
+          throw new Error(data.message || 'Payment verification failed');
+        }
+      } catch (error) {
+        console.error('Verification error:', error);
+        const errorMsg = error.message || 'Payment verification failed. Please contact support.';
+        showPaymentStatus(errorMsg, true);
+        showMessage(errorMsg, 'error');
+        resetAddButton();
+      }
+    }
+    async function addFundsAfterPayment(amount, paymentId, orderId) {
+      showPaymentStatus('Adding funds to wallet...');
+      try {
+        const response = await fetch('/wallet/add-funds', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount,
+            razorpayPaymentId: paymentId,
+            razorpayOrderId: orderId
+          })
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+          showPaymentStatus('Funds added successfully!');
+          showMessage(`Successfully added ₹${amount.toFixed(2)} to your wallet!`, 'success');
+          // Update balance dynamically
+          const currentBalanceText = document.querySelector('.balance-amount').textContent.replace('₹', '').trim();
+          const currentBalance = parseFloat(currentBalanceText);
+          document.querySelector('.balance-amount').innerHTML = `₹${(currentBalance + amount).toFixed(2)}<span class="balance-currency">INR</span>`;
+          // Add to transactions
+          addTransactionToList('Added funds via Razorpay', amount, new Date().toISOString());
+          closeAddMoneyModal();
+        } else {
+          throw new Error(data.message || 'Failed to add funds');
+        }
+      } catch (error) {
+        console.error('Add funds error:', error);
+        const errorMsg = error.message || 'Failed to add funds after payment. Your payment may be refunded.';
+        showPaymentStatus(errorMsg, true);
+        showMessage(errorMsg, 'error');
+        resetAddButton();
+      } finally {
+        setTimeout(hidePaymentStatus, 2000);
+      }
+    }
+    function resetAddButton() {
+      const addBtn = document.getElementById('addMoneyBtn');
+      const amount = document.getElementById('addAmount').value || 100;
+      addBtn.disabled = false;
+      addBtn.innerHTML = `Add ₹<span id="amountDisplay">${amount}</span>`;
+      hidePaymentStatus();
+    }
+    function addTransactionToList(description, amount, date) {
+      const list = document.getElementById('transactionsList');
+      const item = document.createElement('div');
+      item.className = 'transaction-item';
+      item.innerHTML = `
+        <div class="transaction-desc">
+          <div>${description}</div>
+          <div class="transaction-date">${new Date(date).toLocaleDateString()}</div>
+        </div>
+        <div class="transaction-amount ${amount > 0 ? 'positive' : 'negative'}">
+          ${amount > 0 ? '+' : ''}₹${Math.abs(amount).toFixed(2)}
+        </div>
+      `;
+      list.insertBefore(item, list.firstChild);
+      // Remove oldest if more than 5
+      while (list.children.length > 6) {
+        list.removeChild(list.lastChild);
+      }
+    }
+    function viewTransactions() {
+      showMessage('Full transaction history view coming soon! Check recent above.', 'info');
+      // In real app, redirect to /wallet/transactions or expand section
+    }
+    function viewAllTransactions() {
+      showMessage('Redirecting to full history...', 'info');
+      // window.location.href = '/wallet/transactions';
+    }
+    // Close modal on outside click
+    window.onclick = function(event) {
+      const modal = document.getElementById('addMoneyModal');
+      if (event.target === modal) {
+        closeAddMoneyModal();
+      }
+    };
+    // Display any server messages
+    <% if (typeof success !== 'undefined' && success) { %>
+      showMessage('<%= success %>', 'success');
+    <% } %>
+    <% if (typeof error !== 'undefined' && error) { %>
+      showMessage('<%= error %>', 'error');
+    <% } %>
+  </script>
+</body>

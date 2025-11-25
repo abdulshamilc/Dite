@@ -5,7 +5,7 @@ import UserLog from "../../models/userLogModel.js";
 import Product from '../../models/productsModels.js' ;
 import { generateOTP } from "../../utils/genarateOtp.js";
 import generateInvoice from "../../services/OrderPdfGenarator.js";
-
+import Wallet from "../../models/walletModel.js";
 
 const getProfile = async (req, res) => {
   try {
@@ -1104,6 +1104,61 @@ const postReturnSelect = async (req, res) => {
     return res.redirect(`/orders?error=return`);
   }
 };
+const getWallet = async (req, res) => {
+  // User validation
+  if (!req.session.user) {
+    req.session.error = 'Please log in to access your wallet.';
+    return res.redirect('/login'); 
+  }
+
+  try {
+    const userEmail = req.session.user;
+    const user = await User.findOne({ email: userEmail });
+
+    if (!user) {
+      req.session.error = 'User not found. Please log in again.';
+      return res.redirect('/login');
+    }
+
+    const userId = user._id;
+
+    // Find or create wallet
+    let wallet = await Wallet.findOne({ user: userId });
+
+    if (!wallet) {
+      wallet = new Wallet({ user: userId });
+      await wallet.save();
+    }
+
+    // Limit transactions 
+    const recentTransactions = wallet.transactions ? wallet.transactions.slice(0,10) : [];
+
+   
+    const success = req.session.success;
+    const error = req.session.error;
+
+    
+    delete req.session.success;
+    delete req.session.error;
+
+    res.render('user/profile/wallet', { 
+      wallet: {
+        balance: wallet.balance,
+        transactions: recentTransactions
+      },
+      user: user, 
+      currentPath: req.path,
+      success,
+      error
+    });
+  } catch (err) {
+    console.error('Error fetching wallet:', err);
+    req.session.error = 'Failed to load wallet. Please try again.';
+    res.redirect('/profile'); 
+  }
+};
+
+
 
 const getSecurity = async (req, res) => {
   const userEmail = req.session.user;
@@ -1183,6 +1238,7 @@ export {
   confirmReturn,
   getReturnSelect,
   postReturnSelect,
+  getWallet,
   getSecurity,
   getDeleteAcount,
   userlogOut,

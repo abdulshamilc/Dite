@@ -21,7 +21,7 @@ const orderedProductSchema = new mongoose.Schema({
   quantity: {
     type: Number,
     required: true,
-    min: 1,
+    min: 0,
   },
   image: String,
 });
@@ -132,6 +132,15 @@ const orderSchema = new mongoose.Schema(
       enum: ["cod", "online", "Wallet"],
       required: true,
     },
+    paymentInfo: {
+      razorpayPaymentId: { type: String },
+      paymentStatus: {
+        type: String,
+        enum: ["Pending", "Paid", "Failed"],
+      },
+      paymentTime: { type: Date },
+    },
+
     orderStatus: {
       type: String,
       enum: [

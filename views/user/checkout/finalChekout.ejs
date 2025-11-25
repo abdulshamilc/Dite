@@ -328,6 +328,31 @@
         background-color: #22c55e;
       }
 
+      .confirm-btn:disabled {
+        background-color: #666;
+        cursor: not-allowed;
+      }
+
+      /* Payment Status Overlay */
+      .payment-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.2rem;
+      }
+
+      .payment-overlay.show {
+        display: flex;
+      }
+
       /* Modal Styles */
       .modal-overlay {
         display: none;
@@ -578,9 +603,9 @@
               <h2 class="section-title">Payment Option</h2>
               <div class="payment-selection">
                 <label class="payment-option">
-                  <input type="radio" class="payment-radio" name="payment" value="online" required />
+                  <input type="radio" class="payment-radio" name="payment" value="razorpay" required />
                   <span class="payment-icon">💳</span>
-                  <span>Online Payment</span>
+                  <span>Razorpay</span>
                 </label>
                 <label class="payment-option">
                   <input type="radio" class="payment-radio" name="payment" value="cod" />
@@ -626,7 +651,7 @@
               <span>Rs. <%= subtotal.toFixed(2) %></span>
             </div>
           </div>
-          <button class="confirm-btn" onclick="confirmOrder()">
+          <button class="confirm-btn" id="confirmBtn" onclick="confirmOrder()">
             CONFIRM ORDER
           </button>
         </div>
@@ -683,99 +708,274 @@
       </div>
     </div>
 
+    <!-- Payment Status Overlay -->
+    <div class="payment-overlay" id="paymentOverlay">
+      <div id="paymentMessage">Processing payment...</div>
+    </div>
+
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
 
-    <script>
-      // Confirm Order (stub - integrate with backend, check payment selected)
-     function confirmOrder() {
-  const selectedPayment = document.querySelector(".payment-radio:checked");
-  if (!selectedPayment) {
-    alert("Please select a payment method.");
-    return;
+   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  // Calculate subtotal globally in EJS scope (move this calculation OUTSIDE the price-details block in your EJS template)
+  <% let globalSubtotal = 0; %>
+  <% if (cart && cart.items.length > 0) { %>
+    <% cart.items.forEach(item => { globalSubtotal += item.basePrice * item.quantity; }); %>
+  <% } %>
+  // Pass data from EJS to JS
+  const subtotal = <%= globalSubtotal %>;
+  const cartItems = <%- JSON.stringify(cart ? cart.items : []) %>;
+  const selectedAddressId = '<%= selectedAddress ? selectedAddress._id : "" %>';
+  const selectedAddress = <%- JSON.stringify(selectedAddress) %>;
+  const userEmail = '<%= user ? user.email : "" %>'; // Assume user object from backend; fallback empty
+  let razorpayInstance = null;
+
+  // Utility to redirect to failed page with error message and type
+  function redirectToFailed(errorMsg, errorType = 'unknown', deleteCart = false) {
+    const encodedError = encodeURIComponent(errorMsg);
+    const encodedType = encodeURIComponent(errorType);
+    const params = new URLSearchParams({
+      error: encodedError,
+      type: encodedType,
+      deleteCart: deleteCart ? 'true' : 'false'
+    });
+    window.location.href = `/checkout/failed?${params}`;
   }
 
-  fetch('/checkout/placeOrder', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      items: <%- JSON.stringify(cart.items) %>,  // send all cart items
-      addressId: '<%= selectedAddress._id %>',   // send selected address
-      paymentMethod: selectedPayment.value       // send payment method
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    // Assuming your backend responds with { success: true } on success
-    if (data.success) {
-      // Payment/order successful → redirect to success page
-      window.location.href = '/checkout/success';
-    } else {
-      // Payment/order failed → redirect to failed page
-      window.location.href = '/checkout/failed';
+  // Confirm Order (with validations)
+  function confirmOrder() {
+    if (cartItems.length === 0) {
+      alert("Your cart is empty. Add items to proceed.");
+      return;
     }
-  })
-  .catch(err => {
-    console.error('Error:', err);
-    // Redirect to failed page if network or server error occurs
-    window.location.href = '/checkout/failed';
-  });
-}
-      // Handle payment selection
-      document.addEventListener("DOMContentLoaded", function () {
-        const paymentRadios = document.querySelectorAll(".payment-radio");
-        paymentRadios.forEach((radio) => {
-          radio.addEventListener("change", function () {
-            document
-              .querySelectorAll(".payment-option")
-              .forEach((opt) => opt.classList.remove("selected"));
-            this.closest(".payment-option").classList.add("selected");
-          });
-        });
-      });
-
-      // Modal functions
-      function openViewModal(addressData) {
-        document.getElementById("viewFullName").textContent =
-          addressData.fullName || "";
-        document.getElementById("viewPhone").textContent =
-          addressData.phone || "";
-        const altPhoneContainer = document.getElementById(
-          "viewAltPhoneContainer"
-        );
-        if (addressData.altPhone) {
-          document.getElementById("viewAltPhone").textContent =
-            addressData.altPhone;
-          altPhoneContainer.style.display = "flex";
+    if (!selectedAddressId) {
+      alert("Please select a delivery address.");
+      return;
+    }
+    const selectedPayment = document.querySelector(".payment-radio:checked");
+    if (!selectedPayment) {
+      alert("Please select a payment method.");
+      return;
+    }
+    const paymentMethod = selectedPayment.value;
+    document.getElementById('confirmBtn').disabled = true;
+    if (paymentMethod === 'cod') {
+      // COD flow
+      showPaymentStatus('Placing COD order...');
+      fetch('/checkout/placeOrder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cartItems,
+          addressId: selectedAddressId,
+          paymentMethod: 'cod'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/checkout/success';
         } else {
-          altPhoneContainer.style.display = "none";
+          const errorMsg = data.message || 'COD order placement failed. Please try again.';
+          showPaymentStatus(errorMsg, true);
+          setTimeout(() => redirectToFailed(errorMsg, 'cod_failed', true), 1500); // Brief show, then redirect
         }
-        document.getElementById("viewHoNo").textContent =
-          addressData.hoNo || "";
-        document.getElementById("viewStreet").textContent =
-          addressData.street || "";
-        document.getElementById("viewCity").textContent =
-          addressData.city || "";
-        document.getElementById("viewState").textContent =
-          addressData.state || "";
-        document.getElementById("viewPin").textContent = addressData.pin || "";
-        document.getElementById("viewCountry").textContent =
-          addressData.country || "";
-        document.getElementById("viewModal").classList.add("show");
-      }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        const errorMsg = 'Network error during COD order placement. Please check your connection and try again.';
+        showPaymentStatus(errorMsg, true);
+        setTimeout(() => redirectToFailed(errorMsg, 'network_error'), 1500);
+      });
+    } else if (paymentMethod === 'razorpay') {
+      showPaymentStatus('Initiating Razorpay...');
+      initiateRazorpay();
+    }
+  }
 
-      function closeViewModal() {
-        document.getElementById("viewModal").classList.remove("show");
+  // Initiate Razorpay (added try-catch)
+  function initiateRazorpay() {
+    if (!subtotal || subtotal < 1) {
+      const errorMsg = 'Invalid order amount. Please check your cart.';
+      showPaymentStatus(errorMsg, true);
+      setTimeout(() => redirectToFailed(errorMsg, 'invalid_amount'), 1500);
+      return;
+    }
+    fetch('/createOrder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: subtotal }) // Rupees
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success && data.order) {
+        showPaymentStatus('Opening payment modal...');
+        openRazorpayCheckout(data.order);
+      } else {
+        throw new Error(data.message || 'Order creation failed');
       }
+    })
+    .catch(err => {
+      console.error('Error creating order:', err);
+      const errorMsg = err.message || 'Failed to initiate Razorpay order. Please try again.';
+      showPaymentStatus(errorMsg, true);
+      setTimeout(() => redirectToFailed(errorMsg, 'order_creation_failed'), 1500);
+    });
+  }
 
-      // Close modal on overlay click
-      document
-        .getElementById("viewModal")
-        .addEventListener("click", function (e) {
-          if (e.target === this) {
-            closeViewModal();
-          }
-        });
-    </script>
-  </body>
+  // Open Razorpay Checkout (added email prefill)
+  function openRazorpayCheckout(order) {
+    const options = {
+      key: '<%= process.env.RAZORPAY_KEY_ID || "rzp_test_your_key" %>', // Replace with real key via env
+      amount: order.amount, // In paise (backend should set this)
+      currency: order.currency || 'INR',
+      name: 'Dité',
+      description: `Payment of Rs. ${subtotal.toFixed(2)}`,
+      order_id: order.id,
+      handler: function(response) {
+        verifyRazorpayPayment(response);
+      },
+      prefill: {
+        name: selectedAddress ? selectedAddress.fullName : '',
+        email: userEmail, // Now uses user email
+        contact: selectedAddress ? selectedAddress.phone : ''
+      },
+      theme: {
+        color: '#d4c5a9'
+      },
+      modal: {
+        ondismiss: function() {
+          const errorMsg = 'Payment was cancelled by user.';
+          showPaymentStatus(errorMsg, true);
+          setTimeout(() => redirectToFailed(errorMsg, 'payment_cancelled'), 1500);
+        }
+      }
+    };
+    try {
+      razorpayInstance = new Razorpay(options);
+      razorpayInstance.open();
+    } catch (err) {
+      console.error('Razorpay init error:', err);
+      const errorMsg = 'Payment modal failed to load. Please refresh and try again.';
+      showPaymentStatus(errorMsg, true);
+      setTimeout(() => redirectToFailed(errorMsg, 'payment_init_failed'), 1500);
+    }
+  }
+
+  // Verify Razorpay Payment (unchanged, but added catch)
+  function verifyRazorpayPayment(response) {
+    showPaymentStatus('Verifying payment...');
+    fetch('/verifyPayment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        razorpay_payment_id: response.razorpay_payment_id,
+        razorpay_order_id: response.razorpay_order_id,
+        razorpay_signature: response.razorpay_signature
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        placeOrderAfterPayment('razorpay', response.razorpay_payment_id, response.razorpay_order_id);
+      } else {
+        throw new Error(data.message || 'Payment verification failed');
+      }
+    })
+    .catch(err => {
+      console.error('Verification error:', err);
+      const errorMsg = err.message || 'Payment verification failed. Please contact support.';
+      showPaymentStatus(errorMsg, true);
+      setTimeout(() => redirectToFailed(errorMsg, 'verification_failed', true), 1500);
+    });
+  }
+
+  // Place Order After Payment (unchanged)
+  function placeOrderAfterPayment(paymentMethod, paymentId, razorpayOrderId) {
+    showPaymentStatus('Placing your order...');
+    fetch('/checkout/placeOrder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: cartItems,
+        addressId: selectedAddressId,
+        paymentMethod: paymentMethod,
+        razorpayPaymentId: paymentId,
+        razorpayOrderId: razorpayOrderId
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        showPaymentStatus('Order placed successfully!');
+        setTimeout(() => window.location.href = '/checkout/success', 2000);
+      } else {
+        throw new Error(data.message || 'Order placement failed after payment');
+      }
+    })
+    .catch(err => {
+      console.error('Order placement error:', err);
+      const errorMsg = err.message || 'Order placement failed after payment. Your payment may be refunded.';
+      showPaymentStatus(errorMsg, true);
+      setTimeout(() => redirectToFailed(errorMsg, 'order_placement_failed', true), 1500);
+    });
+  }
+
+  // Utility Functions (unchanged)
+  function showPaymentStatus(message, isError = false) {
+    const overlay = document.getElementById('paymentOverlay');
+    const msgEl = document.getElementById('paymentMessage');
+    msgEl.textContent = message;
+    if (isError) {
+      msgEl.style.color = '#ff6b6b';
+    } else {
+      msgEl.style.color = '#4ade80';
+    }
+    overlay.classList.add('show');
+  }
+  function hidePaymentStatus() {
+    document.getElementById('paymentOverlay').classList.remove('show');
+  }
+
+  // Handle payment selection (unchanged)
+  document.addEventListener("DOMContentLoaded", function () {
+    const paymentRadios = document.querySelectorAll(".payment-radio");
+    paymentRadios.forEach((radio) => {
+      radio.addEventListener("change", function () {
+        document.querySelectorAll(".payment-option").forEach((opt) => opt.classList.remove("selected"));
+        this.closest(".payment-option").classList.add("selected");
+      });
+    });
+  });
+
+  // Modal functions (unchanged)
+  function openViewModal(addressData) {
+    document.getElementById("viewFullName").textContent = addressData.fullName || "";
+    document.getElementById("viewPhone").textContent = addressData.phone || "";
+    const altPhoneContainer = document.getElementById("viewAltPhoneContainer");
+    if (addressData.altPhone) {
+      document.getElementById("viewAltPhone").textContent = addressData.altPhone;
+      altPhoneContainer.style.display = "flex";
+    } else {
+      altPhoneContainer.style.display = "none";
+    }
+    document.getElementById("viewHoNo").textContent = addressData.hoNo || "";
+    document.getElementById("viewStreet").textContent = addressData.street || "";
+    document.getElementById("viewCity").textContent = addressData.city || "";
+    document.getElementById("viewState").textContent = addressData.state || "";
+    document.getElementById("viewPin").textContent = addressData.pin || "";
+    document.getElementById("viewCountry").textContent = addressData.country || "";
+    document.getElementById("viewModal").classList.add("show");
+  }
+  function closeViewModal() {
+    document.getElementById("viewModal").classList.remove("show");
+  }
+  document.getElementById("viewModal").addEventListener("click", function (e) {
+    if (e.target === this) {
+      closeViewModal();
+    }
+  });
+</script>
+</body>
 </html>

@@ -102,17 +102,36 @@
       color: #ff5555;
       font-weight: bold;
     }
+    .error-message {
+      color: #ff5555;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+      display: none;
+    }
+    .error-field {
+      border-color: #ff5555;
+      background-color: rgba(255, 85, 85, 0.1);
+    }
+    .required {
+      color: #ff5555;
+    }
+    .toast {
+      opacity: 1;
+      transition: opacity 0.3s ease-in-out;
+      transform: translateX(0);
+    }
+    .toast.fade-out {
+      opacity: 0;
+      transform: translateX(100%);
+    }
   </style>
 </head>
 <body class="min-h-screen bg-black">
-
   <!-- Header Partial -->
   <%- include("../partials/admin/admin-header") %>
-
   <div class="flex">
     <!-- Sidebar Partial -->
     <%- include("../partials/admin/admin-sidebar") %>
-
     <!-- Page Content -->
     <main class="flex-1 p-6 text-white">
       <button
@@ -121,7 +140,6 @@
       >
         <i data-lucide="menu"></i>
       </button>
-
       <div class="form-container">
         <h2 class="text-2xl font-bold text-center mb-6">Add Products</h2>
         <form
@@ -129,24 +147,29 @@
           method="POST"
           enctype="multipart/form-data"
           class="space-y-6"
+          id="product-form"
         >
           <div class="space-y-4">
             <div>
-              <label class="block text-sm font-medium mb-2">Product Name</label>
+              <label class="block text-sm font-medium mb-2">Product Name <span class="required">*</span></label>
               <input
                 type="text"
                 name="name"
                 placeholder="Enter product name..."
                 class="w-full p-3 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                id="product-name"
               />
+              <div class="error-message" id="name-error"></div>
             </div>
             <div>
-              <label class="block text-sm font-medium mb-2">Product Description</label>
+              <label class="block text-sm font-medium mb-2">Product Description <span class="required">*</span></label>
               <textarea
                 name="description"
                 placeholder="Enter product description..."
                 class="w-full p-3 bg-gray-800 border-none rounded text-white h-24 focus:outline-none focus:ring-2 focus:ring-brand"
+                id="description"
               ></textarea>
+              <div class="error-message" id="description-error"></div>
             </div>
             <div>
               <label class="block text-sm font-medium mb-2">Notes</label>
@@ -154,7 +177,9 @@
                 name="notes"
                 placeholder="Enter additional notes..."
                 class="w-full p-3 bg-gray-800 border-none rounded text-white h-24 focus:outline-none focus:ring-2 focus:ring-brand"
+                id="notes"
               ></textarea>
+              <div class="error-message" id="notes-error"></div>
             </div>
             <div>
               <label class="block text-sm font-medium mb-2">Brand Name</label>
@@ -163,29 +188,29 @@
                 name="brand"
                 placeholder="Enter brand name..."
                 class="w-full p-3 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                id="brand"
               />
+              <div class="error-message" id="brand-error"></div>
             </div>
-
-            <!-- Categories -->
+            <!-- Categories (Single Select) -->
             <div>
-              <label class="block text-sm font-medium mb-2">Categories</label>
-              <div id="selected-categories" class="selected-categories"></div>
+              <label class="block text-sm font-medium mb-2">Category <span class="required">*</span></label>
               <select
-                id="category-select"
+                name="category"
                 class="w-full p-3 h-12 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                id="category-select"
               >
                 <option value="">Select a category</option>
                 <% categories.forEach(category => { %>
-                  <option value="<%= category._id %>" data-name="<%= category.name %>"><%= category.name %></option>
+                  <option value="<%= category._id %>"><%= category.name %></option>
                 <% }) %>
               </select>
-              <input type="hidden" name="categories" id="categories-input" />
-              <p class="text-sm text-gray-400 mt-1">Select categories to add them to the product.</p>
+              <div class="error-message" id="category-error"></div>
+              <p class="text-sm text-gray-400 mt-1">Select a category for the product.</p>
             </div>
-
             <!-- Images -->
             <div>
-              <label class="block text-sm font-medium mb-2">Edit Photos</label>
+              <label class="block text-sm font-medium mb-2">Edit Photos <span class="required">*</span></label>
               <div class="image-container mb-4">
                 <% for (let i = 0; i < 4; i++) { %>
                 <div class="image-group">
@@ -194,7 +219,7 @@
                       id="preview-<%= i %>"
                       class="hidden w-24 h-32 object-cover"
                     />
-                    <span id="placeholder-<%= i %>">Image</span>
+                    <span id="placeholder-<%= i %>">Image <%= i + 1 %></span>
                   </div>
                   <input
                     type="file"
@@ -214,27 +239,30 @@
                 </div>
                 <% } %>
               </div>
+              <div class="error-message" id="images-error"></div>
             </div>
-
             <!-- Gender + Concentration -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <label class="block text-sm font-medium mb-2">Gender</label>
+                <label class="block text-sm font-medium mb-2">Gender <span class="required">*</span></label>
                 <select
                   name="gender"
                   class="w-full p-3 h-12 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                  id="gender"
                 >
                   <option value="">Select Gender</option>
                   <option value="MEN">MEN</option>
                   <option value="WOMEN">WOMEN</option>
                   <option value="UNISEX">UNISEX</option>
                 </select>
+                <div class="error-message" id="gender-error"></div>
               </div>
               <div>
-                <label class="block text-sm font-medium mb-2">Concentration</label>
+                <label class="block text-sm font-medium mb-2">Concentration <span class="required">*</span></label>
                 <select
                   name="concentration"
                   class="w-full p-3 h-12 bg-gray-800 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+                  id="concentration"
                 >
                   <option value="">Select Concentration</option>
                   <option value="Parfum">Parfum</option>
@@ -243,53 +271,67 @@
                   <option value="Eau de Cologne">Eau de Cologne</option>
                   <option value="Eau Fraiche">Eau Fraiche</option>
                 </select>
+                <div class="error-message" id="concentration-error"></div>
               </div>
             </div>
-
             <!-- Variants -->
             <div>
-              <label class="block text-sm font-medium mb-2">Variants</label>
+              <label class="block text-sm font-medium mb-2">Variants <span class="required">*</span></label>
               <div id="variants-container" class="space-y-4">
-                <div class="variant-group grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-gray-800 rounded">
+                <div class="variant-group grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-gray-800 rounded" data-variant-index="0">
                   <div>
-                    <label class="block text-sm font-medium mb-2">Size (ml)</label>
-                    <input
-                      type="number"
+                    <label class="block text-sm font-medium mb-2">Size (ml) <span class="required">*</span></label>
+                    <select
                       name="variants[0][mlSize]"
-                      placeholder="e.g., 50"
                       class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-                      required
-                    />
+                      id="ml-size-0"
+                    >
+                      <option value="">Select Size</option>
+                      <option value="5">5 ml</option>
+                      <option value="10">10 ml</option>
+                      <option value="15">15 ml</option>
+                      <option value="30">30 ml</option>
+                      <option value="50">50 ml</option>
+                      <option value="100">100 ml</option>
+                      <option value="150">150 ml</option>
+                      <option value="200">200 ml</option>
+                      <option value="250">250 ml</option>
+                      <option value="300">300 ml</option>
+                    </select>
+                    <div class="error-message" id="ml-size-error-0"></div>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium mb-2">Stock</label>
+                    <label class="block text-sm font-medium mb-2">Stock <span class="required">*</span></label>
                     <input
                       type="number"
                       name="variants[0][stock]"
                       placeholder="e.g., 100"
                       class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-                      required
+                      id="stock-0"
                     />
+                    <div class="error-message" id="stock-error-0"></div>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium mb-2">Base Price</label>
+                    <label class="block text-sm font-medium mb-2">Base Price <span class="required">*</span></label>
                     <input
                       type="number"
                       name="variants[0][basePrice]"
                       placeholder="e.g., 100"
                       class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-                      required
+                      id="base-price-0"
                     />
+                    <div class="error-message" id="base-price-error-0"></div>
                   </div>
                   <div>
-                    <label class="block text-sm font-medium mb-2">Discounted Price</label>
+                    <label class="block text-sm font-medium mb-2">Discounted Price <span class="required">*</span></label>
                     <input
                       type="number"
                       name="variants[0][discountedPrice]"
                       placeholder="e.g., 80"
                       class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-                      required
+                      id="discounted-price-0"
                     />
+                    <div class="error-message" id="discounted-price-error-0"></div>
                     <button
                       type="button"
                       id="add-variant"
@@ -301,7 +343,6 @@
                 </div>
               </div>
             </div>
-
             <!-- Buttons -->
             <div class="flex justify-center space-x-4">
               <a href="/admin/products">
@@ -326,212 +367,260 @@
       </div>
     </main>
   </div>
-
   <script>
     lucide.createIcons();
-
     let croppers = {};
     let variantCount = 1;
+    // Existing product names for duplicate check
+    const existingProductNames = [
+      <% products.forEach(product => { %>
+        "<%= product.name.toLowerCase() %>",
+      <% }) %>
+    ];
+    // Toast notification function
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-xl text-white max-w-sm ${type === 'error' ? 'bg-red-500' : 'bg-green-500'}`;
+      toast.textContent = message;
+      toast.classList.add('toast');
+      document.body.appendChild(toast);
 
-    // Category selection handling
-    const categorySelect = document.getElementById('category-select');
-    const selectedCategoriesContainer = document.getElementById('selected-categories');
-    const categoriesInput = document.getElementById('categories-input');
-    let selectedCategories = [];
-
-    function updateCategoriesInput() {
-      categoriesInput.value = selectedCategories.join(',');
+      // Auto-hide after 3 seconds with fade-out
+      setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => {
+          toast.remove();
+        }, 300);
+      }, 3000);
     }
-
-    function addCategory(id, name) {
-      if (!selectedCategories.includes(id)) {
-        selectedCategories.push(id);
-        updateCategoriesInput();
-
-        // Add selected category to display
-        const categoryElement = document.createElement('div');
-        categoryElement.className = 'selected-category';
-        categoryElement.dataset.id = id;
-        categoryElement.innerHTML = `
-          <span>${name}</span>
-          <span class="remove-category" data-id="${id}">-</span>
-        `;
-        selectedCategoriesContainer.appendChild(categoryElement);
-
-        // Remove from dropdown
-        const option = categorySelect.querySelector(`option[value="${id}"]`);
-        if (option) option.remove();
-
-        // Add event listener for remove button
-        categoryElement.querySelector('.remove-category').addEventListener('click', () => {
-          removeCategory(id, name);
+    // Validation functions
+    function showError(elementId, message) {
+      const errorEl = document.getElementById(elementId);
+      if (!errorEl) return;
+      const field = errorEl.previousElementSibling;
+      errorEl.textContent = message;
+      errorEl.style.display = 'block';
+      if (field && (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA' || field.tagName === 'SELECT')) {
+        field.classList.add('error-field');
+      }
+    }
+    function hideError(elementId) {
+      const errorEl = document.getElementById(elementId);
+      if (!errorEl) return;
+      errorEl.style.display = 'none';
+      const field = errorEl.previousElementSibling;
+      if (field && (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA' || field.tagName === 'SELECT')) {
+        field.classList.remove('error-field');
+      }
+    }
+    function countWords(text) {
+      return text.trim() ? text.trim().split(/\s+/).length : 0;
+    }
+    function validateImages() {
+      let imageCount = 0;
+      for (let i = 0; i < 4; i++) {
+        const fileInput = document.getElementById(`file-${i}`);
+        if (fileInput && fileInput.files.length > 0) {
+          imageCount++;
+        }
+      }
+      if (imageCount !== 4) {
+        showError('images-error', 'Exactly 4 images are required.');
+        return false;
+      }
+      hideError('images-error');
+      return true;
+    }
+    function validateDescription() {
+      const desc = document.getElementById('description').value;
+      const wordCount = countWords(desc);
+      if (wordCount < 10) {
+        showError('description-error', 'Description must have at least 10 words.');
+        return false;
+      }
+      if (wordCount > 150) {
+        showError('description-error', 'Description must have at most 150 words.');
+        return false;
+      }
+      hideError('description-error');
+      return true;
+    }
+    function validateNotes() {
+      const notes = document.getElementById('notes').value;
+      const wordCount = countWords(notes);
+      if (wordCount > 150) {
+        showError('notes-error', 'Notes must have at most 150 words.');
+        return false;
+      }
+      if (wordCount > 0 && wordCount < 5) {
+        showError('notes-error', 'Notes must have at least 5 words if provided.');
+        return false;
+      }
+      hideError('notes-error');
+      return true;
+    }
+    function validateBrand() {
+      const brand = document.getElementById('brand').value.trim();
+      if (brand && !/^[A-Z\s]+$/.test(brand)) {
+        showError('brand-error', 'Brand name must be in uppercase letters only.');
+        return false;
+      }
+      hideError('brand-error');
+      return true;
+    }
+    function validateGender() {
+      const gender = document.getElementById('gender').value;
+      if (!gender) {
+        showError('gender-error', 'Gender is required.');
+        return false;
+      }
+      hideError('gender-error');
+      return true;
+    }
+    function validateConcentration() {
+      const concentration = document.getElementById('concentration').value;
+      if (!concentration) {
+        showError('concentration-error', 'Concentration is required.');
+        return false;
+      }
+      hideError('concentration-error');
+      return true;
+    }
+    function validateCategory() {
+      const category = document.getElementById('category-select').value;
+      if (!category) {
+        showError('category-error', 'Category is required.');
+        return false;
+      }
+      hideError('category-error');
+      return true;
+    }
+    function validateVariant(index) {
+      let valid = true;
+      // ML Size
+      const mlSize = document.getElementById(`ml-size-${index}`).value;
+      if (!mlSize) {
+        showError(`ml-size-error-${index}`, 'Size is required.');
+        valid = false;
+      } else {
+        hideError(`ml-size-error-${index}`);
+      }
+      // Stock
+      const stockEl = document.getElementById(`stock-${index}`);
+      const stock = parseInt(stockEl.value);
+      if (isNaN(stock) || stock < 1) {
+        showError(`stock-error-${index}`, 'Stock must be at least 1.');
+        valid = false;
+      } else {
+        hideError(`stock-error-${index}`);
+      }
+      // Base Price
+      const basePriceEl = document.getElementById(`base-price-${index}`);
+      const basePrice = parseFloat(basePriceEl.value);
+      if (isNaN(basePrice) || basePrice <= 1) {
+        showError(`base-price-error-${index}`, 'Base price must be greater than 1.');
+        valid = false;
+      } else {
+        hideError(`base-price-error-${index}`);
+      }
+      // Discounted Price
+      const discountedPriceEl = document.getElementById(`discounted-price-${index}`);
+      const discountedPrice = parseFloat(discountedPriceEl.value);
+      if (isNaN(discountedPrice) || discountedPrice > basePrice) {
+        showError(`discounted-price-error-${index}`, 'Discounted price must be less than or equal to base price.');
+        valid = false;
+      } else {
+        hideError(`discounted-price-error-${index}`);
+      }
+      return valid;
+    }
+    function validateAllVariants() {
+      let valid = true;
+      const variantGroups = document.querySelectorAll('.variant-group');
+      if (variantGroups.length === 0) {
+        // No variants added
+        valid = false;
+      } else {
+        variantGroups.forEach((group, index) => {
+          if (!validateVariant(index)) {
+            valid = false;
+          }
         });
       }
+      return valid;
     }
-
-    function removeCategory(id, name) {
-      selectedCategories = selectedCategories.filter(catId => catId !== id);
-      updateCategoriesInput();
-
-      // Remove from display
-      const categoryElement = selectedCategoriesContainer.querySelector(`[data-id="${id}"]`);
-      if (categoryElement) categoryElement.remove();
-
-      // Add back to dropdown
-      const option = document.createElement('option');
-      option.value = id;
-      option.dataset.name = name;
-      option.textContent = name;
-      categorySelect.appendChild(option);
-
-      // Sort dropdown options alphabetically
-      const options = Array.from(categorySelect.options).slice(1); // Skip placeholder
-      options.sort((a, b) => a.textContent.localeCompare(b.textContent));
-      while (categorySelect.options.length > 1) categorySelect.remove(1);
-      options.forEach(opt => categorySelect.appendChild(opt));
+    function checkDuplicateName(name) {
+      if (!name.trim()) return true; // Skip if empty
+      const lowerName = name.trim().toLowerCase();
+      return !existingProductNames.includes(lowerName);
     }
-
-    categorySelect.addEventListener('change', () => {
-      const selectedOption = categorySelect.selectedOptions[0];
-      if (selectedOption && selectedOption.value) {
-        addCategory(selectedOption.value, selectedOption.dataset.name);
-        categorySelect.value = ''; // Reset to placeholder
-      }
-    });
-
-    function handleFileChange(event, index) {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const img = document.getElementById("preview-" + index);
-          const placeholder = document.getElementById("placeholder-" + index);
-
-          img.src = e.target.result;
-          img.classList.remove("hidden");
-          placeholder.classList.add("hidden");
-
-          if (croppers[index]) croppers[index].destroy();
-
-          croppers[index] = new Cropper(img, {
-            aspectRatio: 3 / 4,
-            viewMode: 1,
-            scalable: true,
-            zoomable: true,
-          });
-        };
-        reader.readAsDataURL(file);
-      }
-    }
-
-    const sidebar = document.getElementById("sidebar");
-    const toggleSidebarButton = document.getElementById("toggle-sidebar");
-    const toggleSidebarMobileButton = document.getElementById("toggle-sidebar-mobile");
-
-    if (toggleSidebarButton) {
-      toggleSidebarButton.addEventListener("click", () => {
-        sidebar.classList.toggle("sidebar-hidden");
-      });
-    }
-
-    if (toggleSidebarMobileButton) {
-      toggleSidebarMobileButton.addEventListener("click", () => {
-        sidebar.classList.toggle("sidebar-hidden");
-      });
-    }
-
-    document.getElementById("add-variant").addEventListener("click", () => {
-      const container = document.getElementById("variants-container");
-      const variantDiv = document.createElement("div");
-      variantDiv.className = "variant-group grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-gray-800 rounded";
-      variantDiv.innerHTML = `
-        <div>
-          <label class="block text-sm font-medium mb-2">Size (ml)</label>
-          <input
-            type="number"
-            name="variants[${variantCount}][mlSize]"
-            placeholder="e.g., 50"
-            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-            required
-          />
-          <button
-            type="button"
-            class="remove-variant nav-btn bg-red-600 text-white px-4 py-2 mt-2 rounded hover:bg-red-700 w-full"
-          >
-            Remove
-          </button>
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-2">Stock</label>
-          <input
-            type="number"
-            name="variants[${variantCount}][stock]"
-            placeholder="e.g., 100"
-            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-            required
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-2">Base Price</label>
-          <input
-            type="number"
-            name="variants[${variantCount}][basePrice]"
-            placeholder="e.g., 100"
-            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-            required
-          />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-2">Discounted Price</label>
-          <input
-            type="number"
-            name="variants[${variantCount}][discountedPrice]"
-            placeholder="e.g., 80"
-            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
-            required
-          />
-          <button
-            type="button"
-            class="add-variant nav-btn bg-gray-700 text-white px-4 py-2 mt-2 rounded hover:bg-gray-800 w-full"
-          >
-            Add Variant
-          </button>
-        </div>
-      `;
-      container.appendChild(variantDiv);
-      variantCount++;
-
-      const removeButton = variantDiv.querySelector(".remove-variant");
-      if (removeButton) {
-        removeButton.addEventListener("click", () => {
-          variantDiv.remove();
-        });
-      }
-
-      const newAddButton = variantDiv.querySelector(".add-variant");
-      if (newAddButton) {
-        newAddButton.addEventListener("click", () => {
-          document.getElementById("add-variant").click();
-        });
-      }
-
-      const previousAddButton = container.querySelector(".variant-group:last-child .add-variant");
-      if (previousAddButton && previousAddButton !== newAddButton) {
-        previousAddButton.remove();
-      }
-    });
-
-    document.querySelector("form").addEventListener("submit", function (e) {
-      e.preventDefault();
-      const form = e.target;
-      const formData = new FormData(form);
-
-      const cropperKeys = Object.keys(croppers);
-      if (cropperKeys.length === 0) {
-        form.submit();
+    // Event listeners for real-time validation
+    document.getElementById('product-name').addEventListener('blur', function() {
+      const name = this.value.trim();
+      if (!name) {
+        hideError('name-error');
         return;
       }
-
+      const isUnique = checkDuplicateName(name);
+      if (!isUnique) {
+        showError('name-error', 'Product name already exists. Please choose a unique name.');
+      } else {
+        hideError('name-error');
+      }
+    });
+    document.getElementById('description').addEventListener('blur', validateDescription);
+    document.getElementById('notes').addEventListener('blur', validateNotes);
+    document.getElementById('brand').addEventListener('blur', validateBrand);
+    document.getElementById('gender').addEventListener('change', validateGender);
+    document.getElementById('concentration').addEventListener('change', validateConcentration);
+    document.getElementById('category-select').addEventListener('change', validateCategory);
+    // Variant real-time validation
+    document.addEventListener('input', function(e) {
+      if (e.target.matches('[id^="stock-"], [id^="base-price-"], [id^="discounted-price-"]')) {
+        const index = e.target.id.split('-')[2];
+        validateVariant(index);
+      }
+    });
+    document.addEventListener('change', function(e) {
+      if (e.target.matches('[id^="ml-size-"]')) {
+        const index = e.target.id.split('-')[2];
+        validateVariant(index);
+      }
+    });
+    // Form submission validation
+    document.getElementById('product-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      // Trigger all validations to update status
+      validateDescription();
+      validateNotes();
+      validateBrand();
+      validateGender();
+      validateConcentration();
+      validateCategory();
+      validateAllVariants();
+      validateImages();
+      const name = document.getElementById('product-name').value.trim();
+      if (!name) {
+        showError('name-error', 'Product name is required.');
+        return;
+      }
+      const isUnique = checkDuplicateName(name);
+      if (!isUnique) {
+        showError('name-error', 'Product name already exists. Please choose a unique name.');
+        return;
+      }
+      hideError('name-error');
+      if (!validateDescription() || !validateNotes() || !validateBrand() || !validateGender() || !validateConcentration() || !validateCategory() || !validateAllVariants() || !validateImages()) {
+        showToast('Please fix the errors before submitting.', 'error');
+        return;
+      }
+      const form = e.target;
+      const formData = new FormData(form);
+      const cropperKeys = Object.keys(croppers);
+      if (cropperKeys.length === 0) {
+        submitForm(formData);
+        return;
+      }
       Promise.all(
         cropperKeys.map(
           (index) =>
@@ -543,17 +632,139 @@
             })
         )
       ).then(() => {
-        fetch(form.action, {
+        submitForm(formData);
+      });
+    });
+    async function submitForm(formData) {
+      try {
+        const res = await fetch('/admin/products/add-product', {
           method: "POST",
           body: formData,
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            alert("Uploaded successfully!");
-            console.log(data);
-          })
-          .catch((err) => console.error(err));
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(data.message || 'Product added successfully!');
+          setTimeout(() => {
+            window.location.href = '/admin/products';
+          }, 1500); // Redirect after 1.5s to let user see the success toast
+        } else {
+          showToast(data.error || 'An error occurred. Please try again.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('An error occurred during submission. Please try again.', 'error');
+      }
+    }
+    function handleFileChange(event, index) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = document.getElementById("preview-" + index);
+          const placeholder = document.getElementById("placeholder-" + index);
+          img.src = e.target.result;
+          img.classList.remove("hidden");
+          placeholder.classList.add("hidden");
+          if (croppers[index]) croppers[index].destroy();
+          croppers[index] = new Cropper(img, {
+            aspectRatio: 3 / 4,
+            viewMode: 1,
+            scalable: true,
+            zoomable: true,
+          });
+        };
+        reader.readAsDataURL(file);
+        validateImages(); // Validate after file selection
+      }
+    }
+    const sidebar = document.getElementById("sidebar");
+    const toggleSidebarButton = document.getElementById("toggle-sidebar");
+    const toggleSidebarMobileButton = document.getElementById("toggle-sidebar-mobile");
+    if (toggleSidebarButton) {
+      toggleSidebarButton.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-hidden");
       });
+    }
+    if (toggleSidebarMobileButton) {
+      toggleSidebarMobileButton.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-hidden");
+      });
+    }
+    document.getElementById("add-variant").addEventListener("click", () => {
+      const container = document.getElementById("variants-container");
+      const variantDiv = document.createElement("div");
+      variantDiv.className = "variant-group grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 bg-gray-800 rounded";
+      variantDiv.dataset.variantIndex = variantCount;
+      variantDiv.innerHTML = `
+        <div>
+          <label class="block text-sm font-medium mb-2">Size (ml) <span class="required">*</span></label>
+          <select
+            name="variants[${variantCount}][mlSize]"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            id="ml-size-${variantCount}"
+          >
+            <option value="">Select Size</option>
+            <option value="5">5 ml</option>
+            <option value="10">10 ml</option>
+            <option value="15">15 ml</option>
+            <option value="30">30 ml</option>
+            <option value="50">50 ml</option>
+            <option value="100">100 ml</option>
+            <option value="150">150 ml</option>
+            <option value="200">200 ml</option>
+            <option value="250">250 ml</option>
+            <option value="300">300 ml</option>
+          </select>
+          <div class="error-message" id="ml-size-error-${variantCount}"></div>
+          <button
+            type="button"
+            class="remove-variant nav-btn bg-red-600 text-white px-4 py-2 mt-2 rounded hover:bg-red-700 w-full"
+          >
+            Remove
+          </button>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Stock <span class="required">*</span></label>
+          <input
+            type="number"
+            name="variants[${variantCount}][stock]"
+            placeholder="e.g., 100"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            id="stock-${variantCount}"
+          />
+          <div class="error-message" id="stock-error-${variantCount}"></div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Base Price <span class="required">*</span></label>
+          <input
+            type="number"
+            name="variants[${variantCount}][basePrice]"
+            placeholder="e.g., 100"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            id="base-price-${variantCount}"
+          />
+          <div class="error-message" id="base-price-error-${variantCount}"></div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Discounted Price <span class="required">*</span></label>
+          <input
+            type="number"
+            name="variants[${variantCount}][discountedPrice]"
+            placeholder="e.g., 80"
+            class="w-full p-3 bg-gray-700 border-none rounded text-white focus:outline-none focus:ring-2 focus:ring-brand"
+            id="discounted-price-${variantCount}"
+          />
+          <div class="error-message" id="discounted-price-error-${variantCount}"></div>
+        </div>
+      `;
+      container.appendChild(variantDiv);
+      variantCount++;
+      const removeButton = variantDiv.querySelector(".remove-variant");
+      if (removeButton) {
+        removeButton.addEventListener("click", () => {
+          variantDiv.remove();
+        });
+      }
     });
   </script>
 </body>

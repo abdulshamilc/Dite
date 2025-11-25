@@ -657,7 +657,7 @@
               <% if (addresses && addresses.length > 0) { %> <%
               addresses.forEach((address, index) => { %>
               <label
-                class="saved-address"
+                class="saved-address <%= address.isDefault ? 'selected' : '' %>"
                 data-address-index="<%= index %>"
                 data-address="<%= JSON.stringify(address) %>"
               >
@@ -666,6 +666,7 @@
                   class="address-radio"
                   name="address"
                   value="<%= address._id %>"
+                  <%= address.isDefault ? 'checked' : '' %>
                 />
                 <div class="address-details">
                   <div class="address-info">

@@ -15,7 +15,7 @@ export const sanitizeInputs = (req, res, next) => {
           .replace(/>/g, "&gt;");
       }
     }
-  }
+  }``
 
   next();
 };

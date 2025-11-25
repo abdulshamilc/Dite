@@ -44,10 +44,17 @@ import {
   confirmReturn,
   getReturnSelect,
   postReturnSelect,
+  getWallet,
   getSecurity,
   getDeleteAcount,
   userlogOut,
 } from "../controller/user/profileController.js";
+
+import {
+  getWishlist,
+  addToWishlist,
+  removeFromWishlist,
+} from "../controller/user/wishlistController.js";
 
 import {
   getShop,
@@ -75,9 +82,13 @@ import {
   placeOrder,
   getSuccessPage,
   getFailedPage,
-} from "../controller/user/checkoutController.js" ;
+} from "../controller/user/checkoutController.js";
 
-
+import {
+  createRazorpayOrder,
+  verifyRazorpayPayment,
+  addFundsToWallet,
+} from "../controller/user/paymentController.js"; 
 
 import { isAuthenticatedUser } from "../middlewares/authMiddleware.js";
 
@@ -137,16 +148,46 @@ router.get("/categories/:id", getCatogoryShop);
 
 router.get("/collections", getCollections);
 
-router.get("/cart", isAuthenticatedUser,isBlocked, getCart);
-router.post("/cart/add", isAuthenticatedUser,isBlocked, addToCart);
-router.post("/cart/delete/:id", isAuthenticatedUser,isBlocked, deleteCart);
-router.post("/cart/quantity/:id", isAuthenticatedUser, isBlocked, updateQuatity);  // Fixed typo in function name
+router.get("/cart", isAuthenticatedUser, isBlocked, getCart);
+router.post("/cart/add", isAuthenticatedUser, isBlocked, addToCart);
+router.post("/cart/delete/:id", isAuthenticatedUser, isBlocked, deleteCart);
+router.post(
+  "/cart/quantity/:id",
+  isAuthenticatedUser,
+  isBlocked,
+  updateQuatity
+);
+
+router.get("/wishlist", isAuthenticatedUser, isBlocked, getWishlist);
+router.post("/wishlist/add/:id", isAuthenticatedUser, isBlocked, addToWishlist);
+router.post(
+  "/wishlist/remove/:id",
+  isAuthenticatedUser,
+  isBlocked,
+  removeFromWishlist
+);
 
 router.get("/profile", isAuthenticatedUser, isBlocked, getProfile);
-router.post("/profile", isAuthenticatedUser, isBlocked , upload.single("image") , postProfile);
+router.post(
+  "/profile",
+  isAuthenticatedUser,
+  isBlocked,
+  upload.single("image"),
+  postProfile
+);
 
-router.post("/profile/changeEmail", isAuthenticatedUser, isBlocked , changeEmail);
-router.post("/profile/verify-email", isAuthenticatedUser, isBlocked , verifyChangeEmail);
+router.post(
+  "/profile/changeEmail",
+  isAuthenticatedUser,
+  isBlocked,
+  changeEmail
+);
+router.post(
+  "/profile/verify-email",
+  isAuthenticatedUser,
+  isBlocked,
+  verifyChangeEmail
+);
 
 router.get("/address", isAuthenticatedUser, isBlocked, getAddress);
 router.post("/add-address", isAuthenticatedUser, isBlocked, postAddAddress);
@@ -170,37 +211,114 @@ router.post(
 );
 
 router.get("/security", isAuthenticatedUser, isBlocked, getSecurity);
-router.get("/security/delete-account-confirm", isAuthenticatedUser, isBlocked, getDeleteAcount);
+router.get(
+  "/security/delete-account-confirm",
+  isAuthenticatedUser,
+  isBlocked,
+  getDeleteAcount
+);
 
 router.get("/orders", isAuthenticatedUser, isBlocked, getOrders);
 router.get("/order/:id", isAuthenticatedUser, isBlocked, getOrderDetails);
 
 router.get("/cancelOrder/:id", isAuthenticatedUser, isBlocked, getCancelOrder);
-router.post("/cancelOrder/:id", isAuthenticatedUser, isBlocked, postCancelOrder);
-router.post("/cancelOrder/:id/confirm", isAuthenticatedUser, isBlocked, confirmCancel);
+router.post(
+  "/cancelOrder/:id",
+  isAuthenticatedUser,
+  isBlocked,
+  postCancelOrder
+);
+router.post(
+  "/cancelOrder/:id/confirm",
+  isAuthenticatedUser,
+  isBlocked,
+  confirmCancel
+);
 
-router.get("/cancelOrder/:id/cancel-select", isAuthenticatedUser, isBlocked, getCancelSelect);
-router.post("/cancelOrder/:id/cancel-select", isAuthenticatedUser, isBlocked, postCancelSelect);
+router.get(
+  "/cancelOrder/:id/cancel-select",
+  isAuthenticatedUser,
+  isBlocked,
+  getCancelSelect
+);
+router.post(
+  "/cancelOrder/:id/cancel-select",
+  isAuthenticatedUser,
+  isBlocked,
+  postCancelSelect
+);
 
 router.get("/invoice/:id", isAuthenticatedUser, isBlocked, getorderInvoce);
 
 router.get("/return/:id", isAuthenticatedUser, isBlocked, getReturn);
 router.post("/return/:id", isAuthenticatedUser, isBlocked, postReturn);
-router.post("/return/:id/return-confirm", isAuthenticatedUser, isBlocked, confirmReturn);
-router.get("/return/:id/return-select", isAuthenticatedUser, isBlocked, getReturnSelect);
-router.post("/return/:id/return-select", isAuthenticatedUser, isBlocked, postReturnSelect);
- 
-router.get('/checkout/address',isAuthenticatedUser,isBlocked,getCheckout);
-router.post('/checkout/address/save-location/:id',isAuthenticatedUser,isBlocked,addGeolocation);
-router.post('/checkout/address/clear-location/:id',isAuthenticatedUser,isBlocked,clearGeolocation);
-router.post('/checkout/address/add-newaddress',isAuthenticatedUser,isBlocked,addNewAddress);
-router.post('/checkout/placeOrder',isAuthenticatedUser,isBlocked,placeOrder);
+router.post(
+  "/return/:id/return-confirm",
+  isAuthenticatedUser,
+  isBlocked,
+  confirmReturn
+);
+router.get(
+  "/return/:id/return-select",
+  isAuthenticatedUser,
+  isBlocked,
+  getReturnSelect
+);
+router.post(
+  "/return/:id/return-select",
+  isAuthenticatedUser,
+  isBlocked,
+  postReturnSelect
+);
 
-router.get('/checkout/payment/:id',isAuthenticatedUser,isBlocked,getPaymentpage);
+router.get("/checkout/address", isAuthenticatedUser, isBlocked, getCheckout);
+router.post(
+  "/checkout/address/save-location/:id",
+  isAuthenticatedUser,
+  isBlocked,
+  addGeolocation
+);
+router.post(
+  "/checkout/address/clear-location/:id",
+  isAuthenticatedUser,
+  isBlocked,
+  clearGeolocation
+);
+router.post(
+  "/checkout/address/add-newaddress",
+  isAuthenticatedUser,
+  isBlocked,
+  addNewAddress
+);
+router.post("/checkout/placeOrder", isAuthenticatedUser, isBlocked, placeOrder);
 
-router.get('/checkout/success',isAuthenticatedUser,isBlocked,getSuccessPage);
-router.get('/checkout/failed',isAuthenticatedUser,isBlocked,getFailedPage);
+router.get(
+  "/checkout/payment/:id",
+  isAuthenticatedUser,
+  isBlocked,
+  getPaymentpage
+);
+
+router.post(
+  "/createOrder",
+  isAuthenticatedUser,
+  isBlocked,
+  createRazorpayOrder
+);
+router.post(
+  "/verifyPayment",
+  isAuthenticatedUser,
+  isBlocked,
+  verifyRazorpayPayment
+);
+
+router.get("/checkout/success", isAuthenticatedUser, isBlocked, getSuccessPage);
+router.get("/checkout/failed", isAuthenticatedUser, isBlocked, getFailedPage);
 
 
-router.get('/logout',userlogOut);
+router.get('/wallet',isAuthenticatedUser, isBlocked, getWallet)
+router.post('/wallet/add-funds', isAuthenticatedUser, isBlocked, addFundsToWallet);
+
+
+router.get("/logout", userlogOut);
 export default router;

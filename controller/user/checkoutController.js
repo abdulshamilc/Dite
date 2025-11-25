@@ -17,7 +17,7 @@ const getCheckout = async (req, res) => {
     req.session.error = "The Cart Does Not Have Any Product To CheckOut";
     return res.redirect("/cart");
   }
-  const addresses = await Address.find({ userId: user._id });
+  const addresses = await Address.find({ userId: user._id , isDeleted:false}); ;
 
   let subtotal = 0;
   let total = 0;
@@ -135,57 +135,127 @@ const getPaymentpage = async (req, res) => {
   } catch (error) {
     console.log(error);
   }
-};
-
-const placeOrder = async (req, res) => {
+};const placeOrder = async (req, res) => {
   try {
+    // Fetch user from session (email-based auth)
     const user = await User.findOne({ email: req.session.user });
-    if (!user) return res.redirect("/login");
-
-    const { addressId, items, paymentMethod } = req.body;
-
-    const selectedAddress = await Address.findById(addressId);
-
-    if (!selectedAddress) {
-      return res.status(400).json({ message: "Invalid address ID" });
+    if (!user) {
+      return res.status(401).json({ success: false, message: "User not authenticated. Please log in." });
     }
 
+    const { addressId, items, paymentMethod, razorpayPaymentId, razorpayOrderId } = req.body;
+
+    // Validation
+    if (!items || items.length === 0) {
+      return res.status(400).json({ success: false, message: "No items in order" });
+    }
+    if (!addressId) {
+      return res.status(400).json({ success: false, message: "Missing address" });
+    }
+
+    // Fetch and validate address
+    const selectedAddress = await Address.findById(addressId);
+    if (!selectedAddress || selectedAddress.userId.toString() !== user._id.toString()) {
+      return res.status(404).json({ success: false, message: "Invalid or unauthorized address" });
+    }
+    // Convert to plain object for embedding (remove MongoDB metadata)
+    const address = selectedAddress.toObject();
+    delete address._id;
+    delete address.__v;
+
+    // Calculate totalAmount (prioritize discountedPrice if available)
     const totalAmount = items.reduce((acc, item) => {
-      const price = item.discoundedPrice ?? item.basePrice;
-      return acc + price * item.quantity;
+      const price = item.discountedPrice || item.basePrice || 0;
+      return acc + (price * item.quantity);
     }, 0);
+
+    // Map items to schema format (fix field names, add defaults)
+    const mappedItems = items.map((item) => ({
+      productId: item.productId || item._id, // Fallback if needed
+      name: item.name,
+      mlSize: item.mlSize || item.size, // Map size to mlSize
+      basePrice: item.basePrice || 0,
+      discountedPrice: item.discountedPrice || item.basePrice || 0, // Fixed: Use 'discountedPrice' (update schema too!)
+      quantity: item.quantity,
+      image: item.image || "",
+      productStatus: "Placed" // Default as per schema
+    }));
+
+    // Normalize paymentMethod to schema enum (map 'razorpay' to 'online')
+    const normalizedPaymentMethod = paymentMethod === 'razorpay' ? 'online' : paymentMethod;
+
+    // Prepare paymentInfo as per schema
+    const paymentInfo = {
+      paymentStatus: normalizedPaymentMethod === 'online' ? 'Paid' : 'Pending',
+      paymentTime: new Date()
+    };
+    if (normalizedPaymentMethod === 'online') {
+      if (!razorpayPaymentId || !razorpayOrderId) {
+        return res.status(400).json({ success: false, message: "Missing payment details for online payment" });
+      }
+      paymentInfo.razorpayPaymentId = razorpayPaymentId;
+      paymentInfo.razorpayOrderId = razorpayOrderId; // Requires schema field: razorpayOrderId: { type: String }
+    }
+    // For Wallet: Add deduction logic here if needed (e.g., update user.wallet -= totalAmount)
+
+    // Create order (use schema defaults; orderStatus always starts as "Placed")
     const newOrder = new Order({
-      orderID: `ORD-${nanoid(8)}`,
+      orderID: `ORD-${nanoid(8)}`, // Custom ID as in your code
       userId: user._id,
-      address: selectedAddress,
-      items: items.map((item) => ({
-        productId: item.productId,
-        name: item.name,
-        mlSize: item.size,
-        basePrice: item.basePrice,
-        discoundedPrice: item.discountedPrice,
-        quantity: item.quantity,
-        image: item.image,
-      })),
-      paymentMethod,
+      address, // Embedded object
+      items: mappedItems,
+      paymentMethod: normalizedPaymentMethod, // "online", "cod", or "Wallet"
+      paymentInfo, // Structured as per schema
       totalAmount,
-      orderStatus: "Placed",
+      orderStatus: "Placed", // Schema default; separate from paymentStatus
       tracking: [
         {
           status: "Placed",
-          message: "Your order has been placed successfully",
-        },
+          message: `Your order has been placed successfully`,
+          date: new Date() // Add date as per schema
+        }
       ],
-      placedAt: new Date(),
+      placedAt: new Date()
     });
 
-    req.session.orderplaced = true;
     await newOrder.save();
 
-    res.json({ success: true });
+    // Decrease stock immediately (for both COD and Online; assumes Products model with variants)
+    for (const item of mappedItems) {
+      const product = await Products.findById(item.productId);
+      if (product && product.variants) {
+        const mlSizeNum = parseInt(item.mlSize) || 0;
+        const variantIndex = product.variants.findIndex(v => v.mlSize === mlSizeNum);
+        if (variantIndex !== -1 && product.variants[variantIndex].stock >= item.quantity) {
+          product.variants[variantIndex].stock -= item.quantity;
+          await product.save();
+        } else {
+          console.warn(`Stock insufficient for product ${item.productId}, variant ${mlSizeNum}`);
+          // Optional: Rollback order or mark as backordered
+        }
+      }
+    }
+
+    // Clear user's cart (use findOneAndUpdate for safety; assumes single cart per user)
+    await Cart.findOneAndUpdate(
+      { userId: user._id },
+      { $set: { items: [] } },
+      { upsert: true }
+    );
+
+    // Set session flag for success page
+    req.session.orderplaced = true;
+    req.session.orderId = newOrder.orderID; // Optional: Pass order ID for success page
+
+    res.json({ 
+      success: true, 
+      message: "Order placed successfully", 
+      orderId: newOrder.orderID // Return for frontend redirect if needed
+    });
+
   } catch (error) {
     console.error("Error in placeOrder:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ success: false, message: "Internal server error. Please try again." });
   }
 };
 
@@ -219,17 +289,30 @@ const getSuccessPage = async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-};
-
-const getFailedPage = async (req, res) => {
+};const getFailedPage = async (req, res) => {
   const user = await User.findOne({ email: req.session.user });
-  if (!user) res.redirect("/login");
+  if (!user) return res.redirect("/login");
 
-  if (!req.session.orderplaced) res.redirect("/cart");
+  const errorMessage = req.query.error ? decodeURIComponent(req.query.error) : null;
+  const errorType = req.query.type ? decodeURIComponent(req.query.type) : null;
+  const deleteCart = req.query.deleteCart === 'true';
 
-  await Cart.deleteMany({ userId: user._id });
+  if (!errorMessage && !req.session.orderplaced) {  // Fallback: require one or the other
+    return res.redirect("/cart");
+  }
 
-  res.render("user/checkout/failed");
+  // Only delete cart on "hard" failures (as passed via query)
+  if (deleteCart) {
+    await Cart.deleteMany({ userId: user._id });
+  }
+
+  // Clear any lingering session flags to avoid stale state
+  req.session.orderplaced = false;
+  req.session.regenerate((err) => {
+    if (err) console.error('Session regeneration error:', err);
+  });
+
+  res.render("user/checkout/failed", { errorMessage, errorType });
 };
 
 export {

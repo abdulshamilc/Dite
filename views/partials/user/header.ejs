@@ -5,6 +5,7 @@
 
 <header class="header bg-black">
   <nav class="nav flex items-center justify-between py-4">
+    
     <!-- Logo -->
     <div class="logo">
       <img src="/images/logo/Dite White Logo.png" alt="Dité Logo" class="h-10" />
@@ -26,7 +27,17 @@
 
     <!-- Icons -->
     <div class="nav-icons flex space-x-4 text-white text-lg relative">
-      <a href="/login"><i class="fas fa-heart cursor-pointer hover:text-gray-300 text-white"></i></a>
+      
+      <!-- Wishlist Icon (FIXED) -->
+      <% if (session && session.user) { %>
+        <a href="/wishlist">
+          <i class="fas fa-heart cursor-pointer hover:text-gray-300 text-white"></i>
+        </a>
+      <% } else { %>
+        <a href="/login">
+          <i class="fas fa-heart cursor-pointer hover:text-gray-300 text-white"></i>
+        </a>
+      <% } %>
 
       <!-- Profile Dropdown or Login Redirect -->
       <% if (session && session.user) { %>
@@ -58,23 +69,22 @@
           <span class="cart-count" style="display: none;">0</span>
         <% } %>
       </div>
+
     </div>
   </nav>
 </header>
 
+<!-- Profile Dropdown Script -->
 <% if (session && session.user) { %>
 <script>
-  // Get the profile icon and its parent group
   const profileIcon = document.querySelector('.profile-icon');
   const group = profileIcon.parentElement;
 
-  // Add click event listener to toggle the dropdown
   profileIcon.addEventListener('click', (e) => {
-    e.preventDefault(); // Prevent default anchor behavior
+    e.preventDefault();
     group.classList.toggle('active');
   });
 
-  // Close dropdown when clicking outside
   document.addEventListener('click', (e) => {
     if (!group.contains(e.target)) {
       group.classList.remove('active');
@@ -83,16 +93,17 @@
 </script>
 <% } %>
 
+<!-- Mobile Menu Script -->
 <script>
   function toggleMobileMenu() {
     const navMenu = document.getElementById('nav-menu');
     navMenu.classList.toggle('active');
   }
 
-  // Close mobile menu when clicking outside
   document.addEventListener('click', (e) => {
     const navMenu = document.getElementById('nav-menu');
     const hamburger = document.querySelector('.hamburger');
+    
     if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
       navMenu.classList.remove('active');
     }

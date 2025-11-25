@@ -6,6 +6,7 @@
     <title>Return Details - Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <style>
       .bg-brand {
@@ -120,72 +121,6 @@
         background-color: #10b981;
         color: white;
       }
-      .timeline-item {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1.25rem;
-        position: relative;
-      }
-      .timeline-dot {
-        width: 0.75rem;
-        height: 0.75rem;
-        border-radius: 50%;
-        margin-top: 0.25rem;
-        flex-shrink: 0;
-        position: relative;
-        z-index: 2;
-      }
-      .timeline-dot.completed {
-        background-color: #10b981;
-      }
-      .timeline-dot.current {
-        background-color: #c5a987;
-        border: 3px solid #c5a987;
-        width: 1.125rem;
-        height: 1.125rem;
-      }
-      .timeline-dot.pending {
-        background-color: #374151;
-        border: 2px solid #6b7280;
-      }
-      .timeline-dot.cancel {
-        background-color: #ef4444;
-      }
-      .timeline-dot.return {
-        background-color: #f59e0b;
-      }
-      .timeline-dot.rejected {
-        background-color: #ef4444;
-      }
-      .timeline-line {
-        width: 2px;
-        background-color: #374151;
-        margin-left: 0.3125rem;
-        position: absolute;
-        left: 0.3125rem;
-        top: 1.25rem;
-        bottom: -1.25rem;
-        z-index: 1;
-      }
-      .timeline-line.completed {
-        background-color: #10b981;
-      }
-      .timeline-line.current {
-        background-color: #c5a987;
-        border-style: dotted;
-        border-width: 0 0 0 2px;
-      }
-      .timeline-line.pending {
-        background-color: #6b7280;
-        border-style: dotted;
-        border-width: 0 0 0 2px;
-      }
-      .timeline-line.cancel {
-        background-color: #ef4444;
-      }
-      .timeline-line.return {
-        background-color: #f59e0b;
-      }
       .canceled-item {
         opacity: 0.6;
       }
@@ -251,24 +186,6 @@
       }
       .btn:hover {
         opacity: 0.9;
-      }
-      .event-badge {
-        padding: 0.25rem 0.5rem;
-        border-radius: 0.25rem;
-        font-size: 0.75rem;
-        font-weight: bold;
-      }
-      .event-status {
-        background-color: #6b7280;
-        color: white;
-      }
-      .event-cancel {
-        background-color: #ef4444;
-        color: white;
-      }
-      .event-return {
-        background-color: #f59e0b;
-        color: white;
       }
       .reason-text {
         color: #fca5a5;
@@ -499,111 +416,8 @@
                 </div>
               </div>
 
-              <!-- Return Timeline -->
-              <div class="card p-6">
-                <h2 class="text-xl font-bold mb-6 text-brand">Return Timeline</h2>
-                <div class="relative space-y-6">
-                  <% 
-                  let returnHistory = [];
-                  
-                  // Always add Return Requested
-                  returnHistory.push({
-                    date: returnItem.returnedAt || order.updatedAt || new Date(),
-                    status: 'Return Requested',
-                    message: 'Customer submitted return request',
-                    type: 'return'
-                  });
-                  
-                  // Add admin actions
-                  if (returnItem.adminApproved === 'Approved') {
-                    returnHistory.push({
-                      date: returnItem.approvedAt || new Date(),
-                      status: 'Approved by Admin',
-                      message: 'Return approved and refund initiated',
-                      type: 'status'
-                    });
-                  } else if (returnItem.adminApproved === 'Rejected') {
-                    returnHistory.push({
-                      date: returnItem.rejectedAt || new Date(),
-                      status: 'Rejected by Admin',
-                      message: `Return rejected. Reason: ${returnItem.rejectReason || 'Not specified'}`,
-                      type: 'cancel'
-                    });
-                  } else if (returnItem.adminApproved === 'Processing') {
-                    returnHistory.push({
-                      date: returnItem.processingAt || new Date(),
-                      status: 'Processing Return',
-                      message: 'Return items received and under review',
-                      type: 'status'
-                    });
-                  } else if (returnItem.adminApproved === 'Completed') {
-                    returnHistory.push({
-                      date: returnItem.completedAt || new Date(),
-                      status: 'Return Completed',
-                      message: 'Refund processed successfully',
-                      type: 'status'
-                    });
-                  }
-                  
-                  // Sort by date
-                  returnHistory.sort((a, b) => a.date - b.date);
-                  %>
-                  
-                  <% if (returnHistory.length === 0) { %>
-                    <p class="text-gray-400 text-center py-4">No timeline available.</p>
-                  <% } else { %>
-                    <% returnHistory.forEach((event, index) => { %>
-                      <% 
-                      let dotClass = 'timeline-dot pending';
-                      let lineClass = 'timeline-line pending';
-                      let textClass = 'text-gray-500';
-                      let badgeClass = 'event-status';
-                      
-                      if (event.type === 'status' && (event.status.toLowerCase().includes('completed') || event.status.toLowerCase().includes('approved'))) {
-                        dotClass = 'timeline-dot completed';
-                        lineClass = 'timeline-line completed';
-                        textClass = 'text-green-400';
-                      } else if (event.type === 'cancel') {
-                        dotClass = 'timeline-dot cancel';
-                        lineClass = 'timeline-line cancel';
-                        textClass = 'text-red-400';
-                        badgeClass = 'event-cancel';
-                      } else if (event.type === 'return') {
-                        dotClass = 'timeline-dot return';
-                        lineClass = 'timeline-line return';
-                        textClass = 'text-orange-400';
-                        badgeClass = 'event-return';
-                      } else if (index === returnHistory.length - 1) {
-                        dotClass = 'timeline-dot current';
-                        lineClass = 'timeline-line current';
-                        textClass = 'text-brand';
-                      }
-                      
-                      const formattedDate = new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + ' - ' + new Date(event.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                      %>
-                      <div class="timeline-item">
-                        <div class="<%= dotClass %>"></div>
-                        <div class="flex-1">
-                          <div class="flex items-center justify-between mb-1">
-                            <p class="font-semibold <%= textClass %>"><%= event.status %></p>
-                            <span class="<%= badgeClass %> event-badge"><%= event.type.toUpperCase() %></span>
-                          </div>
-                          <p class="text-sm text-gray-400 mb-1"><%= formattedDate %></p>
-                          <% if (event.message) { %>
-                            <p class="text-sm <%= textClass === 'text-brand' ? 'text-gray-300' : 'text-gray-500' %>"><%= event.message %></p>
-                          <% } %>
-                        </div>
-                        <% if (index < returnHistory.length - 1) { %>
-                          <div class="<%= lineClass %>"></div>
-                        <% } %>
-                      </div>
-                    <% }); %>
-                  <% } %>
-                </div>
-              </div>
-
               <!-- Original Order Items -->
-              <div class="card p-6">
+              <div class="card p-6 mb-6">
                 <h2 class="text-xl font-bold mb-4 text-brand">Original Order Items</h2>
                 <% if (order.items && order.items.length > 0) { %>
                   <% order.items.forEach(item => { %>
@@ -631,28 +445,24 @@
                   <p class="text-gray-400 text-center py-4">No order items found.</p>
                 <% } %>
               </div>
+
+              <!-- Actions -->
+              <div class="space-y-3 mb-6">
+                <% if (returnItem.adminApproved === 'Requested') { %>
+                <form method="POST" action="/admin/return/<%= order._id %>/approve" class="block" id="approveForm">
+                  <button type="submit" class="block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition text-center">Approve Return</button>
+                </form>
+                <form method="POST" action="/admin/return/<%= order._id %>/reject" class="block" id="rejectForm">
+                  <button type="submit" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition text-center">Reject Return</button>
+                </form>
+                <% } %>
+                <a href="/admin/orders/view/<%= order._id %>" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-brand transition text-center">View Order</a>
+                <button onclick="window.print()" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-brand transition text-center">Print Return Details</button>
+              </div>
             </div>
 
             <!-- Sidebar -->
             <div class="space-y-6">
-              <!-- Return Status Update -->
-              <% if (returnItem.adminApproved === 'Requested') { %>
-              <div class="card p-6">
-                <h3 class="font-bold mb-4 text-brand">Update Return Status</h3>
-                <form method="POST" action="/admin/returns/<%= returnItem.returnId || order._id %>/<%= returnItem._id %>/status" class="space-y-4">
-                  <select name="status" class="bg-gray-800 p-2 rounded w-full text-white" required>
-                    <option value="">Select Status</option>
-                    <option value="Requested" <%= returnItem.adminApproved === 'Requested' ? 'selected' : '' %>>Requested</option>
-                    <option value="Approved" <%= returnItem.adminApproved === 'Approved' ? 'selected' : '' %>>Approved</option>
-                    <option value="Rejected" <%= returnItem.adminApproved === 'Rejected' ? 'selected' : '' %>>Rejected</option>
-                    <option value="Processing" <%= returnItem.adminApproved === 'Processing' ? 'selected' : '' %>>Processing</option>
-                    <option value="Completed" <%= returnItem.adminApproved === 'Completed' ? 'selected' : '' %>>Completed</option>
-                  </select>
-                  <button type="submit" class="btn btn-primary w-full">Update Status</button>
-                </form>
-              </div>
-              <% } %>
-
               <!-- Customer Details -->
               <div class="card p-6">
                 <div class="flex justify-between items-center mb-4">
@@ -714,20 +524,6 @@
                   <p><%= paymentDisplay %></p>
                 </div>
               </div>
-
-              <!-- Actions -->
-              <div class="space-y-3">
-                <% if (returnItem.adminApproved === 'Requested') { %>
-                <form method="POST" action="/admin/returns/<%= returnItem.returnId || order._id %>/<%= returnItem._id %>/approve" class="block" onsubmit="return confirm('Approve this return request?')">
-                  <button type="submit" class="block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition text-center">Approve Return</button>
-                </form>
-                <form method="POST" action="/admin/returns/<%= returnItem.returnId || order._id %>/<%= returnItem._id %>/reject" class="block" onsubmit="return confirm('Reject this return request?')">
-                  <button type="submit" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition text-center">Reject Return</button>
-                </form>
-                <% } %>
-                <a href="/admin/orders/<%= order._id %>" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-brand transition text-center">View Order</a>
-                <button onclick="window.print()" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-brand transition text-center">Print Return Details</button>
-              </div>
             </div>
           </div>
         </div>
@@ -783,6 +579,62 @@
         if (e.target === this) {
           closeModal();
         }
+      });
+
+      // Approve Form Confirmation
+      document.getElementById('approveForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Are you sure?',
+          text: 'Approve this return request?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#10b981',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Yes, approve it!',
+          background: '#1f2937',
+          color: '#ffffff',
+          customClass: {
+            popup: 'swal-dark-popup',
+            title: 'swal-dark-title',
+            content: 'swal-dark-content',
+            confirmButton: 'swal-dark-confirm',
+            cancelButton: 'swal-dark-cancel'
+          },
+          buttonsStyling: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit();
+          }
+        });
+      });
+
+      // Reject Form Confirmation
+      document.getElementById('rejectForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Are you sure?',
+          text: 'Reject this return request?',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Yes, reject it!',
+          background: '#1f2937',
+          color: '#ffffff',
+          customClass: {
+            popup: 'swal-dark-popup',
+            title: 'swal-dark-title',
+            content: 'swal-dark-content',
+            confirmButton: 'swal-dark-confirm',
+            cancelButton: 'swal-dark-cancel'
+          },
+          buttonsStyling: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit();
+          }
+        });
       });
 
       // Function to show error popup

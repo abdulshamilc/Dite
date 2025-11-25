@@ -1,107 +1,161 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Order Failed - Dité</title>
-  <link rel="stylesheet" href="/style/user/header.css">
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-      background-color: #1a1a1a;
-      color: #ffffff;
-      line-height: 1.6;
-      margin: 0;
-      padding: 0;
-    }
-
-    .failed-container {
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 2rem;
-      text-align: center;
-    }
-
-    .failed-icon {
-      font-size: 4rem;
-      color: #ef4444;
-      margin-bottom: 1rem;
-    }
-
-    .failed-title {
-      font-size: 2.5rem;
-      font-weight: 600;
-      color: #ef4444;
-      margin-bottom: 1rem;
-      letter-spacing: 1px;
-    }
-
-    .failed-message {
-      font-size: 1.1rem;
-      color: #ccc;
-      margin-bottom: 2rem;
-    }
-
-    .retry-btn,
-    .home-btn {
-      padding: 1rem 2rem;
-      border: none;
-      border-radius: 4px;
-      font-size: 1rem;
-      font-weight: 600;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      text-decoration: none;
-      display: inline-block;
-      margin: 0 1rem;
-    }
-
-    .retry-btn {
-      background-color: #d4c5a9;
-      color: #000;
-    }
-
-    .retry-btn:hover {
-      background-color: #b3a18e;
-    }
-
-    .home-btn {
-      background-color: #4ade80;
-      color: #000;
-    }
-
-    .home-btn:hover {
-      background-color: #22c55e;
-    }
-
-    @media (max-width: 768px) {
-      .failed-container {
-        padding: 1rem;
-      }
-
-      .retry-btn,
-      .home-btn {
-        display: block;
-        margin: 1rem auto;
-        width: 100%;
-        max-width: 200px;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Failed - Dité</title>
+    <link rel="stylesheet" href="/style/user/header.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles to match the success page design and enhance attractiveness */
+        .tracking-wider { letter-spacing: 0.05em; }
+        .border-red-400 { border-color: #f87171; }
+        .hover\:text-red-400:hover { color: #f87171; }
+        .bg-red-500 { background-color: #ef4444; }
+        .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .5; } }
+        .border-b-2 { border-bottom-width: 2px; }
+        .hover\:border-red-400:hover { border-color: #f87171; }
+        /* Enhanced failed animation mirroring success */
+        .xmark-container {
+            position: relative;
+        }
+        .xmark-circle {
+            animation: circleExpand 1.5s ease-out;
+            animation-fill-mode: forwards;
+        }
+        @keyframes circleExpand {
+            0% { transform: scale(0); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .xmark-path {
+            stroke-dasharray: 50;
+            stroke-dashoffset: 50;
+            animation: drawX 4s infinite;
+        }
+        @keyframes drawX {
+            0% { stroke-dashoffset: 50; }
+            25% { stroke-dashoffset: 0; }
+            100% { stroke-dashoffset: 0; }
+        }
+        .failed-glow {
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            from { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); }
+            to { box-shadow: 0 0 30px rgba(239, 68, 68, 0.8), 0 0 40px rgba(239, 68, 68, 0.4); }
+        }
+        /* Layered button styles for depth (same as success) */
+        .btn-layered {
+            position: relative;
+            background: linear-gradient(145deg, #745727, #fec575);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow:
+                0 4px 15px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .btn-layered::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+        .btn-layered:hover::before {
+            opacity: 1;
+        }
+        .btn-layered:hover {
+            transform: translateY(-2px);
+            box-shadow:
+                0 6px 20px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            background: linear-gradient(145deg, #a69478, #fec575);
+        }
+        /* Error message styling for prominence */
+        .error-reason {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin: 2rem 0;
+            color: #f87171;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            text-align: left;
+        }
+        .retry-incentive {
+            margin-top: 1rem;
+            color: #9ca3af;
+            font-size: 0.95rem;
+        }
+    </style>
 </head>
-<body>
-  <%- include("../../partials/user/header") %>
-
-  <main class="failed-container">
-    <div class="failed-icon">❌</div>
-    <h1 class="failed-title">Order Failed</h1>
-    <p class="failed-message">We're sorry, but your order could not be processed at this time. Please try again.</p>
-
-    <a href="/checkout" class="retry-btn">Retry Checkout</a>
-    <a href="/" class="home-btn">Back to Home</a>
-  </main>
-
-  <%- include("../../partials/user/footer") %>
+<body class="min-h-screen bg-black text-white flex flex-col">
+    <%- include("../../partials/user/header") %>
+    <!-- Main Content -->
+    <main class="flex-1 flex items-center justify-center px-4 pt-32 pb-20">
+        <div class="text-center max-w-2xl">
+            <!-- Enhanced Animated Xmark (Failed Icon) -->
+            <div class="flex justify-center mb-8">
+                <div class="xmark-container relative">
+                    <div class="w-40 h-40 border-4 border-red-400 rounded-full flex items-center justify-center bg-black xmark-circle">
+                        <div class="w-32 h-32 bg-red-500 rounded-full flex items-center justify-center failed-glow relative z-10">
+                            <!-- Animated X mark icon using SVG with looping draw animation -->
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="text-black">
+                                <path d="M18 6L6 18M6 6l12 12" class="xmark-path" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="3"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Failed Title with gradient styling similar to success -->
+            <h1 class="text-3xl md:text-4xl font-bold mb-4 tracking-wider bg-gradient-to-r from-[#745727] to-[#fec575] bg-clip-text text-transparent drop-shadow-lg">
+                ORDER FAILED
+            </h1>
+            <!-- Error Reason Field (Dynamic - uses EJS variable) -->
+            <div class="error-reason">
+                <strong>Reason for Failure:</strong><br>
+                <% if (errorType === 'payment_cancelled') { %>
+                  You cancelled the payment. No charges applied.
+                <% } else if (errorType === 'verification_failed') { %>
+                  Payment couldn't be verified. Contact support.
+                <% } else if (errorType === 'cod_failed') { %>
+                  Cash on Delivery unavailable for this order. Please try another method.
+                <% } else if (errorType === 'network_error') { %>
+                  Network issue detected. Please check your connection and retry.
+                <% } else if (errorType === 'invalid_amount') { %>
+                  Order amount is invalid. Please review your cart.
+                <% } else if (errorType === 'order_creation_failed') { %>
+                  Failed to create payment order. Please try again.
+                <% } else if (errorType === 'payment_init_failed') { %>
+                  Payment gateway failed to load. Refresh and retry.
+                <% } else if (errorType === 'order_placement_failed') { %>
+                  Order couldn't be placed after payment. Your payment may be refunded.
+                <% } else { %>
+                  <%= errorMessage || 'An unexpected error occurred during payment processing. Please check your payment details and try again.' %>
+                <% } %>
+            </div>
+            <p class="retry-incentive">Don't worry—your cart is safe. Try again?</p>
+            <!-- Enhanced Layered Action Buttons (mirroring success structure) -->
+            <div class="flex flex-col sm:flex-row gap-8 justify-center items-center">
+                <a href="/checkout" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300 w-full sm:w-auto">
+                    RETRY PAYMENT
+                </a>
+                <a href="/" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300 w-full sm:w-auto">
+                    CONTINUE SHOPPING
+                </a>
+            </div>
+        </div>
+    </main>
+    <!-- Footer -->
+    <%- include("../../partials/user/footer") %>
 </body>
 </html>
