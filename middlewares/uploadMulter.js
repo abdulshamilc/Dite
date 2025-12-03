@@ -1,21 +1,21 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
 import cloudinary from "../services/cloudinaryStorage.js";
+import cloudinaryStorage from "multer-storage-cloudinary";
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: (req, file) => {
-    // Decide the folder dynamically
-    let folder = "others";
+const storage = cloudinaryStorage({
+  cloudinary: cloudinary,
 
-    if (req.baseUrl.includes("/products")) folder = `products/${req.body.productId || "general"}`;
-    else if (req.baseUrl.includes("/profile")) folder = `profile_pics/${req.user?._id || "unknown"}`;
-    
-    return {
-      folder,
-      allowed_formats: ["jpg", "png", "jpeg", "webp"],
-    };
+  folder: (req, file) => {
+    // Decide folder dynamically
+    if (req.baseUrl.includes("/products")) {
+      return `products/${req.body.productId || "general"}`;
+    } else if (req.baseUrl.includes("/profile")) {
+      return `profile_pics/${req.user?._id || "unknown"}`;
+    }
+    return "others";
   },
+
+  allowedFormats: ["jpg", "png", "jpeg", "webp"],
 });
 
 const upload = multer({ storage });

@@ -1,59 +1,564 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dite </title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <link rel="stylesheet" href="/css/admin.css">
-   <style>
-    .bg-brand { background-color: #C5A987; }
-    .text-brand { color: #C5A987; }
-    .border-brand { border-color: #C5A987; }
-    aside {
-      border-right: 2px solid transparent;
-      border-image: linear-gradient(to bottom, #C5A987, transparent) 1;
-    }
-    .nav-btn {
-      transition: all 0.3s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    .nav-btn:hover {
-      transform: translateX(4px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-    .nav-btn.active {
-      box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
-    }
-    .logout-btn {
-      transition: all 0.3s ease-in-out;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    }
-    .logout-btn:hover {
-      transform: translateX(4px);
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-    }
-  </style>
-</head>
-<body class="min-h-screen bg-black">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sales Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- Header Partial -->
-  <%- include("../partials/admin/admin-header") %>
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .stat-card {
+        background: linear-gradient(135deg, #1f2937, #111827);
+        border: 1px solid #374151;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+        transition: transform 0.3s ease;
+      }
+      .stat-card:hover {
+        transform: translateY(-2px);
+      }
+      .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #c5a987;
+        margin-bottom: 0.25rem;
+      }
+      .stat-label {
+        color: #9ca3af;
+        font-size: 0.875rem;
+      }
+      .chart-container {
+        background: linear-gradient(135deg, #1f2937, #111827);
+        border: 1px solid #374151;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        height: 400px; /* Adjusted to match top products height */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .top-products-container {
+        background: linear-gradient(135deg, #1f2937, #111827);
+        border: 1px solid #374151;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        height: 400px; /* Adjusted height to fit 7 products comfortably */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .small-chart-container {
+        background: linear-gradient(135deg, #1f2937, #111827);
+        border: 1px solid #374151;
+        border-radius: 0.75rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        height: 250px; /* Consistent height for small charts */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .chart-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #c5a987;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      .small-chart-title {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #c5a987;
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      .gender-legend {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 1rem;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+      }
+      .legend-bar {
+        width: 20px;
+        height: 4px;
+        border-radius: 2px;
+      }
+      .men-bar {
+        background-color: #3b82f6;
+      }
+      .women-bar {
+        background-color: #ec4899;
+      }
+      .unisex-bar {
+        background-color: #10b981;
+      }
+      .export-btn {
+        background: #c5a987;
+        color: #1f2937;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+      }
+      .export-btn:hover {
+        background: #b7947a;
+      }
+      /* Ensure canvas fills container properly */
+      canvas {
+        max-height: 100%;
+        max-width: 100%;
+      }
+      /* Styles for top products list - no scroll, full height */
+      .products-list {
+        width: 100%;
+        height: auto; /* Allow natural height */
+      }
+      .products-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .products-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0; /* Slightly more padding for better spacing */
+        border-bottom: 1px solid #374151;
+        color: #9ca3af;
+      }
+      .products-list li:last-child {
+        border-bottom: none;
+      }
+      .product-name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .product-units {
+        font-weight: bold;
+        color: #c5a987;
+      }
+      /* Styles for sales table */
+      .sales-table {
+        background: linear-gradient(135deg, #1f2937, #111827);
+        border: 1px solid #374151;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        margin-top: 2rem;
+      }
+      .sales-table th {
+        background-color: #374151;
+        color: #9ca3af;
+        padding: 1rem;
+        text-align: left;
+        font-weight: bold;
+      }
+      .sales-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #374151;
+        color: #9ca3af;
+      }
+      .sales-table tr:hover td {
+        background-color: #374151;
+      }
+      .sales-table .revenue {
+        color: #c5a987;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../partials/admin/admin-header") %>
 
-  <div class="flex">
-    <!-- Sidebar Partial -->
-    <%- include("../partials/admin/admin-sidebar") %>
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../partials/admin/admin-sidebar") %>
 
-    <!-- Page Content -->
-    <main class="flex-1 p-6 text-white">
-      
-      <p>This is your Sales Report.</p>
-    </main>
-  </div>
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <!-- Heading + Export Button -->
+        <div class="flex justify-between items-center mb-6">
+          <h1 class="text-3xl font-bold text-white">Sales Report</h1>
+          <button class="export-btn" id="exportBtn">
+            <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+            Export Excel
+          </button>
+        </div>
 
-  <script>
-    lucide.createIcons();
-  </script>
-</body>
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div class="stat-card">
+            <div class="stat-value"><%= totalRevenue %></div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= avgOrderValue %></div>
+            <div class="stat-label">Avg Order Value</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= totalOrders %></div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= newCustomers %></div>
+            <div class="stat-label">Total Customers</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Revenue Overview Chart -->
+          <div class="chart-container">
+            <div class="chart-title">Revenue Overview</div>
+            <canvas id="revenueChart"></canvas>
+          </div>
+
+          <!-- Top Products List -->
+          <div class="top-products-container">
+            <div class="chart-title">Top 7 Products</div>
+            <div id="topProductsList" class="products-list"></div>
+          </div>
+        </div>
+
+        <!-- Last 2 Charts in a Single Row (Small Size) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+          <!-- Sales by Category -->
+          <div class="small-chart-container">
+            <div class="small-chart-title">Sales by Category</div>
+            <canvas id="categoryChart"></canvas>
+          </div>
+
+          <!-- Sales by Gender -->
+          <div class="small-chart-container">
+            <div class="small-chart-title">Sales by Gender</div>
+            <canvas id="genderChart"></canvas>
+            <div class="gender-legend">
+              <div class="legend-item">
+                <div class="legend-bar men-bar"></div>
+                <span>MEN: ₹<%= menSales || 0 %></span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-bar women-bar"></div>
+                <span>WOMEN: ₹<%= womenSales || 0 %></span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-bar unisex-bar"></div>
+                <span>UNISEX: ₹<%= unisexSales || 0 %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detailed Sales Table -->
+        <div class="sales-table-container">
+          <h2 class="text-2xl font-bold text-white mb-4">Detailed Variant Sales</h2>
+          <% if (groupedSalesData && groupedSalesData.length > 0) { %>
+          <table class="sales-table w-full">
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>ML Size</th>
+                <th>Sold Quantity</th>
+                <th>Returns</th>
+                <th>Revenue</th>
+                <th>Current Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% groupedSalesData.forEach(function(product) { %>
+                <% product.variants.forEach(function(item, index) { %>
+                  <% if (index === 0) { %>
+                  <tr>
+                    <td rowspan="<%= product.variants.length %>"><%= product.name %></td>
+                    <td><%= item.mlSize %>ml</td>
+                    <td><%= item.soldQuantity %></td>
+                    <td><%= item.returns %></td>
+                    <td class="revenue">₹<%= item.revenue.toLocaleString() %></td>
+                    <td><%= item.stock %></td>
+                  </tr>
+                  <% } else { %>
+                  <tr>
+                    <td><%= item.mlSize %>ml</td>
+                    <td><%= item.soldQuantity %></td>
+                    <td><%= item.returns %></td>
+                    <td class="revenue">₹<%= item.revenue.toLocaleString() %></td>
+                    <td><%= item.stock %></td>
+                  </tr>
+                  <% } %>
+                <% }) %>
+              <% }) %>
+            </tbody>
+          </table>
+          <% } else { %>
+          <p class="text-center text-gray-500 py-8">No detailed sales data available</p>
+          <% } %>
+        </div>
+      </main>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
+        <h3 class="text-lg font-bold text-white mb-4">Export Sales Report</h3>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Select Period:</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="weekly" class="mr-2">
+              <span class="text-gray-300">Last Week</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="monthly" class="mr-2">
+              <span class="text-gray-300">Last Month</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="yearly" class="mr-2">
+              <span class="text-gray-300">Last Year</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="custom" class="mr-2">
+              <span class="text-gray-300">Custom Date Range</span>
+            </label>
+          </div>
+        </div>
+        <div id="customDateRange" class="hidden mb-4 space-y-2">
+          <label class="block text-sm font-medium text-gray-300">Start Date:</label>
+          <input type="date" id="startDate" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white">
+          <label class="block text-sm font-medium text-gray-300">End Date:</label>
+          <input type="date" id="endDate" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white">
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button id="cancelExport" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Cancel</button>
+          <button id="confirmExport" class="px-4 py-2 bg-brand text-gray-800 rounded hover:bg-[#b7947a]">Download Excel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JS for Charts and Actions -->
+    <script>
+     lucide.createIcons();
+
+      // Use raw injection + JSON.stringify in template to produce valid JS objects
+      const revenueData = <%- JSON.stringify(revenueData || { labels: [], datasets: [] }) %>;
+      const topProductsData = <%- JSON.stringify(topProductsData || { labels: [], datasets: [] }) %>;
+      const categoryData = <%- JSON.stringify(categoryData || { labels: [], datasets: [] }) %>;
+      const genderData = <%- JSON.stringify(genderData || { labels: ["Men", "Women", "Unisex"], datasets:[{ data:[0,0,0], backgroundColor:["#3b82f6","#ec4899","#10b981"] }] }) %>;
+      const statusData = <%- JSON.stringify(statusData || { labels: [], datasets: [] }) %>;
+
+      // Limit top products to top 7 most bought (assuming data is sorted descending)
+      if (topProductsData && topProductsData.labels && topProductsData.labels.length > 7) {
+        topProductsData.labels = topProductsData.labels.slice(0, 7);
+        topProductsData.datasets[0].data = topProductsData.datasets[0].data.slice(0, 7);
+      }
+
+      // Render Top Products List
+      const listDiv = document.getElementById('topProductsList');
+      if (topProductsData && topProductsData.labels && topProductsData.labels.length > 0) {
+        let html = '<ul>';
+        topProductsData.labels.forEach((label, i) => {
+          html += `<li><span class="product-name">${label}</span><span class="product-units">${topProductsData.datasets[0].data[i]} units</span></li>`;
+        });
+        html += '</ul>';
+        listDiv.innerHTML = html;
+      } else {
+        listDiv.innerHTML = '<p class="text-center text-gray-500 py-4">No data available</p>';
+      }
+
+      // Initialize Revenue Chart (with fallback)
+      if (revenueData && revenueData.labels && revenueData.labels.length > 0) {
+        new Chart(document.getElementById('revenueChart'), {
+          type: 'bar',
+          data: revenueData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: { beginAtZero: true, ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+              x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
+            },
+            plugins: { legend: { display: false } }
+          }
+        });
+      } else {
+        // Fallback: No Data chart
+        new Chart(document.getElementById('revenueChart'), {
+          type: 'bar',
+          data: { labels: ["No Data"], datasets: [{ label: "Revenue", data: [0], backgroundColor: "#374151" }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { display: false }, x: { display: false } },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      // Category Chart (with fallback)
+      if (categoryData && categoryData.labels && categoryData.labels.length > 0) {
+        new Chart(document.getElementById('categoryChart'), {
+          type: 'doughnut',
+          data: categoryData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#9ca3af', font: { size: 10 } }
+              }
+            }
+          }
+        });
+      } else {
+        new Chart(document.getElementById('categoryChart'), {
+          type: 'doughnut',
+          data: { labels: ["No Data"], datasets: [{ data: [1], backgroundColor: ["#374151"] }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+
+      // Gender Chart (always render - data/labels always valid, even zeros)
+      new Chart(document.getElementById('genderChart'), {
+        type: 'bar',
+        data: genderData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          scales: {
+            x: { beginAtZero: true, ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+            y: { display: false }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+
+      // Export Modal Logic
+      const modal = document.getElementById('exportModal');
+      const exportBtn = document.getElementById('exportBtn');
+      const cancelBtn = document.getElementById('cancelExport');
+      const confirmBtn = document.getElementById('confirmExport');
+      const customRange = document.getElementById('customDateRange');
+      const periodRadios = document.querySelectorAll('input[name="periodType"]');
+
+      exportBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+      });
+
+      cancelBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        customRange.classList.add('hidden');
+      });
+
+      periodRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          if (e.target.value === 'custom') {
+            customRange.classList.remove('hidden');
+          } else {
+            customRange.classList.add('hidden');
+          }
+        });
+      });
+
+      confirmBtn.addEventListener('click', async () => {
+        const selectedType = document.querySelector('input[name="periodType"]:checked')?.value;
+        if (!selectedType) {
+          alert('Please select a period type.');
+          return;
+        }
+
+        let startDate, endDate;
+        const today = new Date().toISOString().split('T')[0];
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+        if (selectedType === 'weekly') {
+          startDate = oneWeekAgo;
+          endDate = today;
+        } else if (selectedType === 'monthly') {
+          startDate = oneMonthAgo;
+          endDate = today;
+        } else if (selectedType === 'yearly') {
+          startDate = oneYearAgo;
+          endDate = today;
+        } else if (selectedType === 'custom') {
+          startDate = document.getElementById('startDate').value;
+          endDate = document.getElementById('endDate').value;
+          if (!startDate || !endDate) {
+            alert('Please select both start and end dates.');
+            return;
+          }
+        }
+
+        try {
+          const response = await fetch('/admin/sales-report/export', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ startDate, endDate }),
+          });
+
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sales-report-${startDate}-to-${endDate}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            modal.classList.add('hidden');
+          } else {
+            alert('Export failed. Please try again.');
+          }
+        } catch (error) {
+          console.error('Export error:', error);
+          alert('Export failed. Please try again.');
+        }
+      });
+    </script>
+  </body>
 </html>

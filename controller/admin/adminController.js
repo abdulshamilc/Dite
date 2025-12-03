@@ -1,14 +1,17 @@
+import mongoose from "mongoose";
 import { User } from "../../models/userModels.js";
 import { Admin, AdmiResetPassword } from "../../models/adminModels.js";
 import Categories from "../../models/categories.js";
 import Products from "../../models/productsModels.js";
 import Orders from "../../models/ordersModel.js";
+import Offer from "../../models/offerModel.js";
 import sendMail from "../../services/mailer.js";
 import bcrypt from "bcryptjs";
 import addCategoryValidation from "../../validators/addCatogoryValidation.js";
 import jwt from "jsonwebtoken";
 import passwordSchema from "../../validators/resetPasswordValidator.js";
 import { nanoid } from "nanoid";
+import moment from "moment";
 const secret = process.env.JWT_SECRET;
 
 const pageNotFound = (req, res) => {
@@ -132,27 +135,6 @@ const getOtpVerification = (req, res) => {
     console.log(error);
   }
 };
-
-// const resendOtp = async (req, res) => {
-//   try {
-//    if (!req.session.email) return res.redirect("/admin/forgot-password");
-
-//     const  email  = req.session.email;
-
-//     // Delete any old OTPs for that email
-//     await AdmiResetPassword.deleteMany({ email });
-
-//     genarateOTP(email);
-
-//     // Optionally set a message for feedback
-//     req.session.otpSuccess = "A new OTP has been sent to your email.";
-//     res.redirect("/signup/verify-otp");
-//   } catch (error) {
-//     console.log(error);
-//     res.status(500).send("Error resending OTP");
-//   }
-// };
-
 const PostOtpVerification = async (req, res) => {
   try {
     const EnterdOtp = req.body.otp;
@@ -522,17 +504,21 @@ const getProducts = async (req, res) => {
     console.error(error);
     res.status(500).send("Server Error");
   }
-};const getAddProducts = async (req, res) => {
+};
+const getAddProducts = async (req, res) => {
   try {
     const categories = await Categories.find({ isDeleted: false }).lean();
-    const products = await Products.find({ isDeleted: false }).select('name').lean();
+    const products = await Products.find({ isDeleted: false })
+      .select("name")
+      .lean();
     res.render("admin/addProducts", { categories, products });
   } catch (error) {
-    console.error('Error fetching categories and products:', error);
-    res.status(500).json({ success: false, error: 'Failed to load page data.' });
+    console.error("Error fetching categories and products:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Failed to load page data." });
   }
 };
-
 const toNumber = (val, zero = 0) => {
   const parsed = parseInt(val);
   return isNaN(parsed) ? zero : parsed;
@@ -553,68 +539,127 @@ const postAddProducts = async (req, res) => {
 
     // Specific validation for product name
     if (!name || !name.trim()) {
-      return res.status(400).json({ success: false, error: "Product name is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Product name is required." });
     }
 
     // Specific validation for product description
     if (!description || !description.trim()) {
-      return res.status(400).json({ success: false, error: "Product description is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Product description is required." });
+    }
+
+    // Specific validation for notes (now required)
+    if (!notes || !notes.trim()) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Notes are required." });
+    }
+    const wordCountNotes = notes.trim().split(/\s+/).length;
+    if (wordCountNotes < 5 || wordCountNotes > 150) {
+      return res.status(400).json({
+        success: false,
+        error: "Notes must have between 5 and 150 words.",
+      });
     }
 
     // Specific validation for category
-    const category = rawCategory ? rawCategory.trim() : '';
+    const category = rawCategory ? rawCategory.trim() : "";
     if (!category) {
-      return res.status(400).json({ success: false, error: "Category is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Category is required." });
+    }
+
+    // Specific validation for brand (now required)
+    if (!brand || !brand.trim()) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Brand name is required." });
+    }
+    if (!/^[A-Z\s]+$/.test(brand.trim())) {
+      return res.status(400).json({
+        success: false,
+        error: "Brand name must be uppercase letters only.",
+      });
     }
 
     // Specific validation for gender
     if (!gender) {
-      return res.status(400).json({ success: false, error: "Gender is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Gender is required." });
     }
 
     // Specific validation for concentration
     if (!concentration) {
-      return res.status(400).json({ success: false, error: "Concentration is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Concentration is required." });
     }
 
     // Specific validation for variants existence
     if (!variants) {
-      return res.status(400).json({ success: false, error: "Variants are required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Variants are required." });
     }
 
     // Specific validation for images
     if (imageUrls.length !== 4) {
-      return res.status(400).json({ success: false, error: "Exactly 4 images are required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Exactly 4 images are required." });
     }
 
-    // Parse variants - frontend sends as array of objects
+    // Parse variants - frontend sends as object with numeric string keys e.g. { '0': {mlSize: '5', ...} }
     let parsedVariants = [];
-    if (Array.isArray(variants)) {
-      parsedVariants = variants
-        .map((v, index) => {
-          // Check structure first
-          if (!v || !v.mlSize || !v.stock || !v.basePrice || !v.discountedPrice) {
-            return null;
-          }
-          return {
+    if (variants && typeof variants === "object" && !Array.isArray(variants)) {
+      Object.keys(variants).forEach((key) => {
+        const v = variants[key];
+        // Check structure first
+        if (
+          v &&
+          v.mlSize &&
+          v.stock &&
+          v.basePrice !== undefined &&
+          v.discountedPrice !== undefined
+        ) {
+          parsedVariants.push({
             mlSize: toNumber(v.mlSize),
             stock: toNumber(v.stock),
             basePrice: parseFloat(v.basePrice) || 0,
             discountedPrice: parseFloat(v.discountedPrice) || 0,
-            index, // Keep original index for error reporting
-          };
+            index: parseInt(key), // Use key as index
+          });
+        }
+      });
+      // Sort by index to maintain order
+      parsedVariants.sort((a, b) => a.index - b.index);
+    } else if (Array.isArray(variants)) {
+      // Fallback for array (unlikely)
+      parsedVariants = variants
+        .map((v, index) => {
+          if (
+            v &&
+            v.mlSize &&
+            v.stock &&
+            v.basePrice !== undefined &&
+            v.discountedPrice !== undefined
+          ) {
+            return {
+              mlSize: toNumber(v.mlSize),
+              stock: toNumber(v.stock),
+              basePrice: parseFloat(v.basePrice) || 0,
+              discountedPrice: parseFloat(v.discountedPrice) || 0,
+              index,
+            };
+          }
+          return null;
         })
-        .filter(v => v !== null);
-    } else if (variants && variants.mlSize && variants.stock && variants.basePrice && variants.discountedPrice) {
-      // Fallback for single object
-      const singleVariant = {
-        mlSize: toNumber(variants.mlSize),
-        stock: toNumber(variants.stock),
-        basePrice: parseFloat(variants.basePrice) || 0,
-        discountedPrice: parseFloat(variants.discountedPrice) || 0,
-        index: 0,
-      };
-      parsedVariants = [singleVariant];
+        .filter((v) => v !== null);
     }
 
     // Per-variant validation (mirroring frontend field checks)
@@ -622,66 +667,75 @@ const postAddProducts = async (req, res) => {
     parsedVariants.forEach((v) => {
       const variantNum = v.index + 1;
       if (v.mlSize <= 0) {
-        variantErrors.push(`Variant ${variantNum} size must be greater than 0.`);
+        variantErrors.push(
+          `Variant ${variantNum} size must be greater than 0.`
+        );
       }
       if (v.stock < 1) {
         variantErrors.push(`Variant ${variantNum} stock must be at least 1.`);
       }
       if (v.basePrice <= 1) {
-        variantErrors.push(`Variant ${variantNum} base price must be greater than 1.`);
+        variantErrors.push(
+          `Variant ${variantNum} base price must be greater than 1.`
+        );
       }
       if (v.discountedPrice < 0) {
-        variantErrors.push(`Variant ${variantNum} discounted price must be at least 0.`);
+        variantErrors.push(
+          `Variant ${variantNum} discounted price must be at least 0.`
+        );
       }
       if (v.discountedPrice > v.basePrice) {
-        variantErrors.push(`Variant ${variantNum} discounted price must be less than or equal to base price.`);
+        variantErrors.push(
+          `Variant ${variantNum} discounted price must be less than or equal to base price.`
+        );
       }
     });
 
     if (variantErrors.length > 0) {
-      return res.status(400).json({ success: false, error: variantErrors.join(' ') });
+      return res
+        .status(400)
+        .json({ success: false, error: variantErrors.join(" ") });
     }
 
     if (parsedVariants.length === 0) {
-      return res.status(400).json({ success: false, error: "At least one valid variant is required." });
+      return res.status(400).json({
+        success: false,
+        error: "At least one valid variant is required.",
+      });
     }
 
     // Description word count validation
     const wordCountDesc = description.trim().split(/\s+/).length;
     if (wordCountDesc < 10 || wordCountDesc > 150) {
-      return res.status(400).json({ success: false, error: "Description must be between 10 and 150 words." });
-    }
-
-    // Notes word count validation
-    const wordCountNotes = notes ? notes.trim().split(/\s+/).length : 0;
-    if (wordCountNotes > 150 || (wordCountNotes > 0 && wordCountNotes < 5)) {
-      return res.status(400).json({ success: false, error: "Notes must be either empty or at least 5 words, and no more than 150 words." });
-    }
-
-    // Brand validation
-    if (brand && !/^[A-Z\s]+$/.test(brand.trim())) {
-      return res.status(400).json({ success: false, error: "Brand name must be uppercase letters only." });
+      return res.status(400).json({
+        success: false,
+        error: "Description must be between 10 and 150 words.",
+      });
     }
 
     // Check duplicate name (case-insensitive, only non-deleted products)
-    const existingProduct = await Products.findOne({ 
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
-      isDeleted: false 
+    const existingProduct = await Products.findOne({
+      name: { $regex: new RegExp(`^${name.trim()}$`, "i") },
+      isDeleted: false,
     });
     if (existingProduct) {
-      return res.status(400).json({ success: false, error: "Product name already exists. Please choose a unique name." });
+      return res.status(400).json({
+        success: false,
+        error: "Product name already exists. Please choose a unique name.",
+      });
     }
 
     const newProduct = new Products({
       name: name.trim(),
       description: description.trim(),
-      notes: notes ? notes.trim() : '',
-      brand: brand ? brand.trim() : '',
+      notes: notes.trim(),
+      brand: brand.trim(),
       category, // Single string (ObjectId)
       gender,
       concentration,
       images: imageUrls,
-      variants: parsedVariants.map(v => ({ // Strip index for save
+      variants: parsedVariants.map((v) => ({
+        // Strip index for save
         mlSize: v.mlSize,
         stock: v.stock,
         basePrice: v.basePrice,
@@ -692,16 +746,21 @@ const postAddProducts = async (req, res) => {
 
     // Update category with product reference (single category)
     if (category) {
-      await Categories.findByIdAndUpdate(
-        category,
-        { $push: { products: newProduct._id } }
-      );
+      await Categories.findByIdAndUpdate(category, {
+        $push: { products: newProduct._id },
+      });
     }
 
-    res.json({ success: true, message: "New Product Has Been Added Successfully" });
+    res.json({
+      success: true,
+      message: "New Product Has Been Added Successfully",
+    });
   } catch (error) {
-    console.error('Error adding product:', error);
-    res.status(500).json({ success: false, error: "Something went wrong while adding the product. Please try again." });
+    console.error("Error adding product:", error);
+    res.status(500).json({
+      success: false,
+      error: "Something went wrong while adding the product. Please try again.",
+    });
   }
 };
 const getEditProducts = async (req, res) => {
@@ -712,19 +771,24 @@ const getEditProducts = async (req, res) => {
       req.session.errorMessage = "Product not found.";
       return res.redirect("/admin/products");
     }
-    const products = await Products.find({ isDeleted: false }).select('name _id').lean();
+    const products = await Products.find({ isDeleted: false })
+      .select("name _id")
+      .lean();
     res.render("admin/editProducts", { categories, product, products });
   } catch (err) {
     console.error(err);
     req.session.errorMessage = "Something Went Wrong";
     res.redirect("/admin/products");
   }
-};const postEditProduct = async (req, res) => {
+};
+const postEditProduct = async (req, res) => {
   try {
     const productId = req.params.id;
     const oldProduct = await Products.findById(productId);
     if (!oldProduct) {
-      return res.status(404).json({ success: false, error: 'Product not found' });
+      return res
+        .status(404)
+        .json({ success: false, error: "Product not found" });
     }
 
     const {
@@ -738,7 +802,9 @@ const getEditProducts = async (req, res) => {
       variants: rawVariants,
     } = req.body;
     const imageFiles = req.files?.map((file) => file.path) || [];
-    const existingImages = Array.isArray(req.body.existingImages) ? req.body.existingImages : [];
+    const existingImages = Array.isArray(req.body.existingImages)
+      ? req.body.existingImages
+      : [];
 
     // Build updated images
     let updatedImages = [...(oldProduct.images || [])];
@@ -758,34 +824,51 @@ const getEditProducts = async (req, res) => {
     updatedImages = updatedImages.slice(0, 4);
 
     // Validate images: exactly 4 valid paths
-    if (updatedImages.length !== 4 || updatedImages.some(img => !img)) {
-      return res.status(400).json({ success: false, error: "Exactly 4 valid images are required." });
+    if (updatedImages.length !== 4 || updatedImages.some((img) => !img)) {
+      return res.status(400).json({
+        success: false,
+        error: "Exactly 4 valid images are required.",
+      });
     }
 
     // Validate required fields (final values)
     const finalName = name ? name.trim() : oldProduct.name;
     if (!finalName) {
-      return res.status(400).json({ success: false, error: "Product name is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Product name is required." });
     }
 
-    const finalDescription = description ? description.trim() : oldProduct.description;
+    const finalDescription = description
+      ? description.trim()
+      : oldProduct.description;
     if (!finalDescription) {
-      return res.status(400).json({ success: false, error: "Product description is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Product description is required." });
     }
 
-    const finalCategory = rawCategory ? rawCategory.trim() : oldProduct.category;
+    const finalCategory = rawCategory
+      ? rawCategory.trim()
+      : oldProduct.category;
     if (!finalCategory) {
-      return res.status(400).json({ success: false, error: "Category is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Category is required." });
     }
 
     const finalGender = gender || oldProduct.gender;
     if (!finalGender) {
-      return res.status(400).json({ success: false, error: "Gender is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Gender is required." });
     }
 
     const finalConcentration = concentration || oldProduct.concentration;
     if (!finalConcentration) {
-      return res.status(400).json({ success: false, error: "Concentration is required." });
+      return res
+        .status(400)
+        .json({ success: false, error: "Concentration is required." });
     }
 
     // Parse variants if provided, else keep old
@@ -794,7 +877,13 @@ const getEditProducts = async (req, res) => {
       if (Array.isArray(rawVariants)) {
         parsedVariants = rawVariants
           .map((v, index) => {
-            if (!v || !v.mlSize || !v.stock || !v.basePrice || !v.discountedPrice) {
+            if (
+              !v ||
+              !v.mlSize ||
+              !v.stock ||
+              !v.basePrice ||
+              !v.discountedPrice
+            ) {
               return null;
             }
             return {
@@ -805,8 +894,14 @@ const getEditProducts = async (req, res) => {
               index, // For error reporting
             };
           })
-          .filter(v => v !== null);
-      } else if (rawVariants && rawVariants.mlSize && rawVariants.stock && rawVariants.basePrice && rawVariants.discountedPrice) {
+          .filter((v) => v !== null);
+      } else if (
+        rawVariants &&
+        rawVariants.mlSize &&
+        rawVariants.stock &&
+        rawVariants.basePrice &&
+        rawVariants.discountedPrice
+      ) {
         // Fallback for single object (unlikely in edit, but handle)
         const singleVariant = {
           mlSize: parseInt(rawVariants.mlSize),
@@ -824,58 +919,84 @@ const getEditProducts = async (req, res) => {
     parsedVariants.forEach((v) => {
       const variantNum = v.index + 1;
       if (v.mlSize <= 0) {
-        variantErrors.push(`Variant ${variantNum} size must be greater than 0.`);
+        variantErrors.push(
+          `Variant ${variantNum} size must be greater than 0.`
+        );
       }
       if (v.stock < 1) {
         variantErrors.push(`Variant ${variantNum} stock must be at least 1.`);
       }
       if (v.basePrice <= 1) {
-        variantErrors.push(`Variant ${variantNum} base price must be greater than 1.`);
+        variantErrors.push(
+          `Variant ${variantNum} base price must be greater than 1.`
+        );
       }
       if (v.discountedPrice < 0) {
-        variantErrors.push(`Variant ${variantNum} discounted price must be at least 0.`);
+        variantErrors.push(
+          `Variant ${variantNum} discounted price must be at least 0.`
+        );
       }
       if (v.discountedPrice > v.basePrice) {
-        variantErrors.push(`Variant ${variantNum} discounted price must be less than or equal to base price.`);
+        variantErrors.push(
+          `Variant ${variantNum} discounted price must be less than or equal to base price.`
+        );
       }
     });
 
     if (variantErrors.length > 0) {
-      return res.status(400).json({ success: false, error: variantErrors.join(' ') });
+      return res
+        .status(400)
+        .json({ success: false, error: variantErrors.join(" ") });
     }
 
     if (parsedVariants.length === 0) {
-      return res.status(400).json({ success: false, error: "At least one valid variant is required." });
+      return res.status(400).json({
+        success: false,
+        error: "At least one valid variant is required.",
+      });
     }
 
     // Description word count
     const wordCountDesc = finalDescription.split(/\s+/).length;
     if (wordCountDesc < 10 || wordCountDesc > 150) {
-      return res.status(400).json({ success: false, error: "Description must be between 10 and 150 words." });
+      return res.status(400).json({
+        success: false,
+        error: "Description must be between 10 and 150 words.",
+      });
     }
 
     // Notes word count
     const finalNotes = notes ? notes.trim() : oldProduct.notes;
     const wordCountNotes = finalNotes.split(/\s+/).length;
     if (wordCountNotes > 150 || (wordCountNotes > 0 && wordCountNotes < 5)) {
-      return res.status(400).json({ success: false, error: "Notes must be either empty or at least 5 words, and no more than 150 words." });
+      return res.status(400).json({
+        success: false,
+        error:
+          "Notes must be either empty or at least 5 words, and no more than 150 words.",
+      });
     }
 
     // Brand validation
     const finalBrand = brand ? brand.trim() : oldProduct.brand;
     if (finalBrand && !/^[A-Z\s]+$/.test(finalBrand)) {
-      return res.status(400).json({ success: false, error: "Brand name must be uppercase letters only." });
+      return res.status(400).json({
+        success: false,
+        error: "Brand name must be uppercase letters only.",
+      });
     }
 
     // Check duplicate name (exclude current product)
     if (finalName.toLowerCase() !== oldProduct.name.toLowerCase()) {
-      const existingProduct = await Products.findOne({ 
-        name: { $regex: new RegExp(`^${finalName}$`, 'i') },
+      const existingProduct = await Products.findOne({
+        name: { $regex: new RegExp(`^${finalName}$`, "i") },
         _id: { $ne: productId },
-        isDeleted: false 
+        isDeleted: false,
       });
       if (existingProduct) {
-        return res.status(400).json({ success: false, error: "Product name already exists. Please choose a unique name." });
+        return res.status(400).json({
+          success: false,
+          error: "Product name already exists. Please choose a unique name.",
+        });
       }
     }
 
@@ -888,7 +1009,8 @@ const getEditProducts = async (req, res) => {
     oldProduct.gender = finalGender;
     oldProduct.concentration = finalConcentration;
     oldProduct.images = updatedImages;
-    oldProduct.variants = parsedVariants.map(v => ({ // Strip index
+    oldProduct.variants = parsedVariants.map((v) => ({
+      // Strip index
       mlSize: v.mlSize,
       stock: v.stock,
       basePrice: v.basePrice,
@@ -901,21 +1023,51 @@ const getEditProducts = async (req, res) => {
     const oldCategory = oldProduct.category; // Already saved, but was set before save
     if (oldCategory && oldCategory !== finalCategory) {
       // Remove from old category
-      await Categories.findByIdAndUpdate(
-        oldCategory,
-        { $pull: { products: productId } }
-      );
+      await Categories.findByIdAndUpdate(oldCategory, {
+        $pull: { products: productId },
+      });
       // Add to new category
-      await Categories.findByIdAndUpdate(
-        finalCategory,
-        { $push: { products: productId } }
-      );
+      await Categories.findByIdAndUpdate(finalCategory, {
+        $push: { products: productId },
+      });
     }
 
-    res.json({ success: true, message: 'Product Has Been Edited' });
+    res.json({ success: true, message: "Product Has Been Edited" });
   } catch (err) {
-    console.error('Error editing product:', err);
-    res.status(500).json({ success: false, error: 'Something went wrong while editing the product. Please try again.' });
+    console.error("Error editing product:", err);
+    res.status(500).json({
+      success: false,
+      error:
+        "Something went wrong while editing the product. Please try again.",
+    });
+  }
+};
+
+const getProductDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch product with populated categories
+    const product = await Products.findById(id)
+      .populate("category", "name") // Populate category names
+      .lean(); // Use lean for better performance since we're not modifying
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // You can add more data processing here if needed, e.g., calculate totals
+
+    // Render the view
+    res.render("admin/productDetails", {
+      title: "Product Details - Admin",
+      product,
+      // Add other locals if needed, e.g., categories: await Category.find()
+    });
+  } catch (error) {
+    console.error("Error fetching product details:", error);
+    (req.session.error = "error"), "Failed to load product details.";
+    res.redirect("/admin/products");
   }
 };
 const unlistProduct = async (req, res) => {
@@ -925,7 +1077,7 @@ const unlistProduct = async (req, res) => {
     product.isListed = !product.isListed;
     await product.save();
     req.session.successMessage = "Product Status Has Been Changed  ";
-    res.redirect("/admin/products");
+    res.redirect(`/admin/products/${req.params.id}`);
   } catch (error) {
     console.error(error);
     res.status(500).send("Server Error");
@@ -1013,11 +1165,662 @@ const blockUser = async (req, res) => {
     res.status(500).send("Server Error");
   }
 };
-
-const getSaleReport = async (req, res) => {
+const formatRevenue = (amount) => {
+  if (amount >= 100000) {
+    return (amount / 100000).toFixed(2) + "L";
+  }
+  return amount.toLocaleString();
+};
+const getSalesReport = async (req, res) => {
   try {
-    res.render("admin/pageNotFound");
-  } catch (error) {}
+    const { startDate, endDate } = req.body || {}; // For filtered reports
+    const PRICE_FIELD = "$items.discoundedPrice"; // Fixed to match schema: discoundedPrice
+
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let successfulOrders = 0;
+    let deliveredCount = 0;
+    let totalDeliveryDays = 0;
+    const userSet = new Set();
+    const monthlyRevenue = {}; // Keyed by "MMM YYYY" for cross-year accuracy
+    const statusCounts = {
+      Placed: 0,
+      Shipped: 0,
+      "Out for Delivery": 0,
+      Delivered: 0,
+      Cancelled: 0,
+      Returned: 0,
+    };
+
+    // Build date filter
+    const dateFilter = {};
+    if (startDate)
+      dateFilter.placedAt = {
+        ...dateFilter.placedAt,
+        $gte: new Date(startDate),
+      };
+    if (endDate)
+      dateFilter.placedAt = { ...dateFilter.placedAt, $lte: new Date(endDate) };
+
+    const orders = await Orders.find(dateFilter).populate("items.productId");
+
+    if (orders.length === 0) {
+      return res.render("admin/salesReport", {
+        totalRevenue: "₹0",
+        avgOrderValue: "₹0",
+        totalOrders: 0,
+        newCustomers: 0,
+        revenueData: JSON.stringify({ labels: [], datasets: [] }),
+        topProductsData: JSON.stringify({ labels: [], datasets: [] }),
+        categoryData: JSON.stringify({ labels: [], datasets: [] }),
+        genderData: JSON.stringify({
+          labels: ["Men", "Women", "Unisex"],
+          datasets: [
+            {
+              data: [0, 0, 0],
+              backgroundColor: ["#3b82f6", "#ec4899", "#10b981"],
+              borderColor: ["#1f2937", "#1f2937", "#1f2937"],
+              borderWidth: 1,
+            },
+          ],
+        }),
+        statusData: JSON.stringify({
+          labels: [
+            "Placed",
+            "Shipped",
+            "Out for Delivery",
+            "Delivered",
+            "Cancelled",
+            "Returned",
+          ],
+          datasets: [
+            {
+              data: [0, 0, 0, 0, 0, 0],
+              backgroundColor: [
+                "#f59e0b",
+                "#3b82f6",
+                "#10b981",
+                "#10b981",
+                "#ef4444",
+                "#8b5cf6",
+              ],
+              borderColor: "#1f2937",
+              borderWidth: 2,
+            },
+          ],
+        }),
+        menSales: 0,
+        womenSales: 0,
+        unisexSales: 0,
+        groupedSalesData: [],
+      });
+    }
+
+    orders.forEach((order) => {
+      totalOrders++;
+      if (order.orderStatus) {
+        statusCounts[order.orderStatus] =
+          (statusCounts[order.orderStatus] || 0) + 1;
+      }
+
+      const monthKey = moment(order.placedAt).format("MMM YYYY"); // Accurate key
+      if (order.orderStatus === "Delivered") {
+        totalRevenue += order.totalAmount || 0;
+        successfulOrders++;
+        monthlyRevenue[monthKey] =
+          (monthlyRevenue[monthKey] || 0) + (order.totalAmount || 0);
+        userSet.add(order.userId.toString());
+
+        if (order.deliveredAt) {
+          deliveredCount++;
+          let diff = moment(order.deliveredAt).diff(
+            moment(order.placedAt),
+            "days"
+          );
+          if (diff < 0) diff = 0; // Clamp negatives
+          totalDeliveryDays += diff;
+        }
+      }
+    });
+
+    const newCustomers = userSet.size;
+    const avgOrderValue =
+      successfulOrders > 0
+        ? Math.round(totalRevenue / successfulOrders).toString()
+        : "0";
+
+    // Sort chronologically, limit to last 12 months
+    const sortedMonths = Object.keys(monthlyRevenue)
+      .map((key) => ({ key, date: moment(key, "MMM YYYY") }))
+      .sort((a, b) => a.date - b.date)
+      .slice(-12); // Adjust slice(-N) for more/fewer months
+    const revenueLabels = sortedMonths.map((m) => m.key);
+    const revenueValues = sortedMonths.map((m) => monthlyRevenue[m.key] || 0);
+
+    const revenueData = {
+      labels: revenueLabels.length > 0 ? revenueLabels : [], // Empty if no data
+      datasets: [
+        {
+          label: "Revenue",
+          data: revenueValues,
+          backgroundColor: "#c5a987",
+          borderColor: "#c5a987",
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    // Top Products (units sold, limited to 7) - add date filter
+    const topProductsAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: "$items.productId",
+          name: { $first: { $ifNull: ["$product.name", "$items.name"] } }, // Fallback to items.name if available
+          totalUnits: { $sum: "$items.quantity" },
+        },
+      },
+      { $sort: { totalUnits: -1 } },
+      { $limit: 7 },
+    ]);
+
+    const topProductsData = {
+      labels: topProductsAgg.map((p) =>
+        p.name ? p.name.substring(0, 15) : "Unknown"
+      ),
+      datasets: [
+        {
+          label: "Units Sold",
+          data: topProductsAgg.map((p) => p.totalUnits || 0),
+          backgroundColor: "#c5a987",
+          borderColor: "#c5a987",
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    // Category (fixed PRICE_FIELD) - add date filter
+    const categoryAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: {
+          path: "$product.category",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "product.category",
+          foreignField: "_id",
+          as: "categoryDoc",
+        },
+      },
+      { $unwind: { path: "$categoryDoc", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: { $ifNull: ["$categoryDoc.name", "Uncategorized"] },
+          totalSales: { $sum: { $multiply: ["$items.quantity", PRICE_FIELD] } },
+        },
+      },
+      { $sort: { totalSales: -1 } },
+      { $limit: 5 },
+    ]);
+
+    const categoryData = {
+      labels: categoryAgg.map((c) => c._id || "Uncategorized"),
+      datasets: [
+        {
+          data: categoryAgg.map((c) => c.totalSales || 0),
+          backgroundColor: [
+            "#3b82f6",
+            "#10b981",
+            "#f59e0b",
+            "#ef4444",
+            "#8b5cf6",
+          ],
+          borderColor: "#1f2937",
+          borderWidth: 2,
+        },
+      ],
+    };
+
+    // Gender (fixed PRICE_FIELD) - add date filter
+    const genderAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: { $ifNull: ["$product.gender", "unknown"] },
+          totalSales: { $sum: { $multiply: ["$items.quantity", PRICE_FIELD] } },
+        },
+      },
+    ]);
+
+    let menSales = 0,
+      womenSales = 0,
+      unisexSales = 0;
+
+    genderAgg.forEach((g) => {
+      if (g._id === "MEN") menSales = g.totalSales || 0;
+      if (g._id === "WOMEN") womenSales = g.totalSales || 0;
+      if (g._id === "UNISEX") unisexSales = g.totalSales || 0;
+    });
+
+    const genderData = {
+      labels: ["Men", "Women", "Unisex"],
+      datasets: [
+        {
+          data: [menSales, womenSales, unisexSales],
+          backgroundColor: ["#3b82f6", "#ec4899", "#10b981"],
+          borderColor: ["#1f2937", "#1f2937", "#1f2937"],
+          borderWidth: 1,
+        },
+      ],
+    };
+
+    // Status (unchanged) - add date filter
+    const statusAgg = await Orders.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: "$orderStatus",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+    statusAgg.forEach((stat) => {
+      statusCounts[stat._id] = stat.count;
+    });
+
+    const statusData = {
+      labels: [
+        "Placed",
+        "Shipped",
+        "Out for Delivery",
+        "Delivered",
+        "Cancelled",
+        "Returned",
+      ],
+      datasets: [
+        {
+          data: [
+            statusCounts.Placed || 0,
+            statusCounts.Shipped || 0,
+            statusCounts["Out for Delivery"] || 0,
+            statusCounts.Delivered || 0,
+            statusCounts.Cancelled || 0,
+            statusCounts.Returned || 0,
+          ],
+          backgroundColor: [
+            "#f59e0b",
+            "#3b82f6",
+            "#10b981",
+            "#10b981",
+            "#ef4444",
+            "#8b5cf6",
+          ],
+          borderColor: "#1f2937",
+          borderWidth: 2,
+        },
+      ],
+    };
+
+    // Aggregates for sales data (delivered, returns) - fixed PRICE_FIELD, add date filter
+    const deliveredAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: {
+            productId: "$items.productId",
+            mlSize: "$items.mlSize",
+          },
+          productName: { $first: "$product.name" },
+          mlSize: { $first: "$items.mlSize" },
+          soldQuantity: { $sum: "$items.quantity" },
+          revenue: {
+            $sum: { $multiply: ["$items.quantity", PRICE_FIELD] },
+          },
+        },
+      },
+      { $sort: { revenue: -1 } },
+    ]);
+
+    const returnedAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Returned" } },
+      { $unwind: "$returndProduct" },
+      {
+        $group: {
+          _id: {
+            productId: "$returndProduct.productId",
+            mlSize: "$returndProduct.mlSize",
+          },
+          returns: { $sum: "$returndProduct.returndQuantity" },
+        },
+      },
+    ]);
+
+    // Maps for quick lookup (using string keys with ObjectId.toString())
+    const deliveredMap = new Map();
+    deliveredAgg.forEach((item) => {
+      const key = `${item._id.productId.toString()}_${item.mlSize}`;
+      deliveredMap.set(key, {
+        soldQuantity: item.soldQuantity || 0,
+        revenue: item.revenue || 0,
+      });
+    });
+
+    const returnsMap = new Map();
+    returnedAgg.forEach((r) => {
+      const key = `${r._id.productId.toString()}_${r._id.mlSize}`;
+      returnsMap.set(key, r.returns || 0);
+    });
+
+    // Fetch all listed, non-deleted products
+    const allProducts = await Products.find({
+      isListed: true,
+      isDeleted: false,
+    });
+
+    // Build groupedSalesData: one entry per product, with its variants
+    const groupedSalesData = [];
+    for (const product of allProducts) {
+      const productVariants = [];
+      let productTotalRevenue = 0;
+
+      for (const variant of product.variants) {
+        if (variant.isListed && !variant.isDeleted) {
+          const mlSizeStr = String(variant.mlSize);
+          const key = `${product._id.toString()}_${mlSizeStr}`;
+          const delivered = deliveredMap.get(key) || {
+            soldQuantity: 0,
+            revenue: 0,
+          };
+          const returns = returnsMap.get(key) || 0;
+
+          const variantData = {
+            mlSize: variant.mlSize,
+            soldQuantity: delivered.soldQuantity,
+            returns,
+            revenue: delivered.revenue,
+            stock: variant.stock || 0,
+          };
+
+          productVariants.push(variantData);
+          productTotalRevenue += delivered.revenue;
+        }
+      }
+
+      if (productVariants.length > 0) {
+        // Sort variants by mlSize ascending
+        productVariants.sort((a, b) => a.mlSize - b.mlSize);
+        groupedSalesData.push({
+          name: product.name || "Unknown",
+          variants: productVariants,
+          totalRevenue: productTotalRevenue,
+        });
+      }
+    }
+
+    // Sort products by totalRevenue descending
+    groupedSalesData.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+    res.render("admin/salesReport", {
+      totalRevenue: `₹${totalRevenue.toLocaleString()}`,
+      avgOrderValue: `₹${avgOrderValue}`,
+      totalOrders,
+      newCustomers,
+
+      revenueData,
+      topProductsData,
+      categoryData,
+      genderData,
+      statusData,
+
+      menSales,
+      womenSales,
+      unisexSales,
+      groupedSalesData,
+    });
+  } catch (error) {
+    console.error("Sales Report Error:", error);
+    res.status(500).send("Server Error");
+  }
+};
+
+// Export handler for Excel
+const exportSalesReport = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    const PRICE_FIELD = "$items.discoundedPrice";
+
+    // Build date filter
+    const dateFilter = {};
+    if (startDate)
+      dateFilter.placedAt = {
+        ...dateFilter.placedAt,
+        $gte: new Date(startDate),
+      };
+    if (endDate)
+      dateFilter.placedAt = { ...dateFilter.placedAt, $lte: new Date(endDate) };
+
+    // Compute data similar to getSalesReport (reuse logic if possible, but for brevity, recompute key parts)
+    const orders = await Orders.find(dateFilter).populate("items.productId");
+
+    let totalRevenue = 0;
+    let totalOrders = 0;
+    let successfulOrders = 0;
+    const userSet = new Set();
+
+    orders.forEach((order) => {
+      totalOrders++;
+      if (order.orderStatus === "Delivered") {
+        totalRevenue += order.totalAmount || 0;
+        successfulOrders++;
+        userSet.add(order.userId.toString());
+      }
+    });
+
+    const newCustomers = userSet.size;
+    const avgOrderValue =
+      successfulOrders > 0 ? Math.round(totalRevenue / successfulOrders) : 0;
+
+    // Detailed data
+    const deliveredAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $unwind: "$items" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "items.productId",
+          foreignField: "_id",
+          as: "product",
+        },
+      },
+      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: {
+            productId: "$items.productId",
+            mlSize: "$items.mlSize",
+          },
+          productName: { $first: "$product.name" },
+          mlSize: { $first: "$items.mlSize" },
+          soldQuantity: { $sum: "$items.quantity" },
+          revenue: {
+            $sum: { $multiply: ["$items.quantity", PRICE_FIELD] },
+          },
+        },
+      },
+    ]);
+
+    const returnedAgg = await Orders.aggregate([
+      { $match: { ...dateFilter, orderStatus: "Returned" } },
+      { $unwind: "$returndProduct" },
+      {
+        $group: {
+          _id: {
+            productId: "$returndProduct.productId",
+            mlSize: "$returndProduct.mlSize",
+          },
+          returns: { $sum: "$returndProduct.returndQuantity" },
+        },
+      },
+    ]);
+
+    const deliveredMap = new Map();
+    deliveredAgg.forEach((item) => {
+      const key = `${item._id.productId.toString()}_${item.mlSize}`;
+      deliveredMap.set(key, {
+        soldQuantity: item.soldQuantity || 0,
+        revenue: item.revenue || 0,
+        productName: item.productName,
+      });
+    });
+
+    const returnsMap = new Map();
+    returnedAgg.forEach((r) => {
+      const key = `${r._id.productId.toString()}_${r._id.mlSize}`;
+      returnsMap.set(key, r.returns || 0);
+    });
+
+    const allProducts = await Products.find({
+      isListed: true,
+      isDeleted: false,
+    });
+
+    // Flatten data for Excel (repeat product name)
+    const exportData = [];
+    allProducts.forEach((product) => {
+      product.variants.forEach((variant) => {
+        if (variant.isListed && !variant.isDeleted) {
+          const mlSizeStr = String(variant.mlSize);
+          const key = `${product._id.toString()}_${mlSizeStr}`;
+          const delivered = deliveredMap.get(key) || {
+            soldQuantity: 0,
+            revenue: 0,
+            productName: product.name,
+          };
+          const returns = returnsMap.get(key) || 0;
+
+          exportData.push({
+            productName: product.name,
+            mlSize: variant.mlSize,
+            soldQuantity: delivered.soldQuantity,
+            returns,
+            revenue: delivered.revenue,
+            stock: variant.stock || 0,
+          });
+        }
+      });
+    });
+
+    exportData.sort((a, b) => b.revenue - a.revenue);
+
+    // Use exceljs to generate file (assume installed: npm i exceljs)
+    const ExcelJS = require("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Sales Report");
+
+    // Add summary row
+    worksheet.addRow(["Summary"]);
+    worksheet.addRow(["Total Revenue", `₹${totalRevenue.toLocaleString()}`]);
+    worksheet.addRow(["Avg Order Value", `₹${avgOrderValue.toLocaleString()}`]);
+    worksheet.addRow(["Total Orders", totalOrders]);
+    worksheet.addRow(["Total Customers", newCustomers]);
+    worksheet.addRow([]);
+
+    // Add headers
+    worksheet.addRow([
+      "Product Name",
+      "ML Size",
+      "Sold Quantity",
+      "Returns",
+      "Revenue",
+      "Current Stock",
+    ]);
+
+    // Add data
+    exportData.forEach((row) => {
+      worksheet.addRow([
+        row.productName,
+        `${row.mlSize}ml`,
+        row.soldQuantity,
+        row.returns,
+        `₹${row.revenue.toLocaleString()}`,
+        row.stock,
+      ]);
+    });
+
+    // Style headers
+    worksheet.getRow(8).font = { bold: true };
+    worksheet.columns = [
+      { width: 30 },
+      { width: 10 },
+      { width: 15 },
+      { width: 10 },
+      { width: 15 },
+      { width: 15 },
+    ];
+
+    // Set response headers
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=sales-report-${startDate || "full"}-to-${
+        endDate || "full"
+      }.xlsx`
+    );
+
+    // Send workbook
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error("Export error:", error);
+    res.status(500).json({ message: "Export failed" });
+  }
 };
 
 // Category fields
@@ -1301,17 +2104,20 @@ const getReturn = async (req, res) => {
 const getReturnDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
-    const order = await Orders.findById(orderId).populate('userId', 'name email phone');
+    const order = await Orders.findById(orderId).populate(
+      "userId",
+      "name email phone"
+    );
     if (!order) {
-      req.session.error = 'Order not found';
-      return res.redirect('/admin/returns');
+      req.session.error = "Order not found";
+      return res.redirect("/admin/returns");
     }
 
     const user = order.userId;
     const returnItem = order.returndProduct[0];
     if (!returnItem) {
-      req.session.error = 'Return not found';
-      return res.redirect('/admin/returns');
+      req.session.error = "Return not found";
+      return res.redirect("/admin/returns");
     }
 
     // Add missing fields virtually
@@ -1319,11 +2125,13 @@ const getReturnDetails = async (req, res) => {
       ...returnItem.toObject(),
       returnId: nanoid(6),
       images: [],
-      rejectReason: returnItem.adminApproved === 'Rejected' ? 'No reason provided' : '',
-      approvedAt: returnItem.adminApproved === 'Approved' ? new Date() : null,
-      rejectedAt: returnItem.adminApproved === 'Rejected' ? new Date() : null,
-      processingAt: returnItem.adminApproved === 'Processing' ? new Date() : null,
-      completedAt: returnItem.adminApproved === 'Completed' ? new Date() : null,
+      rejectReason:
+        returnItem.adminApproved === "Rejected" ? "No reason provided" : "",
+      approvedAt: returnItem.adminApproved === "Approved" ? new Date() : null,
+      rejectedAt: returnItem.adminApproved === "Rejected" ? new Date() : null,
+      processingAt:
+        returnItem.adminApproved === "Processing" ? new Date() : null,
+      completedAt: returnItem.adminApproved === "Completed" ? new Date() : null,
       returndQuantity: returnItem.returndQuantity || 1,
     };
 
@@ -1333,7 +2141,7 @@ const getReturnDetails = async (req, res) => {
     delete req.session.success;
     delete req.session.error;
 
-    res.render('admin/returnDetails', {
+    res.render("admin/returnDetails", {
       order,
       returnItem: enhancedReturnItem,
       user,
@@ -1342,70 +2150,427 @@ const getReturnDetails = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    req.session.error = 'Failed to fetch return details';
-    res.redirect('/admin/returns');
+    req.session.error = "Failed to fetch return details";
+    res.redirect("/admin/returns");
   }
-}
+};
 
 const returnApprove = async (req, res) => {
   const { orderId } = req.params;
   try {
     const order = await Orders.findById(orderId);
     if (!order) {
-      req.session.error = 'Order not found';
+      req.session.error = "Order not found";
       return res.redirect(`/admin/return/${orderId}`);
     }
 
     const returnItem = order.returndProduct[0];
-    if (!returnItem || returnItem.adminApproved !== 'Requested') {
-      req.session.error = 'Invalid return or already processed';
+    if (!returnItem || returnItem.adminApproved !== "Requested") {
+      req.session.error = "Invalid return or already processed";
       return res.redirect(`/admin/return/${orderId}`);
     }
 
     // Update return status
-    returnItem.adminApproved = 'Approved';
+    returnItem.adminApproved = "Approved";
 
     // Update order status to Returned
-    order.orderStatus = 'Returned';
+    order.orderStatus = "Returned";
 
     // Update original item status to Returned and reduce quantity
-    const originalItem = order.items.find(item => 
-      item.productId.toString() === returnItem.productId.toString() && 
-      item.mlSize === returnItem.mlSize
+    const originalItem = order.items.find(
+      (item) =>
+        item.productId.toString() === returnItem.productId.toString() &&
+        item.mlSize === returnItem.mlSize
     );
     if (originalItem) {
-      originalItem.productStatus = 'Returned';
+      originalItem.productStatus = "Returned";
       originalItem.quantity -= returnItem.returndQuantity;
     }
 
     // Add tracking entry for return approval
     order.tracking.push({
-      status: 'Return Approved',
+      status: "Return Approved",
       date: new Date(),
-      message: 'Return approved by admin and stock updated'
+      message: "Return approved by admin and stock updated",
     });
 
     // Increase stock in specific variant
     await Products.findOneAndUpdate(
-      { 
-        _id: returnItem.productId, 
-        'variants.mlSize': returnItem.mlSize 
+      {
+        _id: returnItem.productId,
+        "variants.mlSize": returnItem.mlSize,
       },
-      { 
-        $inc: { 'variants.$.stock': returnItem.returndQuantity } 
+      {
+        $inc: { "variants.$.stock": returnItem.returndQuantity },
       }
     );
 
     await order.save();
 
-    req.session.success = 'Return approved, order status updated, and stock restored successfully';
+    req.session.success =
+      "Return approved, order status updated, and stock restored successfully";
     res.redirect(`/admin/return/${orderId}`);
   } catch (error) {
     console.error(error);
-    req.session.error = 'Failed to approve return';
+    req.session.error = "Failed to approve return";
     res.redirect(`/admin/return/${orderId}`);
   }
 };
+const getOffers = async (req, res) => {
+  let successMessage = null;
+  let errorMessage = null;
+
+  try {
+    // Handle messages from redirects
+    if (req.query.success) {
+      successMessage = decodeURIComponent(req.query.success);
+    }
+    if (req.query.error) {
+      errorMessage = decodeURIComponent(req.query.error);
+    }
+    if (req.session.error) {
+      errorMessage = req.session.error;
+      delete req.session.error; // Clear to avoid repeats
+    }
+    if (req.session.success) {
+      successMessage = req.session.success;
+      delete req.session.success;
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Total offers count
+    const totalOffers = await Offer.countDocuments({});
+
+    // Active offers count
+    const activeOffersCount = await Offer.countDocuments({ isActive: true });
+
+    // Inactive offers count
+    const inactiveOffersCount = totalOffers - activeOffersCount;
+
+    // Total discount value (sum of all discountValue, regardless of type)
+    const totalDiscountAggregation = await Offer.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalDiscount: { $sum: "$discountValue" },
+        },
+      },
+    ]);
+    const totalDiscountCount =
+      totalDiscountAggregation.length > 0
+        ? totalDiscountAggregation
+        : [{ totalDiscount: 0 }];
+
+    // Fetch paginated offers with populated target
+    const offers = await Offer.find({ isDeleted: false })
+      .populate("targetId")
+      .sort({ createdAt: -1 }) // Sort by most recent first
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate total pages
+    const totalPages = Math.ceil(totalOffers / limit);
+
+    // Products and details for listing
+    const products = await Products.find({ isDeleted: false, isListed: true })
+      .select("_id name price description images variants")
+      .limit(50); // Adjust model/import
+    const categories = await Categories.find({
+      isActive: true,
+      isDeleted: false,
+    })
+      .select("_id name description")
+      .limit(50);
+
+    // Render the view (adjust the view path as needed, e.g., 'admin/offers/list')
+    res.render("admin/offers", {
+      offers,
+      products,
+      categories,
+      totalOffers,
+      activeOffersCount,
+      inactiveOffersCount,
+      totalDiscountCount,
+      currentPage: page,
+      totalPages,
+      limit,
+      successMessage,
+      errorMessage,
+    });
+  } catch (error) {
+    console.error("Error fetching offers:", error);
+    // Re-render with empty data or redirect, but for simplicity, render with error
+    res.render("admin/offers", {
+      offers: [],
+      totalOffers: 0,
+      activeOffersCount: 0,
+      inactiveOffersCount: 0,
+      totalDiscountCount: [{ totalDiscount: 0 }],
+      currentPage: 1,
+      totalPages: 1,
+      limit: 10,
+      successMessage: null,
+      errorMessage: error.message,
+    });
+  }
+};
+
+const createOffer = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      discountType,
+      discountValue,
+      appliesTo,
+      startDate,
+      endDate,
+    } = req.body;
+    let targetId = req.body.targetId; // Could be string (category) or array (products)
+
+    // Normalize targetId to always be an array
+    let rawTargetIds = Array.isArray(targetId) ? targetId : [targetId];
+    // Filter out empty or invalid strings before further processing
+    const targetIds = rawTargetIds.filter((id) => id && id.trim() !== "");
+
+    if (!name?.trim()) {
+      req.session.error = "Offer name is required";
+      return res.redirect("/admin/offers");
+    }
+    if (!discountType || !["flat", "percentage"].includes(discountType)) {
+      req.session.error = "Valid discount type is required";
+      return res.redirect("/admin/offers");
+    }
+    const discountNum = parseFloat(discountValue);
+    if (isNaN(discountNum) || discountNum <= 0) {
+      req.session.error = "Discount value must be greater than 0";
+      return res.redirect("/admin/offers");
+    }
+    if (!appliesTo || !["product", "category"].includes(appliesTo)) {
+      req.session.error =
+        "Must specify if offer applies to product or category";
+      return res.redirect("/admin/offers");
+    }
+    if (
+      !targetIds?.length ||
+      targetIds.some((id) => !mongoose.Types.ObjectId.isValid(id))
+    ) {
+      req.session.error = "Valid target ID(s) are required";
+      return res.redirect("/admin/offers");
+    }
+    if (!startDate) {
+      req.session.error = "Start date is required";
+      return res.redirect("/admin/offers");
+    }
+    if (!endDate) {
+      req.session.error = "End date is required";
+      return res.redirect("/admin/offers");
+    }
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    if (end <= start) {
+      req.session.error = "End date must be after start date";
+      return res.redirect("/admin/offers");
+    }
+    if (discountType === "percentage" && discountNum > 100) {
+      req.session.error = "Percentage discount cannot exceed 100%";
+      return res.redirect("/admin/offers");
+    }
+
+    // Validate targets (products or category)
+    if (appliesTo === "product") {
+      const validProducts = await Products.countDocuments({
+        _id: { $in: targetIds },
+        isDeleted: false,
+        isListed: true,
+      });
+      if (validProducts !== targetIds.length) {
+        req.session.error = "One or more selected products are invalid";
+        return res.redirect("/admin/offers");
+      }
+    } else {
+      const validCategory = await Categories.countDocuments({
+        _id: targetIds[0],
+        isActive: true,
+        isDeleted: false,
+      });
+      if (!validCategory) {
+        req.session.error = "Selected category is invalid";
+        return res.redirect("/admin/offers");
+      }
+    }
+
+    const offerData = {
+      name: name.trim(),
+      description: description?.trim() || undefined,
+      discountType,
+      discountValue: discountNum,
+      appliesTo,
+      targetModel: appliesTo === "product" ? "Products" : "Categories",
+      targetId: targetIds,
+      startDate: start,
+      endDate: end,
+      isActive: true,
+    };
+
+    const offer = new Offer(offerData);
+    await offer.save();
+
+    // Redirect with success message (handled in GET)
+    req.session.success = "Offer created successfully!";
+    res.redirect("/admin/offers");
+  } catch (error) {
+    console.error("Error creating offer:", error);
+    // Redirect with error message (handled in GET)
+    req.session.error = error.message;
+    res.redirect("/admin/offers");
+  }
+};
+const getOfferDetails = async (req, res) => {
+  let successMessage = null;
+  let errorMessage = null;
+
+  try {
+    // Handle messages from redirects
+    if (req.session.success) {
+      successMessage = req.session.success;
+      delete req.session.success;
+    }
+    if (req.session.error) {
+      errorMessage = req.session.error;
+      delete req.session.error;
+    }
+
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      req.session.error = "Invalid offer ID";
+      return res.redirect("/admin/offers");
+    }
+
+    // Fetch offer with populated targets (uses refPath: "targetModel" from schema)
+    const offer = await Offer.findById(id).populate("targetId");
+
+    if (!offer) {
+      console.error(`Offer not found for ID: ${id}`); // Log for server-side debug
+      req.session.error = "Offer not found";
+      return res.redirect("/admin/offers");
+    }
+
+    // Log for debugging (now includes populated targets)
+    console.log(
+      "Offer with populated targets:",
+      JSON.stringify(offer, null, 2)
+    );
+
+    res.render("admin/offerDetails", {
+      offer,
+      success: successMessage,
+      error: errorMessage,
+    });
+  } catch (error) {
+    console.error("Error fetching offer details:", error); // This already exists, but ensure it's visible in your logs (e.g., console or file)
+    req.session.error = error.message;
+    res.redirect("/admin/offers");
+  }
+};
+const toggleOfferStatus = async (req, res) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      req.session.error = "Invalid offer ID";
+      return res.redirect("/admin/offers");
+    }
+
+    const offer = await Offer.findOne({ _id: req.params.id });
+
+    if (!offer) {
+      req.session.error = "Offer not found";
+      return res.redirect("/admin/offers");
+    }
+
+    offer.isActive = !offer.isActive;
+    await offer.save();
+    req.session.success = offer.isActive
+      ? "Offer activated successfully!"
+      : "Offer deactivated successfully!";
+    res.redirect(`/admin/offers/${req.params.id}`);
+  } catch (error) {
+    console.error("Error toggling offer status:", error);
+    req.session.error = error.message;
+    res.redirect("/admin/offers");
+  }
+};
+
+const updateOfferEndDate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { endDate } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      req.session.error = "Invalid offer ID";
+      return res.redirect("/admin/offers");
+    }
+
+    if (!endDate) {
+      req.session.error = "End date is required";
+      return res.redirect(`/admin/offers/${id}`);
+    }
+
+    const offer = await Offer.findById(id);
+
+    if (!offer) {
+      req.session.error = "Offer not found";
+      return res.redirect("/admin/offers");
+    }
+
+    const newEnd = new Date(endDate);
+    if (newEnd <= offer.startDate) {
+      req.session.error = "End date must be after start date";
+      return res.redirect(`/admin/offers/${id}`);
+    }
+
+    offer.endDate = newEnd;
+    await offer.save();
+
+    req.session.success = "Offer end date updated successfully!";
+    res.redirect(`/admin/offers/${id}`);
+  } catch (error) {
+    console.error("Error updating offer end date:", error);
+    req.session.error = error.message;
+    res.redirect("/admin/offers");
+  }
+};
+const deleteOffer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      req.session.error = "Invalid offer ID";
+      return res.redirect("/admin/offers");
+    }
+
+    const offer = await Offer.findById(id);
+
+    if (!offer) {
+      req.session.error = "Offer not found";
+      return res.redirect("/admin/offers");
+    }
+
+    offer.isDeleted = true;
+    await offer.save();
+
+    req.session.success = "Offer deleted successfully!";
+    res.redirect("/admin/offers");
+  } catch (error) {
+    console.error("Error deleting offer:", error);
+    req.session.error = error.message;
+    res.redirect("/admin/offers");
+  }
+};
+
 const logOut = (req, res) => {
   try {
     delete req.session.admin;
@@ -1432,13 +2597,15 @@ export {
   getViewOrders,
   updateOrderStatus,
   getProducts,
+  getProductDetails,
   getAddProducts,
   postAddProducts,
   getEditProducts,
   postEditProduct,
   unlistProduct,
   deleteProduct,
-  getSaleReport,
+  getSalesReport,
+  exportSalesReport,
   getcustomers,
   blockUser,
   getCategories,
@@ -1449,5 +2616,11 @@ export {
   getReturn,
   getReturnDetails,
   returnApprove,
+  getOffers,
+  createOffer,
+  getOfferDetails,
+  toggleOfferStatus,
+  updateOfferEndDate,
+  deleteOffer,
   logOut,
 };
