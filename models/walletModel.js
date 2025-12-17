@@ -57,6 +57,29 @@ const walletSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Add a static refund utility to walletSchema
+walletSchema.statics.refundToWallet = async function(userId, amount, description, referenceId = null) {
+  if (!userId || !amount || amount <= 0) throw new Error("Invalid refund arguments");
+  let wallet = await this.findOne({ user: userId });
+  if (!wallet) {
+    wallet = new this({ user: userId });
+  }
+  wallet.balance += amount;
+  wallet.transactions.unshift({
+    description: description || "Refund for order/product",
+    amount: amount,
+    date: new Date(),
+    type: 'credit',
+    source: 'refund',
+    referenceId: referenceId || undefined,
+  });
+  if (wallet.transactions.length > 100) {
+    wallet.transactions = wallet.transactions.slice(0, 100);
+  }
+  await wallet.save();
+  return wallet.balance;
+};
+
 const Wallet = mongoose.model('Wallet', walletSchema);
 
 export default Wallet;

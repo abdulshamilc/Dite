@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Confirm Order Cancellation</title>
-    <link rel="stylesheet" href="/style/user/header.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
     <style>
         :root {
             --primary: #1a1a1a;
@@ -316,5 +317,6 @@
             hiddenInput.value = textarea.value;
         });
     </script>
+    <%- include("../../partials/user/footer") %>
 </body>
 </html>

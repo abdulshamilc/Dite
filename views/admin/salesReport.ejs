@@ -242,17 +242,11 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <!-- Revenue Overview Chart -->
+        <!-- Revenue Overview Chart - Full Width -->
+        <div class="mb-8">
           <div class="chart-container">
             <div class="chart-title">Revenue Overview</div>
             <canvas id="revenueChart"></canvas>
-          </div>
-
-          <!-- Top Products List -->
-          <div class="top-products-container">
-            <div class="chart-title">Top 7 Products</div>
-            <div id="topProductsList" class="products-list"></div>
           </div>
         </div>
 
@@ -285,48 +279,53 @@
           </div>
         </div>
 
-        <!-- Detailed Sales Table -->
+        <!-- Sales Report Table - Order Based -->
         <div class="sales-table-container">
-          <h2 class="text-2xl font-bold text-white mb-4">Detailed Variant Sales</h2>
-          <% if (groupedSalesData && groupedSalesData.length > 0) { %>
-          <table class="sales-table w-full">
-            <thead>
-              <tr>
-                <th>Product Name</th>
-                <th>ML Size</th>
-                <th>Sold Quantity</th>
-                <th>Returns</th>
-                <th>Revenue</th>
-                <th>Current Stock</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% groupedSalesData.forEach(function(product) { %>
-                <% product.variants.forEach(function(item, index) { %>
-                  <% if (index === 0) { %>
-                  <tr>
-                    <td rowspan="<%= product.variants.length %>"><%= product.name %></td>
-                    <td><%= item.mlSize %>ml</td>
-                    <td><%= item.soldQuantity %></td>
-                    <td><%= item.returns %></td>
-                    <td class="revenue">₹<%= item.revenue.toLocaleString() %></td>
-                    <td><%= item.stock %></td>
-                  </tr>
-                  <% } else { %>
-                  <tr>
-                    <td><%= item.mlSize %>ml</td>
-                    <td><%= item.soldQuantity %></td>
-                    <td><%= item.returns %></td>
-                    <td class="revenue">₹<%= item.revenue.toLocaleString() %></td>
-                    <td><%= item.stock %></td>
-                  </tr>
-                  <% } %>
+          <h2 class="text-2xl font-bold text-white mb-4">Sales Report - Orders & Transactions</h2>
+          <% if (orderSalesData && orderSalesData.length > 0) { %>
+          <div class="overflow-x-auto">
+            <table class="sales-table w-full">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Date & Time</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Items Count</th>
+                  <th>Total Amount</th>
+                  <th>Payment Method</th>
+                  <th>Transaction ID</th>
+                  <th>Status</th>
+                  <th>Delivered Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% orderSalesData.forEach(function(order) { %>
+                <tr>
+                  <td class="font-mono text-sm"><%= order.orderId %></td>
+                  <td><%= order.date %></td>
+                  <td>
+                    <div><%= order.customerName %></div>
+                    <div class="text-xs text-gray-500"><%= order.customerEmail %></div>
+                  </td>
+                  <td class="text-sm max-w-xs truncate" title="<%= order.items %>"><%= order.items %></td>
+                  <td><%= order.itemsCount %></td>
+                  <td class="revenue">₹<%= order.totalAmount.toLocaleString() %></td>
+                  <td><%= order.paymentMethod %></td>
+                  <td class="font-mono text-xs"><%= order.transactionId %></td>
+                  <td>
+                    <span class="px-2 py-1 text-xs rounded <%= order.orderStatus === 'Delivered' ? 'bg-green-600' : order.orderStatus === 'Cancelled' ? 'bg-red-600' : order.orderStatus === 'Returned' ? 'bg-purple-600' : 'bg-yellow-600' %>">
+                      <%= order.orderStatus %>
+                    </span>
+                  </td>
+                  <td><%= order.deliveredAt %></td>
+                </tr>
                 <% }) %>
-              <% }) %>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
           <% } else { %>
-          <p class="text-center text-gray-500 py-8">No detailed sales data available</p>
+          <p class="text-center text-gray-500 py-8">No order data available</p>
           <% } %>
         </div>
       </main>
@@ -376,31 +375,10 @@
 
       // Use raw injection + JSON.stringify in template to produce valid JS objects
       const revenueData = <%- JSON.stringify(revenueData || { labels: [], datasets: [] }) %>;
-      const topProductsData = <%- JSON.stringify(topProductsData || { labels: [], datasets: [] }) %>;
       const categoryData = <%- JSON.stringify(categoryData || { labels: [], datasets: [] }) %>;
       const genderData = <%- JSON.stringify(genderData || { labels: ["Men", "Women", "Unisex"], datasets:[{ data:[0,0,0], backgroundColor:["#3b82f6","#ec4899","#10b981"] }] }) %>;
-      const statusData = <%- JSON.stringify(statusData || { labels: [], datasets: [] }) %>;
 
-      // Limit top products to top 7 most bought (assuming data is sorted descending)
-      if (topProductsData && topProductsData.labels && topProductsData.labels.length > 7) {
-        topProductsData.labels = topProductsData.labels.slice(0, 7);
-        topProductsData.datasets[0].data = topProductsData.datasets[0].data.slice(0, 7);
-      }
-
-      // Render Top Products List
-      const listDiv = document.getElementById('topProductsList');
-      if (topProductsData && topProductsData.labels && topProductsData.labels.length > 0) {
-        let html = '<ul>';
-        topProductsData.labels.forEach((label, i) => {
-          html += `<li><span class="product-name">${label}</span><span class="product-units">${topProductsData.datasets[0].data[i]} units</span></li>`;
-        });
-        html += '</ul>';
-        listDiv.innerHTML = html;
-      } else {
-        listDiv.innerHTML = '<p class="text-center text-gray-500 py-4">No data available</p>';
-      }
-
-      // Initialize Revenue Chart (with fallback)
+      // Initialize Revenue Chart
       if (revenueData && revenueData.labels && revenueData.labels.length > 0) {
         new Chart(document.getElementById('revenueChart'), {
           type: 'bar',
@@ -409,10 +387,28 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              y: { beginAtZero: true, ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
+              y: { 
+                beginAtZero: true, 
+                ticks: { 
+                  color: '#9ca3af',
+                  callback: function(value) {
+                    return '₹' + value.toLocaleString();
+                  }
+                }, 
+                grid: { color: '#374151' } 
+              },
               x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
             },
-            plugins: { legend: { display: false } }
+            plugins: { 
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return 'Revenue: ₹' + context.parsed.y.toLocaleString();
+                  }
+                }
+              }
+            }
           }
         });
       } else {
@@ -430,7 +426,7 @@
       }
 
       // Category Chart (with fallback)
-      if (categoryData && categoryData.labels && categoryData.labels.length > 0) {
+      if (categoryData && categoryData.labels && categoryData.labels.length > 0 && categoryData.datasets && categoryData.datasets[0].data.some(d => d > 0)) {
         new Chart(document.getElementById('categoryChart'), {
           type: 'doughnut',
           data: categoryData,
@@ -441,6 +437,15 @@
               legend: {
                 position: 'bottom',
                 labels: { color: '#9ca3af', font: { size: 10 } }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed || 0;
+                    return label + ': ₹' + value.toLocaleString();
+                  }
+                }
               }
             }
           }
@@ -466,10 +471,31 @@
           maintainAspectRatio: false,
           indexAxis: 'y',
           scales: {
-            x: { beginAtZero: true, ticks: { color: '#9ca3af' }, grid: { color: '#374151' } },
-            y: { display: false }
+            x: { 
+              beginAtZero: true, 
+              ticks: { 
+                color: '#9ca3af',
+                callback: function(value) {
+                  return '₹' + value.toLocaleString();
+                }
+              }, 
+              grid: { color: '#374151' } 
+            },
+            y: { 
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#374151' }
+            }
           },
-          plugins: { legend: { display: false } }
+          plugins: { 
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return '₹' + context.parsed.x.toLocaleString();
+                }
+              }
+            }
+          }
         }
       });
 

@@ -6,6 +6,7 @@ import Product from '../../models/productsModels.js' ;
 import { generateOTP } from "../../utils/genarateOtp.js";
 import generateInvoice from "../../services/OrderPdfGenarator.js";
 import Wallet from "../../models/walletModel.js";
+import mongoose from "mongoose";
 
 const getProfile = async (req, res) => {
   try {
@@ -335,7 +336,7 @@ const postEditAddress = async (req, res) => {
   }
 };
 
-const postsetDefaultAdress = async (req, res) => {
+const postSetDefaultAddress = async (req, res) => {
   try {
     const addressId = req.body.addressId;
 
@@ -354,7 +355,7 @@ const postsetDefaultAdress = async (req, res) => {
     console.error(error);
   }
 };
-const postDeletetAdress = async (req, res) => {
+const postDeleteAddress = async (req, res) => {
   try {
     const addressId = req.params.id;
 
@@ -380,23 +381,46 @@ const getOrders = async (req, res) => {
       return res.redirect("/login");
     }
 
-    // Pagination
+    // Pagination & Filtering
     let page = parseInt(req.query.page) || 1;
     if (page < 1) page = 1;
-    const limit = 5;
+    const limit = 10;
     const skip = (page - 1) * limit;
+    
+    const search = req.query.search || "";
+    const sort = req.query.sort || "date_desc";
 
-    const totalOrders = await Order.countDocuments({ userId: user._id });
+    // Build Query
+    const query = { userId: user._id };
+    
+    if (search) {
+      query.$or = [
+        { orderID: { $regex: search, $options: "i" } },
+        // Also allow searching by the Mongo _id if user types it
+        ...(mongoose.Types.ObjectId.isValid(search) ? [{ _id: search }] : [])
+      ];
+    }
+
+    // Build Sort
+    let sortOptions = { placedAt: -1 }; // Default
+    if (sort === "date_asc") sortOptions = { placedAt: 1 };
+    else if (sort === "amount_desc") sortOptions = { totalAmount: -1 };
+    else if (sort === "amount_asc") sortOptions = { totalAmount: 1 };
+
+    const totalOrders = await Order.countDocuments(query);
     const totalPages = Math.ceil(totalOrders / limit);
+
+    // Ensure page doesn't exceed total pages
+    if (page > totalPages && totalPages > 0) page = totalPages;
 
     const pages = [];
     for (let i = 1; i <= totalPages; i++) {
       pages.push(i);
     }
 
-    const orders = await Order.find({ userId: user._id })
-      .sort({ placedAt: -1 })
-      .skip(skip)
+    const orders = await Order.find(query)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
       .limit(limit)
       .lean();
 
@@ -405,6 +429,8 @@ const getOrders = async (req, res) => {
       totalPages,
       currentPage: page,
       pages,
+      search,
+      sort,
     });
   } catch (error) {
     console.error("Error fetching order history:", error);
@@ -468,7 +494,7 @@ const getCancelOrder = async (req, res) => {
       cancelSubtotal += itemTotal;
     });
 
-    res.render("user/profile/cancellOrder", {
+    res.render("user/profile/cancelOrder", {
       order,
       cancelledItems,
       cancelSubtotal,
@@ -545,7 +571,12 @@ const confirmCancel = async (req, res) => {
       return res.redirect(`/cancelOrder/${orderId}/cancel-select`);
     }
 
-    const parsedCancelledItems = JSON.parse(cancelledItemsStr);
+    let parsedCancelledItems;
+    try {
+      parsedCancelledItems = JSON.parse(cancelledItemsStr);
+    } catch (e) {
+      return res.redirect(`/cancelOrder/${orderId}/cancel-select`);
+    }
 
     const fullCancelledItems = parsedCancelledItems
       .map((pi) => {
@@ -663,27 +694,32 @@ const confirmCancel = async (req, res) => {
       try {
         await Promise.all(
           fullCancelledItems.map(async ({ item, cancelQty }) => {
-            const product = await Product.findById(item.productId);
-            if (product && cancelQty > 0) {
-
-              product.variants.map(v=> {
-                if(v.mlSize == item.mlSize){
-                  v.stock = (v.stock || 0 ) + cancelQty ;
-                }
-              })
-              await product.save();
+            if (cancelQty > 0) {
+              await Product.updateOne(
+                { _id: item.productId, "variants.mlSize": item.mlSize },
+                { $inc: { "variants.$.stock": cancelQty } }
+              );
             }
           })
         );
       } catch (stockErr) {
         console.error("Stock update error:", stockErr); 
       }
+      // Re-fetch/save not strictly needed as $inc is atomic, but kept flow clean.
 
       // Clear session 
       delete req.session.cancelledItems;
       delete req.session.orderId;
 
       await req.session.save(); 
+
+      // Refund logic for wallet based on payment method:
+      if (cancelSubtotal > 0) {
+        if (order.paymentMethod === 'online' || order.paymentMethod === 'Wallet') {
+          // Refund to wallet for online or wallet payments
+          await Wallet.refundToWallet(user._id, cancelSubtotal, `Refund for cancelled order ${order.orderID}`, order._id.toString());
+        }
+      }
 
       return res.redirect(
         `/order/${orderId}?cancelled=true&subtotal=${cancelSubtotal}`
@@ -735,7 +771,13 @@ const postCancelSelect = async (req, res) => {
       return res.redirect(`/orders/${orderId}`);
     }
 
-    const parsedCancelledItems = JSON.parse(cancelledItemsStr);
+    let parsedCancelledItems;
+    try {
+      parsedCancelledItems = JSON.parse(cancelledItemsStr);
+    } catch (e) {
+      req.session.error = "Invalid data format.";
+      return res.redirect(`/orders/${orderId}`);
+    }
 
     if (
       !Array.isArray(parsedCancelledItems) ||
@@ -840,7 +882,7 @@ const getReturn = async (req, res) => {
       returnSubtotal += itemTotal;
     });
 
-    res.render("user/profile/retrunOrder", {
+    res.render("user/profile/returnOrder", {
       order,
       returnItems,
       returnSubtotal,
@@ -865,7 +907,12 @@ const postReturn = async (req, res) => {
       return res.redirect(`/order/${orderId}`);
     }
 
-    const parsedReturnedItems = JSON.parse(returnedItemsStr);
+    let parsedReturnedItems;
+    try {
+      parsedReturnedItems = JSON.parse(returnedItemsStr);
+    } catch (e) {
+      return res.redirect(`/order/${orderId}`);
+    }
 
     const order = await Order.findById(orderId);
     if (!order) {
@@ -934,7 +981,13 @@ const postReturnSelect = async (req, res) => {
       return res.redirect(`/orders/${orderId}`);
     }
 
-    const parsedReturnedItems = JSON.parse(returnedItemsStr);
+    let parsedReturnedItems;
+    try {
+      parsedReturnedItems = JSON.parse(returnedItemsStr);
+    } catch (e) {
+      req.session.error = "Invalid data format.";
+      return res.redirect(`/orders/${orderId}`);
+    }
 
     if (
       !Array.isArray(parsedReturnedItems) ||
@@ -1017,7 +1070,12 @@ const postReturnSelect = async (req, res) => {
       return res.redirect(`/return/${orderId}/return-select`);
     }
 
-    const parsedReturnItems = JSON.parse(returnItemsStr);
+    let parsedReturnItems;
+    try {
+      parsedReturnItems = JSON.parse(returnItemsStr);
+    } catch (e) {
+       return res.redirect(`/return/${orderId}/return-select`);
+    }
 
     const fullReturnItems = parsedReturnItems
       .map((pi) => {
@@ -1047,35 +1105,21 @@ const postReturnSelect = async (req, res) => {
         const itemTotal = (item.discountedPrice || item.basePrice || 0) * returnQty;
         returnSubtotal += itemTotal;
 
-        // Check for existing return request for this product variant
-        let existingReturn = order.returndProduct.find(
-          (rp) => rp.productId.toString() === item.productId.toString() && 
-                  rp.mlSize === item.mlSize &&
-                  rp.adminApproved === "Requested" // Only append to pending requests
-        );
+        // Create new return request (Always create new entry to keep requests distinct)
+        const returnedProduct = {
+          productId: item.productId,
+          name: item.name,
+          mlSize: item.mlSize,
+          basePrice: item.basePrice,
+          discountedPrice: item.discountedPrice || 0,
+          returndQuantity: returnQty,
+          image: item.image,
+          reason: returnReason,
+          returnedAt: new Date(),
+          adminApproved: "Requested", // Set as requested
+        };
 
-        if (existingReturn) {
-          // Append to existing pending request
-          existingReturn.returndQuantity += returnQty;
-          existingReturn.reason = returnReason; // Update reason if needed
-          existingReturn.returnedAt = new Date();
-        } else {
-          // Create new return request
-          const returnedProduct = {
-            productId: item.productId,
-            name: item.name,
-            mlSize: item.mlSize,
-            basePrice: item.basePrice,
-            discountedPrice: item.discountedPrice || 0,
-            returndQuantity: returnQty,
-            image: item.image,
-            reason: returnReason,
-            returnedAt: new Date(),
-            adminApproved: "Requested", // Set as requested
-          };
-
-          order.returndProduct.push(returnedProduct);
-        }
+        order.returndProduct.push(returnedProduct);
       });
       // Add to tracking
       order.tracking.push({
@@ -1091,6 +1135,13 @@ const postReturnSelect = async (req, res) => {
       delete req.session.orderId;
 
       await req.session.save(); 
+
+      // Refund logic: always refund to wallet for online/wallet, refund to wallet for COD only on return (not cancel)
+      if (returnSubtotal > 0) {
+        if (order.paymentMethod === 'online' || order.paymentMethod === 'Wallet' || order.paymentMethod === 'cod') {
+          await Wallet.refundToWallet(user._id, returnSubtotal, `Refund for returned product in order ${order.orderID}`, order._id.toString());
+        }
+      }
 
       return res.redirect(
         `/order/${orderId}?returnRequested=true&subtotal=${returnSubtotal}`
@@ -1223,8 +1274,8 @@ export {
   getAddress,
   postAddAddress,
   postEditAddress,
-  postsetDefaultAdress,
-  postDeletetAdress,
+  postSetDefaultAddress,
+  postDeleteAddress,
   getOrders,
   getOrderDetails,
   getCancelOrder,

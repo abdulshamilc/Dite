@@ -8,6 +8,7 @@ const storage = cloudinaryStorage({
   folder: (req, file) => {
     // Decide folder dynamically
     if (req.baseUrl.includes("/products")) {
+      console.log("Reached")
       return `products/${req.body.productId || "general"}`;
     } else if (req.baseUrl.includes("/profile")) {
       return `profile_pics/${req.user?._id || "unknown"}`;

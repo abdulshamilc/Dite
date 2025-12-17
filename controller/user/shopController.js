@@ -1,6 +1,8 @@
 import Categories from "../../models/categories.js";
 import Products from "../../models/productsModels.js";
 import Wishlist from '../../models/wishlistModel.js' ;
+import {User} from '../../models/userModels.js';
+import Offer from "../../models/offerModel.js";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -191,10 +193,13 @@ const getShop = async (req, res) => {
 
     // Fetch wishlist if user is authenticated
     let wishlist = [];
-    if (req.user) {
-      const wishlistDoc = await Wishlist.findOne({ userId: req.user._id }).populate('items.productId');
-      if (wishlistDoc) {
-        wishlist = wishlistDoc.items.map(item => ({ product: item.productId }));
+    if (req.session.user) {
+      const user = await User.findOne({ email: req.session.user });
+      if (user) {
+        const wishlistDoc = await Wishlist.findOne({ userId: user._id }).populate('items.productId');
+        if (wishlistDoc) {
+          wishlist = wishlistDoc.items.map(item => ({ product: item.productId }));
+        }
       }
     }
 
@@ -256,7 +261,33 @@ const productDetail = async (req, res) => {
         error: "Product not found!",
       });
     }
-    const categoryId = product.category[0];
+    // Handle category - support both array (old data) and single value (new data)
+    let categoryId = product.category;
+    if (Array.isArray(categoryId)) {
+      categoryId = categoryId[0];
+    }
+    // Fetch active offers for this product or its category
+    const currentDate = new Date();
+    const productOffers = await Offer.find({
+      targetModel: 'Product',
+      targetId: product._id,
+      isActive: true,
+      isDeleted: false,
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate }
+    });
+    
+    const categoryOffers = await Offer.find({
+      targetModel: 'Categories',
+      targetId: categoryId,
+      isActive: true,
+      isDeleted: false,
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate }
+    });
+    
+    const activeOffers = [...productOffers, ...categoryOffers];
+
     const suggestions = await Products.find({
       category: categoryId,
       _id: { $ne: product._id },
@@ -266,6 +297,7 @@ const productDetail = async (req, res) => {
     res.render("user/shop/productDetail", {
       product,
       suggestions,
+      activeOffers,
       error: req.query.error || null,
     });
   } catch (error) {
@@ -520,6 +552,19 @@ const getCatogoryShop = async (req, res) => {
   }
 };
 
+const getProductAPI = async (req, res) => {
+  try {
+    const product = await Products.findById(req.params.id);
+    if (!product || product.isDeleted || !product.isListed) {
+      return res.status(404).json({ success: false, message: 'Product not found or unavailable.' });
+    }
+    res.json({ success: true, product });
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    res.status(500).json({ success: false, message: 'Server error.' });
+  }
+};
+
 export {
   getShop,
   productDetail,
@@ -528,4 +573,5 @@ export {
   getWomenShop,
   getUnisexShop,
   getCatogoryShop,
+  getProductAPI,
 };

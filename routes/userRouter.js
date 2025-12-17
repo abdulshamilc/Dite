@@ -29,8 +29,8 @@ import {
   postEditAddress,
   changeEmail,
   verifyChangeEmail,
-  postsetDefaultAdress,
-  postDeletetAdress,
+  postSetDefaultAddress,
+  postDeleteAddress,
   getOrders,
   getOrderDetails,
   getCancelOrder,
@@ -54,6 +54,7 @@ import {
   getWishlist,
   addToWishlist,
   removeFromWishlist,
+  addToCartFromWishlist,
 } from "../controller/user/wishlistController.js";
 
 import {
@@ -64,13 +65,14 @@ import {
   getWomenShop,
   getUnisexShop,
   getCatogoryShop,
+  getProductAPI,
 } from "../controller/user/shopController.js";
 
 import {
   getCart,
   addToCart,
   deleteCart,
-  updateQuatity,
+  updateQuantity,
 } from "../controller/user/cartController.js";
 
 import {
@@ -82,6 +84,7 @@ import {
   placeOrder,
   getSuccessPage,
   getFailedPage,
+  getWalletBalanceAPI,
 } from "../controller/user/checkoutController.js";
 
 import {
@@ -155,7 +158,7 @@ router.post(
   "/cart/quantity/:id",
   isAuthenticatedUser,
   isBlocked,
-  updateQuatity
+  updateQuantity
 );
 
 router.get("/wishlist", isAuthenticatedUser, isBlocked, getWishlist);
@@ -166,6 +169,9 @@ router.post(
   isBlocked,
   removeFromWishlist
 );
+router.post('/wishlist/addToCart/:id', isAuthenticatedUser, isBlocked , addToCartFromWishlist)
+
+router.get('/api/product/:id', isAuthenticatedUser, isBlocked, getProductAPI);
 
 router.get("/profile", isAuthenticatedUser, isBlocked, getProfile);
 router.post(
@@ -201,13 +207,13 @@ router.post(
   "/address/set-default",
   isAuthenticatedUser,
   isBlocked,
-  postsetDefaultAdress
+  postSetDefaultAddress
 );
 router.post(
   "/delete-address/:id",
   isAuthenticatedUser,
   isBlocked,
-  postDeletetAdress
+  postDeleteAddress
 );
 
 router.get("/security", isAuthenticatedUser, isBlocked, getSecurity);
@@ -318,6 +324,7 @@ router.get("/checkout/failed", isAuthenticatedUser, isBlocked, getFailedPage);
 
 router.get('/wallet',isAuthenticatedUser, isBlocked, getWallet)
 router.post('/wallet/add-funds', isAuthenticatedUser, isBlocked, addFundsToWallet);
+router.get('/wallet/api/balance', getWalletBalanceAPI); // For checkout wallet fetch
 
 
 router.get("/logout", userlogOut);

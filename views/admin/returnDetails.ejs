@@ -449,7 +449,7 @@
               <!-- Actions -->
               <div class="space-y-3 mb-6">
                 <% if (returnItem.adminApproved === 'Requested') { %>
-                <form method="POST" action="/admin/return/<%= order._id %>/approve" class="block" id="approveForm">
+                <form method="POST" action="/admin/return/<%= order._id %>/approve?returnId=<%= returnItem._id %>" class="block" id="approveForm">
                   <button type="submit" class="block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition text-center">Approve Return</button>
                 </form>
                 <form method="POST" action="/admin/return/<%= order._id %>/reject" class="block" id="rejectForm">

@@ -110,7 +110,14 @@
               >
                 <option value="">Select a category</option>
                 <% categories.forEach(category => { %>
-                  <option value="<%= category._id %>" <%= product.category && product.category.toString() === category._id.toString() ? 'selected' : '' %>><%= category.name %></option>
+                  <% 
+                    let categoryId = product.category;
+                    if (Array.isArray(categoryId)) {
+                      categoryId = categoryId[0];
+                    }
+                    const isSelected = categoryId && (categoryId.toString() === category._id.toString() || (categoryId._id && categoryId._id.toString() === category._id.toString()));
+                  %>
+                  <option value="<%= category._id %>" <%= isSelected ? 'selected' : '' %>><%= category.name %></option>
                 <% }) %>
               </select>
               <div class="error-message" id="category-error"></div>

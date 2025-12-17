@@ -12,6 +12,7 @@ import jwt from "jsonwebtoken";
 import passwordSchema from "../../validators/resetPasswordValidator.js";
 import { nanoid } from "nanoid";
 import moment from "moment";
+import Wallet from "../../models/walletModel.js";
 const secret = process.env.JWT_SECRET;
 
 const pageNotFound = (req, res) => {
@@ -443,7 +444,7 @@ const getProducts = async (req, res) => {
     const errorMessage = req.session.errorMessage;
     const successMessage = req.session.successMessage;
 
-    // Clear them so they don’t reappear after refresh
+    // Clear them so they don't reappear after refresh
     req.session.errorMessage = null;
     req.session.successMessage = null;
 
@@ -525,6 +526,10 @@ const toNumber = (val, zero = 0) => {
 };
 const postAddProducts = async (req, res) => {
   try {
+    console.log('Received add product request');
+    console.log('Files:', req.files?.length || 0);
+    console.log('Body keys:', Object.keys(req.body || {}));
+    
     const {
       name,
       description,
@@ -536,6 +541,19 @@ const postAddProducts = async (req, res) => {
       variants,
     } = req.body;
     const imageUrls = req.files?.map((file) => file.path) || [];
+    
+    console.log('Parsed data:', {
+      name: name?.substring(0, 20),
+      hasDescription: !!description,
+      hasNotes: !!notes,
+      category: rawCategory,
+      brand,
+      gender,
+      concentration,
+      variantsType: typeof variants,
+      variantsIsArray: Array.isArray(variants),
+      imageCount: imageUrls.length
+    });
 
     // Specific validation for product name
     if (!name || !name.trim()) {
@@ -571,6 +589,23 @@ const postAddProducts = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, error: "Category is required." });
+    }
+    
+    // Validate category is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(category)) {
+      console.error('Invalid category ObjectId:', category);
+      return res
+        .status(400)
+        .json({ success: false, error: "Invalid category ID format." });
+    }
+    
+    // Verify category exists
+    const categoryExists = await Categories.findById(category);
+    if (!categoryExists || categoryExists.isDeleted) {
+      console.error('Category not found or deleted:', category);
+      return res
+        .status(400)
+        .json({ success: false, error: "Selected category does not exist or is inactive." });
     }
 
     // Specific validation for brand (now required)
@@ -615,52 +650,91 @@ const postAddProducts = async (req, res) => {
     }
 
     // Parse variants - frontend sends as object with numeric string keys e.g. { '0': {mlSize: '5', ...} }
+    // FormData with bracket notation creates nested objects
     let parsedVariants = [];
-    if (variants && typeof variants === "object" && !Array.isArray(variants)) {
-      Object.keys(variants).forEach((key) => {
-        const v = variants[key];
-        // Check structure first
-        if (
-          v &&
-          v.mlSize &&
-          v.stock &&
-          v.basePrice !== undefined &&
-          v.discountedPrice !== undefined
-        ) {
-          parsedVariants.push({
+    
+    console.log('Variants raw:', variants);
+    console.log('Variants type:', typeof variants);
+    console.log('Variants is array:', Array.isArray(variants));
+    if (variants) {
+      console.log('Variants structure:', JSON.stringify(variants).substring(0, 500));
+    }
+    
+    // Try to parse variants from different possible formats
+    if (typeof variants === "object" && variants !== null) {
+      // Handle nested object structure from FormData: variants[0][mlSize] becomes { '0': { mlSize: ... } }
+      if (!Array.isArray(variants)) {
+        Object.keys(variants).forEach((key) => {
+          const v = variants[key];
+          console.log(`Processing variant key ${key}:`, v);
+          
+          // Check if it's a nested object
+          if (v && typeof v === 'object') {
+            // Check structure first
+            if (
+              (v.mlSize || v['mlSize']) &&
+              (v.stock !== undefined || v['stock'] !== undefined) &&
+              (v.basePrice !== undefined || v['basePrice'] !== undefined) &&
+              (v.discountedPrice !== undefined || v['discountedPrice'] !== undefined)
+            ) {
+              parsedVariants.push({
+                mlSize: toNumber(v.mlSize || v['mlSize']),
+                stock: toNumber(v.stock || v['stock']),
+                basePrice: parseFloat(v.basePrice || v['basePrice']) || 0,
+                discountedPrice: parseFloat(v.discountedPrice || v['discountedPrice']) || 0,
+                index: parseInt(key), // Use key as index
+              });
+            }
+          }
+        });
+        // Sort by index to maintain order
+        parsedVariants.sort((a, b) => a.index - b.index);
+      } else if (Array.isArray(variants)) {
+        // Handle array format
+        parsedVariants = variants
+          .map((v, index) => {
+            if (
+              v &&
+              typeof v === 'object' &&
+              (v.mlSize || v['mlSize']) &&
+              (v.stock !== undefined || v['stock'] !== undefined) &&
+              (v.basePrice !== undefined || v['basePrice'] !== undefined) &&
+              (v.discountedPrice !== undefined || v['discountedPrice'] !== undefined)
+            ) {
+              return {
+                mlSize: toNumber(v.mlSize || v['mlSize']),
+                stock: toNumber(v.stock || v['stock']),
+                basePrice: parseFloat(v.basePrice || v['basePrice']) || 0,
+                discountedPrice: parseFloat(v.discountedPrice || v['discountedPrice']) || 0,
+                index,
+              };
+            }
+            return null;
+          })
+          .filter((v) => v !== null);
+      }
+    } else if (typeof variants === "string") {
+      // Try to parse if it's a JSON string
+      try {
+        const parsed = JSON.parse(variants);
+        if (Array.isArray(parsed)) {
+          parsedVariants = parsed.map((v, index) => ({
             mlSize: toNumber(v.mlSize),
             stock: toNumber(v.stock),
             basePrice: parseFloat(v.basePrice) || 0,
             discountedPrice: parseFloat(v.discountedPrice) || 0,
-            index: parseInt(key), // Use key as index
-          });
+            index,
+          }));
         }
-      });
-      // Sort by index to maintain order
-      parsedVariants.sort((a, b) => a.index - b.index);
-    } else if (Array.isArray(variants)) {
-      // Fallback for array (unlikely)
-      parsedVariants = variants
-        .map((v, index) => {
-          if (
-            v &&
-            v.mlSize &&
-            v.stock &&
-            v.basePrice !== undefined &&
-            v.discountedPrice !== undefined
-          ) {
-            return {
-              mlSize: toNumber(v.mlSize),
-              stock: toNumber(v.stock),
-              basePrice: parseFloat(v.basePrice) || 0,
-              discountedPrice: parseFloat(v.discountedPrice) || 0,
-              index,
-            };
-          }
-          return null;
-        })
-        .filter((v) => v !== null);
+      } catch (e) {
+        console.error('Failed to parse variants as JSON:', e);
+      }
     }
+    
+    console.log('Parsed variants count:', parsedVariants.length);
+    console.log('Parsed variants:', parsedVariants);
+    
+    console.log('Parsed variants count:', parsedVariants.length);
 
     // Per-variant validation (mirroring frontend field checks)
     let variantErrors = [];
@@ -725,6 +799,13 @@ const postAddProducts = async (req, res) => {
       });
     }
 
+    console.log('Creating product with data:', {
+      name: name.trim().substring(0, 20),
+      category,
+      imageCount: imageUrls.length,
+      variantCount: parsedVariants.length
+    });
+
     const newProduct = new Products({
       name: name.trim(),
       description: description.trim(),
@@ -742,24 +823,51 @@ const postAddProducts = async (req, res) => {
         discountedPrice: v.discountedPrice,
       })),
     });
+    
+    console.log('Saving product to database...');
     await newProduct.save();
+    console.log('Product saved successfully with ID:', newProduct._id);
 
     // Update category with product reference (single category)
     if (category) {
+      console.log('Updating category with product reference...');
       await Categories.findByIdAndUpdate(category, {
         $push: { products: newProduct._id },
       });
+      console.log('Category updated successfully');
     }
 
+    console.log('Product creation completed successfully');
     res.json({
       success: true,
       message: "New Product Has Been Added Successfully",
     });
   } catch (error) {
-    console.error("Error adding product:", error);
+    console.error("Error adding product - Full error:", error);
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message).join(', ');
+      return res.status(400).json({
+        success: false,
+        error: `Validation error: ${validationErrors}`,
+      });
+    }
+    
+    // Handle mongoose cast errors (invalid ObjectId, etc.)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid data format: ${error.message}`,
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      error: "Something went wrong while adding the product. Please try again.",
+      error: error.message || "Something went wrong while adding the product. Please try again.",
     });
   }
 };
@@ -848,9 +956,15 @@ const postEditProduct = async (req, res) => {
         .json({ success: false, error: "Product description is required." });
     }
 
+    // Handle old category - might be array from old data
+    let oldCategoryValue = oldProduct.category;
+    if (Array.isArray(oldCategoryValue)) {
+      oldCategoryValue = oldCategoryValue[0];
+    }
+    
     const finalCategory = rawCategory
       ? rawCategory.trim()
-      : oldProduct.category;
+      : oldCategoryValue;
     if (!finalCategory) {
       return res
         .status(400)
@@ -1020,13 +1134,20 @@ const postEditProduct = async (req, res) => {
     await oldProduct.save();
 
     // Handle category change
-    const oldCategory = oldProduct.category; // Already saved, but was set before save
-    if (oldCategory && oldCategory !== finalCategory) {
+    // Compare using string conversion to handle ObjectId comparison
+    const oldCategoryStr = oldCategoryValue ? oldCategoryValue.toString() : null;
+    const finalCategoryStr = finalCategory ? finalCategory.toString() : null;
+    if (oldCategoryStr && finalCategoryStr && oldCategoryStr !== finalCategoryStr) {
       // Remove from old category
-      await Categories.findByIdAndUpdate(oldCategory, {
+      await Categories.findByIdAndUpdate(oldCategoryValue, {
         $pull: { products: productId },
       });
       // Add to new category
+      await Categories.findByIdAndUpdate(finalCategory, {
+        $push: { products: productId },
+      });
+    } else if (!oldCategoryStr && finalCategoryStr) {
+      // Product didn't have a category before, just add to new one
       await Categories.findByIdAndUpdate(finalCategory, {
         $push: { products: productId },
       });
@@ -1252,7 +1373,7 @@ const getSalesReport = async (req, res) => {
         menSales: 0,
         womenSales: 0,
         unisexSales: 0,
-        groupedSalesData: [],
+        orderSalesData: [],
       });
     }
 
@@ -1362,12 +1483,6 @@ const getSalesReport = async (req, res) => {
         },
       },
       { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
-      {
-        $unwind: {
-          path: "$product.category",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
       {
         $lookup: {
           from: "categories",
@@ -1601,8 +1716,36 @@ const getSalesReport = async (req, res) => {
       }
     }
 
-    // Sort products by totalRevenue descending
-    groupedSalesData.sort((a, b) => b.totalRevenue - a.totalRevenue);
+    // Prepare order-based sales data with transaction details
+    const orderSalesData = await Orders.find(dateFilter)
+      .populate("userId", "name email")
+      .populate("items.productId", "name")
+      .sort({ placedAt: -1 })
+      .lean();
+
+    // Format order data for display
+    const formattedOrders = orderSalesData.map((order) => {
+      const itemsSummary = order.items
+        .map((item) => {
+          const productName = item.productId?.name || "Unknown Product";
+          return `${productName} (${item.mlSize}ml x${item.quantity})`;
+        })
+        .join(", ");
+
+      return {
+        orderId: order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
+        date: moment(order.placedAt).format("DD MMM YYYY, hh:mm A"),
+        customerName: order.userId?.name || "Guest",
+        customerEmail: order.userId?.email || "N/A",
+        items: itemsSummary,
+        itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+        totalAmount: order.totalAmount || 0,
+        paymentMethod: order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A",
+        orderStatus: order.orderStatus || "N/A",
+        transactionId: order.paymentInfo?.razorpayPaymentId || order.paymentInfo?.razorpayOrderId || "N/A",
+        deliveredAt: order.deliveredAt ? moment(order.deliveredAt).format("DD MMM YYYY") : "N/A",
+      };
+    });
 
     res.render("admin/salesReport", {
       totalRevenue: `₹${totalRevenue.toLocaleString()}`,
@@ -1619,7 +1762,7 @@ const getSalesReport = async (req, res) => {
       menSales,
       womenSales,
       unisexSales,
-      groupedSalesData,
+      orderSalesData: formattedOrders,
     });
   } catch (error) {
     console.error("Sales Report Error:", error);
@@ -1643,7 +1786,7 @@ const exportSalesReport = async (req, res) => {
     if (endDate)
       dateFilter.placedAt = { ...dateFilter.placedAt, $lte: new Date(endDate) };
 
-    // Compute data similar to getSalesReport (reuse logic if possible, but for brevity, recompute key parts)
+    // Compute data similar to getSalesReport
     const orders = await Orders.find(dateFilter).populate("items.productId");
 
     let totalRevenue = 0;
@@ -1723,103 +1866,146 @@ const exportSalesReport = async (req, res) => {
       returnsMap.set(key, r.returns || 0);
     });
 
-    const allProducts = await Products.find({
-      isListed: true,
-      isDeleted: false,
+    // Get order-based data for Excel export
+    const orderData = await Orders.find(dateFilter)
+      .populate("userId", "name email")
+      .populate("items.productId", "name")
+      .sort({ placedAt: -1 })
+      .lean();
+
+    // Format order data for Excel
+    const exportData = orderData.map((order) => {
+      const itemsSummary = order.items
+        .map((item) => {
+          const productName = item.productId?.name || "Unknown Product";
+          return `${productName} (${item.mlSize}ml x${item.quantity})`;
+        })
+        .join("; ");
+
+      return {
+        orderId: order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
+        date: moment(order.placedAt).format("DD MMM YYYY, hh:mm A"),
+        customerName: order.userId?.name || "Guest",
+        customerEmail: order.userId?.email || "N/A",
+        items: itemsSummary,
+        itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
+        totalAmount: order.totalAmount || 0,
+        paymentMethod: order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A",
+        orderStatus: order.orderStatus || "N/A",
+        transactionId: order.paymentInfo?.razorpayPaymentId || order.paymentInfo?.razorpayOrderId || "N/A",
+        deliveredAt: order.deliveredAt ? moment(order.deliveredAt).format("DD MMM YYYY") : "N/A",
+      };
     });
 
-    // Flatten data for Excel (repeat product name)
-    const exportData = [];
-    allProducts.forEach((product) => {
-      product.variants.forEach((variant) => {
-        if (variant.isListed && !variant.isDeleted) {
-          const mlSizeStr = String(variant.mlSize);
-          const key = `${product._id.toString()}_${mlSizeStr}`;
-          const delivered = deliveredMap.get(key) || {
-            soldQuantity: 0,
-            revenue: 0,
-            productName: product.name,
-          };
-          const returns = returnsMap.get(key) || 0;
+    // Try to use exceljs, fallback to CSV if not available
+    try {
+      const ExcelJS = (await import("exceljs")).default;
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Sales Report");
 
-          exportData.push({
-            productName: product.name,
-            mlSize: variant.mlSize,
-            soldQuantity: delivered.soldQuantity,
-            returns,
-            revenue: delivered.revenue,
-            stock: variant.stock || 0,
-          });
-        }
-      });
-    });
+      // Add summary section
+      worksheet.addRow(["SALES REPORT SUMMARY"]);
+      worksheet.addRow(["Period", `${startDate || "All Time"} to ${endDate || "Now"}`]);
+      worksheet.addRow([]);
+      worksheet.addRow(["Total Revenue", `₹${totalRevenue.toLocaleString()}`]);
+      worksheet.addRow(["Average Order Value", `₹${avgOrderValue.toLocaleString()}`]);
+      worksheet.addRow(["Total Orders", totalOrders]);
+      worksheet.addRow(["Total Customers", newCustomers]);
+      worksheet.addRow([]);
 
-    exportData.sort((a, b) => b.revenue - a.revenue);
-
-    // Use exceljs to generate file (assume installed: npm i exceljs)
-    const ExcelJS = require("exceljs");
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet("Sales Report");
-
-    // Add summary row
-    worksheet.addRow(["Summary"]);
-    worksheet.addRow(["Total Revenue", `₹${totalRevenue.toLocaleString()}`]);
-    worksheet.addRow(["Avg Order Value", `₹${avgOrderValue.toLocaleString()}`]);
-    worksheet.addRow(["Total Orders", totalOrders]);
-    worksheet.addRow(["Total Customers", newCustomers]);
-    worksheet.addRow([]);
-
-    // Add headers
-    worksheet.addRow([
-      "Product Name",
-      "ML Size",
-      "Sold Quantity",
-      "Returns",
-      "Revenue",
-      "Current Stock",
-    ]);
-
-    // Add data
-    exportData.forEach((row) => {
-      worksheet.addRow([
-        row.productName,
-        `${row.mlSize}ml`,
-        row.soldQuantity,
-        row.returns,
-        `₹${row.revenue.toLocaleString()}`,
-        row.stock,
+      // Add headers
+      const headerRow = worksheet.addRow([
+        "Order ID",
+        "Date & Time",
+        "Customer Name",
+        "Customer Email",
+        "Items",
+        "Items Count",
+        "Total Amount",
+        "Payment Method",
+        "Transaction ID",
+        "Order Status",
+        "Delivered Date",
       ]);
-    });
 
-    // Style headers
-    worksheet.getRow(8).font = { bold: true };
-    worksheet.columns = [
-      { width: 30 },
-      { width: 10 },
-      { width: 15 },
-      { width: 10 },
-      { width: 15 },
-      { width: 15 },
-    ];
+      // Style header row
+      headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      headerRow.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFC5A987" },
+      };
 
-    // Set response headers
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=sales-report-${startDate || "full"}-to-${
-        endDate || "full"
-      }.xlsx`
-    );
+      // Add data
+      exportData.forEach((row) => {
+        worksheet.addRow([
+          row.orderId,
+          row.date,
+          row.customerName,
+          row.customerEmail,
+          row.items,
+          row.itemsCount,
+          row.totalAmount,
+          row.paymentMethod,
+          row.transactionId,
+          row.orderStatus,
+          row.deliveredAt,
+        ]);
+      });
 
-    // Send workbook
-    await workbook.xlsx.write(res);
-    res.end();
+      // Set column widths
+      worksheet.columns = [
+        { width: 15 }, // Order ID
+        { width: 20 }, // Date & Time
+        { width: 20 }, // Customer Name
+        { width: 25 }, // Customer Email
+        { width: 40 }, // Items
+        { width: 12 }, // Items Count
+        { width: 15 }, // Total Amount
+        { width: 15 }, // Payment Method
+        { width: 25 }, // Transaction ID
+        { width: 15 }, // Order Status
+        { width: 15 }, // Delivered Date
+      ];
+
+      // Format amount column
+      worksheet.getColumn(7).numFmt = '"₹"#,##0';
+
+      // Set response headers
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=sales-report-${startDate || "all"}-to-${
+          endDate || "now"
+        }.xlsx`
+      );
+
+      // Send workbook
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (excelError) {
+      console.error("ExcelJS not available, using CSV fallback:", excelError);
+      // Fallback to CSV
+      let csv = "Order ID,Date & Time,Customer Name,Customer Email,Items,Items Count,Total Amount,Payment Method,Transaction ID,Order Status,Delivered Date\n";
+      exportData.forEach((row) => {
+        csv += `${row.orderId},"${row.date}",${row.customerName},${row.customerEmail},"${row.items}",${row.itemsCount},₹${row.totalAmount},${row.paymentMethod},${row.transactionId},${row.orderStatus},${row.deliveredAt}\n`;
+      });
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=sales-report-${startDate || "all"}-to-${
+          endDate || "now"
+        }.csv`
+      );
+      res.send(csv);
+    }
   } catch (error) {
     console.error("Export error:", error);
-    res.status(500).json({ message: "Export failed" });
+    res.status(500).json({ success: false, message: "Export failed: " + error.message });
   }
 };
 
@@ -1829,7 +2015,7 @@ const getCategories = async (req, res) => {
     const errorMessage = req.session.errorMessage;
     const successMessage = req.session.successMessage;
 
-    // Clear them so they don’t reappear after refresh
+    // Clear them so they don't reappear after refresh
     req.session.errorMessage = null;
     req.session.successMessage = null;
 
@@ -2114,7 +2300,19 @@ const getReturnDetails = async (req, res) => {
     }
 
     const user = order.userId;
-    const returnItem = order.returndProduct[0];
+    let returnItem;
+
+    if (req.query.returnId) {
+        returnItem = order.returndProduct.find(
+          (item) => item._id.toString() === req.query.returnId
+        );
+    } 
+
+    if (!returnItem) {
+        // Fallback or error if ID invalid
+        returnItem = order.returndProduct[0];
+    }
+    
     if (!returnItem) {
       req.session.error = "Return not found";
       return res.redirect("/admin/returns");
@@ -2164,27 +2362,49 @@ const returnApprove = async (req, res) => {
       return res.redirect(`/admin/return/${orderId}`);
     }
 
-    const returnItem = order.returndProduct[0];
-    if (!returnItem || returnItem.adminApproved !== "Requested") {
-      req.session.error = "Invalid return or already processed";
+    // Find the return request
+    let returnItem;
+    if (req.query.returnId) {
+        returnItem = order.returndProduct.find(item => item._id.toString() === req.query.returnId);
+    } else {
+        // Fallback: Find the first pending return request
+        returnItem = order.returndProduct.find(item => item.adminApproved === "Requested");
+    }
+
+    if (!returnItem) {
+      req.session.error = "Return request not found";
       return res.redirect(`/admin/return/${orderId}`);
+    }
+    
+    if (returnItem.adminApproved !== "Requested") {
+        req.session.error = "Return already processed";
+        return res.redirect(`/admin/return/${orderId}?returnId=${returnItem._id}`);
     }
 
     // Update return status
     returnItem.adminApproved = "Approved";
 
-    // Update order status to Returned
-    order.orderStatus = "Returned";
-
     // Update original item status to Returned and reduce quantity
+    let hasActiveItems = false;
     const originalItem = order.items.find(
       (item) =>
         item.productId.toString() === returnItem.productId.toString() &&
         item.mlSize === returnItem.mlSize
     );
+    
     if (originalItem) {
-      originalItem.productStatus = "Returned";
       originalItem.quantity -= returnItem.returndQuantity;
+      if (originalItem.quantity <= 0) {
+         originalItem.productStatus = "Returned";
+      }
+    }
+
+    // Check if any active items remain
+    hasActiveItems = order.items.some(item => item.quantity > 0);
+
+    // Update order status only if no active items remain
+    if (!hasActiveItems) {
+      order.orderStatus = "Returned";
     }
 
     // Add tracking entry for return approval
@@ -2207,6 +2427,12 @@ const returnApprove = async (req, res) => {
 
     await order.save();
 
+    // Refund logic for wallet - only on approved returns:
+    if ((order.paymentMethod === 'online' || order.paymentMethod === 'Wallet' || order.paymentMethod === 'cod') && returnItem.returndQuantity > 0 && returnItem.discountedPrice > 0) {
+      // Only refund if not already refunded (prevent double refund)
+      await Wallet.refundToWallet(order.userId, returnItem.discountedPrice * returnItem.returndQuantity, `Refund (Return) for order ${order.orderID}: ${returnItem.name} (${returnItem.mlSize}ml)`, order._id.toString());
+    }
+
     req.session.success =
       "Return approved, order status updated, and stock restored successfully";
     res.redirect(`/admin/return/${orderId}`);
@@ -2221,6 +2447,9 @@ const getOffers = async (req, res) => {
   let errorMessage = null;
 
   try {
+    // Auto-fix legacy data
+    await Offer.updateMany({ targetModel: 'Products' }, { $set: { targetModel: 'Product' } });
+
     // Handle messages from redirects
     if (req.query.success) {
       successMessage = decodeURIComponent(req.query.success);
@@ -2318,6 +2547,69 @@ const getOffers = async (req, res) => {
   }
 };
 
+const recalculatePrices = async (targetIds, type) => {
+  try {
+    let products = [];
+    if (type === 'Product') {
+      products = await Products.find({ _id: { $in: targetIds } });
+    } else if (type === 'Categories') {
+      products = await Products.find({ category: { $in: targetIds } });
+    }
+
+    const currentDate = new Date();
+
+    for (const product of products) {
+      // Find all active offers applying to this product
+      const productOffers = await Offer.find({
+        targetModel: 'Product',
+        targetId: product._id,
+        isActive: true,
+        isDeleted: false,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate }
+      });
+
+      // Find all active offers applying to this product's category
+      const categoryOffers = await Offer.find({
+        targetModel: 'Categories',
+        targetId: product.category,
+        isActive: true,
+        isDeleted: false,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate }
+      });
+
+      const allOffers = [...productOffers, ...categoryOffers];
+
+      // Calculate best discount for each variant
+      product.variants.forEach(variant => {
+        let bestPrice = variant.basePrice;
+
+        if (allOffers.length > 0) {
+          // Find the offer that gives the lowest price
+          const prices = allOffers.map(offer => {
+            let discounted = variant.basePrice;
+            if (offer.discountType === 'flat') {
+              discounted = variant.basePrice - offer.discountValue;
+            } else {
+              discounted = variant.basePrice - (variant.basePrice * offer.discountValue / 100);
+            }
+            return Math.max(0, discounted); // Ensure price doesn't go below 0
+          });
+          
+          bestPrice = Math.min(variant.basePrice, ...prices);
+        }
+
+        variant.discountedPrice = Math.round(bestPrice); // Round to nearest integer
+      });
+
+      await product.save();
+    }
+  } catch (error) {
+    console.error("Error recalculating prices:", error);
+  }
+};
+
 const createOffer = async (req, res) => {
   try {
     const {
@@ -2403,13 +2695,15 @@ const createOffer = async (req, res) => {
       }
     }
 
+    const targetModelName = appliesTo === "product" ? "Product" : "Categories";
+
     const offerData = {
       name: name.trim(),
       description: description?.trim() || undefined,
       discountType,
       discountValue: discountNum,
       appliesTo,
-      targetModel: appliesTo === "product" ? "Products" : "Categories",
+      targetModel: targetModelName,
       targetId: targetIds,
       startDate: start,
       endDate: end,
@@ -2418,6 +2712,9 @@ const createOffer = async (req, res) => {
 
     const offer = new Offer(offerData);
     await offer.save();
+
+    // Recalculate prices for affected items
+    await recalculatePrices(targetIds, targetModelName);
 
     // Redirect with success message (handled in GET)
     req.session.success = "Offer created successfully!";
@@ -2434,6 +2731,9 @@ const getOfferDetails = async (req, res) => {
   let errorMessage = null;
 
   try {
+    // Auto-fix legacy data
+    await Offer.updateMany({ targetModel: 'Products' }, { $set: { targetModel: 'Product' } });
+
     // Handle messages from redirects
     if (req.session.success) {
       successMessage = req.session.success;
@@ -2493,6 +2793,9 @@ const toggleOfferStatus = async (req, res) => {
 
     offer.isActive = !offer.isActive;
     await offer.save();
+
+    await recalculatePrices(offer.targetId, offer.targetModel);
+
     req.session.success = offer.isActive
       ? "Offer activated successfully!"
       : "Offer deactivated successfully!";
@@ -2535,6 +2838,8 @@ const updateOfferEndDate = async (req, res) => {
     offer.endDate = newEnd;
     await offer.save();
 
+    await recalculatePrices(offer.targetId, offer.targetModel);
+
     req.session.success = "Offer end date updated successfully!";
     res.redirect(`/admin/offers/${id}`);
   } catch (error) {
@@ -2561,6 +2866,8 @@ const deleteOffer = async (req, res) => {
 
     offer.isDeleted = true;
     await offer.save();
+
+    await recalculatePrices(offer.targetId, offer.targetModel);
 
     req.session.success = "Offer deleted successfully!";
     res.redirect("/admin/offers");

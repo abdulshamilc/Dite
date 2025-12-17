@@ -23,6 +23,7 @@ import {
     unlistProduct,
     deleteProduct,
     getSalesReport,
+    exportSalesReport,
     getcustomers,
     blockUser,
     getCategories, 
@@ -75,7 +76,8 @@ router.post('/products/edit-product/:id',isAuthenticatedAdmin, upload.array('ima
 router.post('/products/unlist/:id',isAuthenticatedAdmin,unlistProduct)
 router.post('/products/delete/:id',isAuthenticatedAdmin,deleteProduct)
 
-router.get('/sales',isAuthenticatedAdmin,pagination,getSalesReport) 
+router.get('/sales',isAuthenticatedAdmin,pagination,getSalesReport)
+router.post('/sales-report/export',isAuthenticatedAdmin,exportSalesReport) 
 
 router.get('/customers',isAuthenticatedAdmin,pagination,getcustomers) 
 router.post('/customers/block/:id',isAuthenticatedAdmin,blockUser)

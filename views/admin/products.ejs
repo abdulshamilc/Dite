@@ -179,10 +179,14 @@
                   <% } %>
                 </td>
                  <td class="px-4 py-2 align-top">
-  <% if (product.category && product.category.length > 0) { %>
-    <% product.category.forEach(cat => { %>
-      <%= cat.name %><br />
-    <% }) %>
+  <% 
+    let category = product.category;
+    if (Array.isArray(category)) {
+      category = category[0];
+    }
+  %>
+  <% if (category) { %>
+    <%= category.name || category %>
   <% } else { %>
     N/A
   <% } %>

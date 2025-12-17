@@ -1,5 +1,12 @@
-<%- include("../../partials/user/header") %>
-<style>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wallet - Dité</title>
+  <%- include("../../partials/user/headerHead") %>
+  <%- include("../../partials/user/footerHead") %>
+  <style>
   :root {
     --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
     --text:#f5f5f5;
@@ -360,7 +367,9 @@
     display: flex;
   }
 </style>
+</head>
 <body>
+  <%- include("../../partials/user/header") %>
   <div class="container">
     <h1 class="page-title">WALLET</h1>
     <section class="layout" aria-label="Wallet layout">
@@ -685,4 +694,6 @@
       showMessage('<%= error %>', 'error');
     <% } %>
   </script>
+  <%- include("../../partials/user/footer") %>
 </body>
+</html>

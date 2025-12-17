@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cart - Dité</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
     <style>
       * {
         margin: 0;
@@ -555,7 +557,7 @@
                       <% } %>
                     </div>
                     <div class="item-price">
-                      Rs.<%= item.basePrice.toFixed(2) %>
+                        <span>Rs.<%= item.discountedPrice.toFixed(2) %></span>
                     </div>
                   </div>
                   <div class="item-controls">
@@ -582,13 +584,15 @@
                     <div class="quantity-controls">
                       <button
                         class="quantity-btn"
+                        id="btn-dec-<%= item._id %>"
                         onclick="updateQuantity('<%= item._id %>', '<%= item.size %>', 'dec', <%= item.quantity %>)"
                       >
                         -
                       </button>
-                      <span class="quantity">Qty: <%=item.quantity %></span>
+                      <span class="quantity">Qty: <span id="qty-<%= item._id %>"><%= item.quantity %></span></span>
                       <button
                         class="quantity-btn"
+                        id="btn-inc-<%= item._id %>"
                         onclick="updateQuantity('<%= item._id %>', '<%= item.size %>', 'inc', <%= item.quantity %>)"
                       >
                         +
@@ -620,9 +624,29 @@
           <div class="summary-items">
             <% if (cart && cart.items.length > 0) { %>
               <% cart.items.forEach(item => { %>
-                <div class="summary-item">
-                  <span><%= item.name %></span>
-                  <span>Rs.<%= (item.basePrice * item.quantity).toFixed(2) %></span>
+                <div class="summary-item" id="summary-item-<%= item._id %>" style="flex-direction: column; align-items: flex-start; gap: 0.5rem; padding-bottom: 1rem; border-bottom: 1px solid #444;">
+                  <div style="display: flex; justify-content: space-between; width: 100%; font-size: 1.1rem;">
+                      <span style="font-weight: 500;"><%= item.name %></span>
+                      <span id="summary-base-<%= item._id %>" style="color: #ccc;">Rs.<%= (item.basePrice * item.quantity).toFixed(2) %></span>
+                  </div>
+                  
+                  <% const savings = (item.basePrice - item.discountedPrice) * item.quantity; %>
+                  <div id="savings-container-<%= item._id %>" style="display: <%= savings > 0 ? 'flex' : 'none' %>; justify-content: space-between; width: 100%; font-size: 1rem; color: #ef4444;">
+                      <span>Discount Applied</span>
+                      <span id="summary-savings-<%= item._id %>">-Rs.<%= savings.toFixed(2) %></span>
+                  </div>
+
+                  <% if (savings > 0 && offersMap && offersMap[item._id]) { %>
+                      <div style="font-size: 0.95rem; color: #ffffff; margin-top: 0.2rem;">
+                          <div>Offer: <%= offersMap[item._id].name %></div>
+                          <div>Expires: <%= new Date(offersMap[item._id].endDate).toLocaleDateString() %></div>
+                      </div>
+                  <% } %>
+                  
+                  <div style="display: flex; justify-content: space-between; width: 100%; margin-top: 0.5rem; font-weight: 600; font-size: 1.1rem;">
+                      <span>Total</span>
+                      <span id="summary-total-<%= item._id %>">Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %></span>
+                  </div>
                 </div>
               <% }); %>
               <div class="summary-item">
@@ -655,7 +679,19 @@
             <div class="total-amount">Rs.<%= total.toFixed(2) %></div>
           </div>
 
-          <a href="checkout/address"><button class="checkout-btn">CHECKOUT</button></a>
+          <% 
+             let hasOutOfStock = false;
+             if (cart && cart.items) {
+                 hasOutOfStock = cart.items.some(item => item.stockStatus === 'Out of Stock');
+             }
+          %>
+
+          <% if (hasOutOfStock) { %>
+              <button class="checkout-btn" disabled style="background-color: #555; cursor: not-allowed; opacity: 0.7;">Some items unavailable</button>
+              <p style="color: #ef4444; font-size: 0.9em; margin-top: 0.5rem; text-align: center;">Please remove out of stock items to proceed.</p>
+          <% } else { %>
+              <a href="checkout/address"><button class="checkout-btn">CHECKOUT</button></a>
+          <% } %>
         </aside>
       </div>
     </main>
@@ -688,25 +724,60 @@
         }, 5000);
       }
 
-      async function updateQuantity(itemId,size, action, currentQty) {
+      async function updateQuantity(itemId, size, action, currentQty) {
         if (action === 'inc' && currentQty >= 10) {
           showToast('You cannot add more than 10 Quantity.', 'error');
           return;
         }
 
         try {
-          const res = await fetch(`/cart/Quantity/${itemId}`, {
+          const res = await fetch(`/cart/quantity/${itemId}`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ size,action }),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ size, action }),
           });
 
-          if (res.ok) {
-            window.location.href = "/cart";
+          const data = await res.json();
+
+          if (res.ok && data.success) {
+            if (!data.newQuantity || data.newQuantity === 0) {
+              window.location.reload(); // Item removed
+            } else {
+              // Update List Quantity
+              const qtyEl = document.getElementById(`qty-${itemId}`);
+              if(qtyEl) qtyEl.innerText = data.newQuantity;
+
+              // Update Summary - Base Price Total
+              const summaryBase = document.getElementById(`summary-base-${itemId}`);
+              if(summaryBase) summaryBase.innerText = `Rs.${data.itemTotal.toFixed(2)}`;
+
+              // Update Summary - Savings
+              const savingsContainer = document.getElementById(`savings-container-${itemId}`);
+              const savingsVal = document.getElementById(`summary-savings-${itemId}`);
+              if(savingsContainer && savingsVal) {
+                  if (data.itemSavings > 0) {
+                      savingsVal.innerText = `-Rs.${data.itemSavings.toFixed(2)}`;
+                      savingsContainer.style.display = 'flex';
+                  } else {
+                      savingsContainer.style.display = 'none';
+                  }
+              }
+
+              // Update Summary - Item Final Total
+              const summaryTotal = document.getElementById(`summary-total-${itemId}`);
+              if(summaryTotal) summaryTotal.innerText = `Rs.${data.itemDiscountedTotal.toFixed(2)}`;
+
+              // Update Global Cart Total
+              const globalTotal = document.querySelector('.total-amount');
+              if(globalTotal) globalTotal.innerText = `Rs.${data.cartTotal.toFixed(2)}`;
+
+              // Update Button Handlers
+              const btnInc = document.getElementById(`btn-inc-${itemId}`);
+              const btnDec = document.getElementById(`btn-dec-${itemId}`);
+              if(btnInc) btnInc.setAttribute('onclick', `updateQuantity('${itemId}', '${size}', 'inc', ${data.newQuantity})`);
+              if(btnDec) btnDec.setAttribute('onclick', `updateQuantity('${itemId}', '${size}', 'dec', ${data.newQuantity})`);
+            }
           } else {
-            const data = await res.json();
             showToast(data.message || "Failed to update quantity", 'error');
           }
         } catch (error) {

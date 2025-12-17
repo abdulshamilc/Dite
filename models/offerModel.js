@@ -29,7 +29,7 @@ const offerSchema = new mongoose.Schema(
     },
     targetModel: {
       type: String,
-      enum: ["Products", "Categories"], 
+      enum: ["Product", "Categories"], 
       required: [true, "Target model is required"],
     },
     targetId: {

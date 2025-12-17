@@ -590,11 +590,11 @@
         }
       }
     </style>
-    <link rel="stylesheet" href="/style/user/header.css">
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
   </head>
-<!-- Header -->
-    <%- include("../../partials/user/header") %>
   <body>
+    <%- include("../../partials/user/header") %>
     
     <!-- Main Content -->
     <main class="checkout-container">
@@ -627,7 +627,7 @@
                       </div>
                     </div>
                     <div class="item-total">
-                      Rs.<%= (item.basePrice * item.quantity).toFixed(2) %>
+                      Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %>
                     </div>
                   </div>
                   <div class="item-footer">

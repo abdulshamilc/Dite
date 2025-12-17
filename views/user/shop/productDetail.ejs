@@ -35,13 +35,11 @@
         transform: scale(1.1);
       }
     </style>
-    <!-- Moved header-specific head content here to avoid nesting issues -->
-    <link rel="stylesheet" href="/style/user/header.css">
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
   </head>
-  <%- include("../../partials/user/header") %>
   <body class="min-h-screen bg-black text-white px-10">
-    <!-- Header -->
+    <%- include("../../partials/user/header") %>
 
     <main class="pt-20">
       <!-- Error Alert -->
@@ -104,6 +102,27 @@
                 </button>
                 <% }) %>
               </div>
+
+              <!-- Special Offers -->
+              <% if (typeof activeOffers !== 'undefined' && activeOffers && activeOffers.length > 0) { %>
+                <div class="mb-8 p-4 bg-gray-900 border border-yellow-500/30 rounded-lg">
+                  <h4 class="text-yellow-500 font-bold mb-2 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M17.707 9.293a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-7-7A.997.997 0 012 10V5a3 3 0 013-3h5c.256 0 .512.098.707.293l7 7zM5 6a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                    </svg>
+                    Special Offers Available!
+                  </h4>
+                  <ul class="space-y-2">
+                    <% activeOffers.forEach(offer => { %>
+                      <li class="text-sm text-gray-300">
+                        <span class="font-semibold text-white"><%= offer.name %>:</span>
+                        <%= offer.discountType === 'percentage' ? offer.discountValue + '% Off' : 'Flat ₹' + offer.discountValue + ' Off' %>
+                        <% if(offer.description) { %> - <span class="text-gray-400 italic"><%= offer.description %></span><% } %>
+                      </li>
+                    <% }); %>
+                  </ul>
+                </div>
+              <% } %>
 
              <!-- Price -->
 <div id="priceSection" class="text-3xl font-bold mb-8">
@@ -366,5 +385,6 @@
         });
       });
     </script>
+    <%- include("../../partials/user/footer") %>
   </body>
 </html>

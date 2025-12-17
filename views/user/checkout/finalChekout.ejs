@@ -4,7 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Final Checkout - Dité</title>
-     <link rel="stylesheet" href="/style/user/header.css">
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
     <style>
       .checkout-container,
       .checkout-container * {
@@ -551,7 +552,7 @@
                         </div>
                       </div>
                       <div class="item-total">
-                        Rs.<%= (item.basePrice * item.quantity).toFixed(2) %>
+                        Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %>
                       </div>
                     </div>
                     <div class="item-footer">
@@ -612,6 +613,11 @@
                   <span class="payment-icon">💰</span>
                   <span>Cash on Delivery</span>
                 </label>
+                <label class="payment-option">
+                  <input type="radio" class="payment-radio" name="payment" value="wallet" id="walletOption" />
+                  <span class="payment-icon">👛</span>
+                  <span>Wallet <span id="wallet-balance"></span></span>
+                </label>
               </div>
             </div>
           </div>
@@ -625,8 +631,8 @@
             <% cart.items.forEach(item => { %>
             <div class="summary-item">
               <span class="summary-name"><%= item.name %></span>
-              <span class="summary-qty">Qty: <%= item.quantity %> x Rs. <%= item.basePrice.toFixed(2) %></span>
-              <span class="summary-total">Rs. <%= (item.basePrice * item.quantity).toFixed(2) %></span>
+              <span class="summary-qty">Qty: <%= item.quantity %> x Rs. <%= item.discountedPrice.toFixed(2) %></span>
+              <span class="summary-total">Rs. <%= (item.discountedPrice * item.quantity).toFixed(2) %></span>
             </div>
             <% }); %>
           </div>
@@ -636,7 +642,7 @@
             <h2 class="price-title">Price Details</h2>
             <% let subtotal = 0; %>
             <% if (cart && cart.items.length > 0) { %>
-              <% cart.items.forEach(item => { subtotal += item.basePrice * item.quantity; }); %>
+              <% cart.items.forEach(item => { subtotal += item.discountedPrice * item.quantity; }); %>
             <% } %>
             <div class="price-detail">
               <span>Subtotal</span>
@@ -721,7 +727,7 @@
   // Calculate subtotal globally in EJS scope (move this calculation OUTSIDE the price-details block in your EJS template)
   <% let globalSubtotal = 0; %>
   <% if (cart && cart.items.length > 0) { %>
-    <% cart.items.forEach(item => { globalSubtotal += item.basePrice * item.quantity; }); %>
+    <% cart.items.forEach(item => { globalSubtotal += item.discountedPrice * item.quantity; }); %>
   <% } %>
   // Pass data from EJS to JS
   const subtotal = <%= globalSubtotal %>;
@@ -791,6 +797,38 @@
     } else if (paymentMethod === 'razorpay') {
       showPaymentStatus('Initiating Razorpay...');
       initiateRazorpay();
+    } else if (paymentMethod === 'wallet') {
+      if(userWalletBalance < subtotal){
+        alert('Insufficient wallet balance.');
+        document.getElementById('confirmBtn').disabled = false;
+        return;
+      }
+      showPaymentStatus('Paying from Wallet...');
+      fetch('/checkout/placeOrder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          items: cartItems,
+          addressId: selectedAddressId,
+          paymentMethod: 'wallet'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/checkout/success';
+        } else {
+          const errorMsg = data.message || 'Wallet payment failed. Please try again.';
+          showPaymentStatus(errorMsg, true);
+          setTimeout(() => redirectToFailed(errorMsg, 'wallet_failed', true), 1500);
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        const errorMsg = 'Network error during wallet payment. Please check your connection and try again.';
+        showPaymentStatus(errorMsg, true);
+        setTimeout(() => redirectToFailed(errorMsg, 'network_error'), 1500);
+      });
     }
   }
 
@@ -976,6 +1014,23 @@
       closeViewModal();
     }
   });
+
+  let userWalletBalance = 0;
+  fetch('/wallet/api/balance').then(res => res.json()).then(({balance})=>{
+    userWalletBalance = balance || 0;
+    const balLabel = document.getElementById('wallet-balance');
+    if(balLabel) {
+      balLabel.textContent = `(Balance: ₹${userWalletBalance.toFixed(2)})`;
+    }
+    const walletRadio = document.getElementById('walletOption');
+    if(walletRadio) {
+      walletRadio.disabled = userWalletBalance < subtotal;
+      if(walletRadio.disabled) {
+        walletRadio.parentElement.style.opacity = '0.5';
+        walletRadio.parentElement.title = 'Insufficient Wallet Balance';
+      }
+    }
+  }).catch(()=>{});
 </script>
 </body>
 </html>

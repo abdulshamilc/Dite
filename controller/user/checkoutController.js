@@ -4,6 +4,7 @@ import { User } from "../../models/userModels.js";
 import Order from "../../models/ordersModel.js";
 import { nanoid } from "nanoid";
 import Products from "../../models/productsModels.js";
+import Wallet from '../../models/walletModel.js';
 
 const getCheckout = async (req, res) => {
   const userEmail = req.session.user;
@@ -11,19 +12,35 @@ const getCheckout = async (req, res) => {
 
   const user = await User.findOne({ email: userEmail });
   if (!user) return res.redirect("/login");
-  const cart = await Cart.findOne({ userId: user._id });
+  
+  const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
   if (!cart) return res.redirect("/cart");
   if (cart.items.length <= 0) {
     req.session.error = "The Cart Does Not Have Any Product To CheckOut";
     return res.redirect("/cart");
+  } 
+
+  // Validate Stock before proceeding
+  for (const item of cart.items) {
+    const product = item.productId;
+    if (!product || product.isDeleted || !product.isListed) {
+       req.session.error = `Item ${item.name} is currently unavailable.`;
+       return res.redirect("/cart");
+    }
+    const variant = product.variants.find(v => v.mlSize === Number(item.size));
+    if (!variant || variant.stock < item.quantity) {
+       req.session.error = `Item ${item.name} (Size: ${item.size}) is out of stock.`;
+       return res.redirect("/cart");
+    }
   }
+
   const addresses = await Address.find({ userId: user._id , isDeleted:false}); ;
 
   let subtotal = 0;
   let total = 0;
   if (cart && cart.items.length > 0) {
     subtotal = cart.items.reduce(
-      (acc, item) => acc + item.basePrice * item.quantity,
+      (acc, item) => acc + item.discountedPrice * item.quantity,
       0
     );
     total = subtotal;
@@ -135,7 +152,21 @@ const getPaymentpage = async (req, res) => {
   } catch (error) {
     console.log(error);
   }
-};const placeOrder = async (req, res) => {
+};
+
+const getWalletBalanceAPI = async (req, res) => {
+  try {
+    if (!req.session.user) return res.json({ balance: 0 });
+    const user = await User.findOne({ email: req.session.user });
+    if (!user) return res.json({ balance: 0 });
+    const wallet = await Wallet.findOne({ user: user._id });
+    return res.json({ balance: wallet ? wallet.balance : 0 });
+  } catch (error) {
+    return res.json({ balance: 0 });
+  }
+};
+
+const placeOrder = async (req, res) => {
   try {
     // Fetch user from session (email-based auth)
     const user = await User.findOne({ email: req.session.user });
@@ -162,6 +193,19 @@ const getPaymentpage = async (req, res) => {
     const address = selectedAddress.toObject();
     delete address._id;
     delete address.__v;
+
+    // Final Stock Validation
+    for (const item of items) { // items from request body
+       const product = await Products.findById(item.productId || item._id);
+       if (!product || product.isDeleted || !product.isListed) {
+           return res.status(400).json({ success: false, message: `Product ${product ? product.name : 'Unknown'} is no longer available.` });
+       }
+       const size = item.mlSize || item.size;
+       const variant = product.variants.find(v => v.mlSize === Number(size));
+       if (!variant || variant.stock < item.quantity) {
+           return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name} (Size: ${size}).` });
+       }
+    }
 
     // Calculate totalAmount (prioritize discountedPrice if available)
     const totalAmount = items.reduce((acc, item) => {
@@ -196,7 +240,26 @@ const getPaymentpage = async (req, res) => {
       paymentInfo.razorpayPaymentId = razorpayPaymentId;
       paymentInfo.razorpayOrderId = razorpayOrderId; // Requires schema field: razorpayOrderId: { type: String }
     }
-    // For Wallet: Add deduction logic here if needed (e.g., update user.wallet -= totalAmount)
+    // For Wallet: Deduction
+    if (normalizedPaymentMethod === 'wallet') {
+      // Check wallet balance
+      let wallet = await Wallet.findOne({ user: user._id });
+      if (!wallet || wallet.balance < totalAmount) {
+        return res.status(400).json({ success: false, message: "Insufficient wallet balance. Please top up or use another payment method." });
+      }
+      wallet.balance -= totalAmount;
+      wallet.transactions.unshift({
+        description: `Purchase from wallet. Order ID: ${newOrder.orderID}`,
+        amount: totalAmount,
+        type: 'debit',
+        date: new Date(),
+        source: 'purchase',
+        referenceId: newOrder._id.toString(),
+      });
+      if (wallet.transactions.length > 100) wallet.transactions = wallet.transactions.slice(0, 100);
+      await wallet.save();
+      paymentInfo.paymentStatus = 'Paid'; // Mark as paid
+    }
 
     // Create order (use schema defaults; orderStatus always starts as "Placed")
     const newOrder = new Order({
@@ -221,20 +284,16 @@ const getPaymentpage = async (req, res) => {
     await newOrder.save();
 
     // Decrease stock immediately (for both COD and Online; assumes Products model with variants)
-    for (const item of mappedItems) {
-      const product = await Products.findById(item.productId);
-      if (product && product.variants) {
+    // Decrease stock immediately using atomic update
+    await Promise.all(
+      mappedItems.map(async (item) => {
         const mlSizeNum = parseInt(item.mlSize) || 0;
-        const variantIndex = product.variants.findIndex(v => v.mlSize === mlSizeNum);
-        if (variantIndex !== -1 && product.variants[variantIndex].stock >= item.quantity) {
-          product.variants[variantIndex].stock -= item.quantity;
-          await product.save();
-        } else {
-          console.warn(`Stock insufficient for product ${item.productId}, variant ${mlSizeNum}`);
-          // Optional: Rollback order or mark as backordered
-        }
-      }
-    }
+        await Products.updateOne(
+          { _id: item.productId, "variants.mlSize": mlSizeNum },
+          { $inc: { "variants.$.stock": -item.quantity } }
+        );
+      })
+    );
 
     // Clear user's cart (use findOneAndUpdate for safety; assumes single cart per user)
     await Cart.findOneAndUpdate(
@@ -267,20 +326,7 @@ const getSuccessPage = async (req, res) => {
     if (!req.session.orderplaced) return res.redirect("/cart");
 
     // Decrease stock for the latest placed order
-    const latestOrder = await Order.findOne({ userId: user._id }).sort({ placedAt: -1 });
-    if (latestOrder && latestOrder.orderStatus === "Placed") {
-      for (const item of latestOrder.items) {
-        const product = await Products.findById(item.productId);
-        if (product && product.variants) {
-          const mlSizeNum = parseInt(item.mlSize);
-          const variantIndex = product.variants.findIndex(v => v.mlSize === mlSizeNum);
-          if (variantIndex !== -1) {
-            product.variants[variantIndex].stock -= item.quantity;
-            await product.save();
-          }
-        }
-      }
-    }
+    // Stock deduction is handled in placeOrder. Removing duplicate logic here.
 
     await Cart.deleteMany({ userId: user._id });
 
@@ -289,7 +335,8 @@ const getSuccessPage = async (req, res) => {
   } catch (error) {
     console.log(error)
   }
-};const getFailedPage = async (req, res) => {
+};
+const getFailedPage = async (req, res) => {
   const user = await User.findOne({ email: req.session.user });
   if (!user) return res.redirect("/login");
 
@@ -321,6 +368,7 @@ export {
   clearGeolocation,
   addNewAddress,
   getPaymentpage,
+  getWalletBalanceAPI,
   placeOrder,
   getSuccessPage,
   getFailedPage,

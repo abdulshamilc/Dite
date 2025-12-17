@@ -213,7 +213,7 @@
             </thead>
             <tbody>
               <% returns.forEach(returnItem => { %>
-              <tr class="border-b border-gray-700 hover:bg-gray-900 cursor-pointer" onclick="window.location.href='/admin/return/<%= returnItem.order_id %>'">
+              <tr class="border-b border-gray-700 hover:bg-gray-900 cursor-pointer" onclick="window.location.href='/admin/return/<%= returnItem.order_id %>?returnId=<%= returnItem._id %>'">
                 <td class="px-4 py-2"><%= returnItem.returnID %></td>
                 <td class="px-4 py-2"><%= returnItem.orderID %></td>
                 <td class="px-4 py-2"><%= returnItem.address.fullName %></td>

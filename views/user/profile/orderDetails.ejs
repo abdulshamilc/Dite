@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order Details</title>
-    <link rel="stylesheet" href="/style/user/header.css">
     <script src="https://cdn.tailwindcss.com"></script>
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
     <style>
         :root {
             --primary: #1a1a1a;
@@ -362,24 +363,38 @@
         <div class="max-w-6xl mx-auto w-full">
             <%
             // Compute effective quantities for active items by subtracting approved returned quantities (cancels already reflected in item.quantity)
+            // Compute effective quantities for active items
+            // Logic: item.quantity in DB is already reduced by Approved returns.
+            // We subtract 'Requested' and 'Rejected' returns here so they don't show as "Active" 
+            // (since they appear in the "Returned Items" list or are potentially in flux).
             let effectiveItems = [];
             let hasActiveItems = false;
             let hasApprovedReturn = false;
+            
+            // First check if there are any approved returns to set the flag correctly
+            if (order.returndProduct && order.returndProduct.length > 0) {
+                 hasApprovedReturn = order.returndProduct.some(rp => rp.adminApproved === 'Approved');
+            }
+
             if (order.items && order.items.length > 0) {
                 effectiveItems = order.items.map(item => {
                     let effectiveQty = item.quantity || 0;
-                    let approvedReturnQty = 0;
+                    let pendingOrRejectedQty = 0;
+                    
                     if (order.returndProduct && order.returndProduct.length > 0) {
                         order.returndProduct.forEach(rp => {
-                            if (rp.adminApproved === 'Approved' &&
+                            // Only subtract Requested or Rejected from Active view
+                            // Approved is already subtracted from item.quantity in DB
+                            if ((rp.adminApproved === 'Requested' || rp.adminApproved === 'Rejected') &&
                                 rp.productId.toString() === item.productId.toString() &&
                                 rp.mlSize === item.mlSize) {
-                                approvedReturnQty += rp.returndQuantity || 0;
-                                hasApprovedReturn = true;
+                                pendingOrRejectedQty += rp.returndQuantity || 0;
                             }
                         });
                     }
-                    effectiveQty -= approvedReturnQty;
+                    
+                    effectiveQty -= pendingOrRejectedQty;
+                    
                     if (effectiveQty > 0) {
                         hasActiveItems = true;
                     }
@@ -390,21 +405,25 @@
                 }).filter(item => item.effectiveQuantity > 0);
             }
 
-            // Compute available for return: subtract all returned quantities (pending + approved + requested, regardless of status)
+            // Compute available for return: 
+            // Start with item.quantity (which excludes Approved).
+            // Subtract 'Requested' and 'Rejected' to see what's left to request.
             let returnAvailableItems = [];
             if (order.items && order.items.length > 0) {
                 returnAvailableItems = order.items.map(item => {
                     let effectiveQty = item.quantity || 0;
-                    let totalReturnQty = 0;
+                    let unavailableQty = 0;
                     if (order.returndProduct && order.returndProduct.length > 0) {
                         order.returndProduct.forEach(rp => {
-                            if (rp.productId.toString() === item.productId.toString() &&
+                            // Don't subtract Approved (already gone from item.quantity)
+                            if (rp.adminApproved !== 'Approved' && 
+                                rp.productId.toString() === item.productId.toString() &&
                                 rp.mlSize === item.mlSize) {
-                                totalReturnQty += rp.returndQuantity || 0;
+                                unavailableQty += rp.returndQuantity || 0;
                             }
                         });
                     }
-                    effectiveQty -= totalReturnQty;
+                    effectiveQty -= unavailableQty;
                     return {
                         ...item.toObject(),
                         effectiveQuantity: Math.max(0, effectiveQty)
@@ -852,7 +871,19 @@
                     <% if (order.orderStatus === 'Placed' && hasActiveItems) { %>
                     <button id="cancelOrderBtn" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition text-center" aria-label="Cancel order items">Cancel Order</button>
                     <% } %>
-                    <% if (order.orderStatus === 'Delivered' && hasActiveItems) { %>
+                    <% 
+                        let isReturnable = false;
+                        if (order.orderStatus === 'Delivered' && order.deliveredAt) {
+                            const deliveryDate = new Date(order.deliveredAt);
+                            const currentDate = new Date();
+                            const timeDiff = currentDate - deliveryDate;
+                            const daysDiff = timeDiff / (1000 * 3600 * 24);
+                            if (daysDiff <= 3) {
+                                isReturnable = true;
+                            }
+                        }
+                    %>
+                    <% if (order.orderStatus === 'Delivered' && hasActiveItems && isReturnable) { %>
                     <button id="returnOrderBtn" class="block w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold transition text-center" aria-label="Return order items">Return Order</button>
                     <% } %>
                     <button id="downloadInvoiceBtn" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-accent transition text-center" aria-label="Download invoice PDF">Download Invoice</button>
@@ -1158,5 +1189,6 @@
             });
         }
     </script>
+    <%- include("../../partials/user/footer") %>
 </body>
 </html>

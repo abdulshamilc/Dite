@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order History</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
     <style>
         :root {
             --primary: #080808;
@@ -59,11 +61,27 @@
             <div class="h-1 w-20 accent-border border-t-2 mt-4 mx-auto"></div> <!-- Added mx-auto for underline centering -->
         </div>
 
-        <!-- Filter Button - Centered -->
-        <div class="max-w-6xl mx-auto mb-8 text-center w-full">
-            <button class="bg-accent text-primary px-6 py-3 rounded-md font-semibold hover:bg-opacity-90 transition-colors inline-block">
-                Filter Orders
-            </button>
+        <!-- Search and Sort - Centered -->
+        <div class="max-w-6xl mx-auto mb-8 w-full flex flex-col md:flex-row gap-4 items-center justify-between bg-[#262626] p-4 rounded-lg border border-gray-700">
+            <div class="w-full md:w-1/2 relative">
+                <input type="text" id="orderSearch" value="<%= locals.search || '' %>" placeholder="Search by Order ID..." 
+                    class="w-full bg-[#1a1a1a] border border-gray-600 text-white px-4 py-2 rounded-md focus:outline-none focus:border-accent transition-colors"
+                >
+                <button class="absolute right-3 top-2.5 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="flex items-center gap-2 w-full md:w-auto">
+                <label class="text-gray-400 text-sm whitespace-nowrap">Sort By:</label>
+                <select id="orderSort" class="bg-[#1a1a1a] border border-gray-600 text-white px-4 py-2 rounded-md focus:outline-none focus:border-accent transition-colors w-full md:w-auto">
+                    <option value="date_desc" <%= locals.sort === 'date_desc' ? 'selected' : '' %>>Newest First</option>
+                    <option value="date_asc" <%= locals.sort === 'date_asc' ? 'selected' : '' %>>Oldest First</option>
+                    <option value="amount_desc" <%= locals.sort === 'amount_desc' ? 'selected' : '' %>>Amount: High to Low</option>
+                    <option value="amount_asc" <%= locals.sort === 'amount_asc' ? 'selected' : '' %>>Amount: Low to High</option>
+                </select>
+            </div>
         </div>
 
         <!-- Orders Container -->
@@ -72,8 +90,8 @@
                 <% orders.forEach(function(order) { %>
                 <!-- Transform inline: Format ID, status, date, etc. -->
                 <% 
-                    // Format ID from _id
-                    const formattedId = `#ORD-${order._id.toString().slice(-8).toUpperCase()}`;
+                    // Format ID
+                    const formattedId = order.orderID ? `#${order.orderID}` : `#ORD-${order._id.toString().slice(-8).toUpperCase()}`;
                     
                     // Map status (using consistent orderStatus property)
                     let statusText = order.orderStatus || 'Processing';
@@ -160,25 +178,86 @@
             <% } %>
         </div>
 
-        <!-- Pagination  -->
+        <!-- Pagination with Search/Sort Persistence -->
         <% if (totalPages > 1) { %>
         <div class="max-w-6xl mx-auto flex justify-center items-center space-x-2">
-            <a href="?page=<%= currentPage > 1 ? currentPage - 1 : 1 %>" 
+            <!-- Previous Button -->
+            <a href="?page=<%= currentPage > 1 ? currentPage - 1 : 1 %>&search=<%= locals.search %>&sort=<%= locals.sort %>" 
                class="pagination-btn <%= currentPage === 1 ? 'disabled' : '' %>">
                 Previous
             </a>
-            <% pages.forEach(function(p) { %>
-                <a href="?page=<%= p %>" 
+
+            <!-- Numbered Pages -->
+            <% 
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+
+            // Adjust window if near start
+            if (currentPage <= 3) {
+                endPage = Math.min(5, totalPages);
+            }
+            // Adjust window if near end
+            if (currentPage >= totalPages - 2) {
+                startPage = Math.max(1, totalPages - 4);
+            }
+
+            // Show first page if not in range
+            if (startPage > 1) { %>
+                <a href="?page=1&search=<%= locals.search %>&sort=<%= locals.sort %>" class="pagination-btn">1</a>
+                <% if (startPage > 2) { %>
+                    <span class="text-gray-500 px-2">...</span>
+                <% } %>
+            <% } %>
+
+            <% for(let p = startPage; p <= endPage; p++) { %>
+                <a href="?page=<%= p %>&search=<%= locals.search %>&sort=<%= locals.sort %>" 
                    class="pagination-btn <%= currentPage === p ? 'active' : '' %>">
                     <%= p %>
                 </a>
-            <% }); %>
-            <a href="?page=<%= currentPage < totalPages ? currentPage + 1 : totalPages %>" 
+            <% } %>
+
+            <!-- Show last page if not in range -->
+            <% if (endPage < totalPages) { %>
+                <% if (endPage < totalPages - 1) { %>
+                    <span class="text-gray-500 px-2">...</span>
+                <% } %>
+                <a href="?page=<%= totalPages %>&search=<%= locals.search %>&sort=<%= locals.sort %>" class="pagination-btn"><%= totalPages %></a>
+            <% } %>
+
+            <!-- Next Button -->
+            <a href="?page=<%= currentPage < totalPages ? currentPage + 1 : totalPages %>&search=<%= locals.search %>&sort=<%= locals.sort %>" 
                class="pagination-btn <%= currentPage === totalPages ? 'disabled' : '' %>">
                 Next
             </a>
         </div>
         <% } %>
+
+        <script>
+            let searchTimeout;
+            const searchInput = document.getElementById('orderSearch');
+            const sortSelect = document.getElementById('orderSort');
+
+            // Handle Search
+            searchInput.addEventListener('input', function(e) {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    updateUrl('search', e.target.value);
+                }, 500); // 500ms debounce
+            });
+
+            // Handle Sort
+            sortSelect.addEventListener('change', function(e) {
+                updateUrl('sort', e.target.value);
+            });
+
+            function updateUrl(key, value) {
+                const url = new URL(window.location.href);
+                url.searchParams.set(key, value);
+                url.searchParams.set('page', 1); // Reset to page 1 on filter change
+                window.location.href = url.toString();
+            }
+        </script>
     </div>
+    <%- include("../../partials/user/footer") %>
 </body>
 </html>

@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Wishlist - Dité</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <%- include("../../partials/user/headerHead") %>
+    <%- include("../../partials/user/footerHead") %>
     <style>
       /* Your existing styles unchanged */
       * {
@@ -453,58 +455,66 @@
       }
     </style>
   </head>
+  
   <body>
     <!-- Header -->
     <%- include("../../partials/user/header") %>
 
-    <!-- Main Content -->
     <main class="wishlist-container">
       <h1 class="wishlist-title">WISHLIST</h1>
 
-      <!-- Wishlist Items -->
       <section class="wishlist-items">
         <% if (wishlist && wishlist.items.length > 0) { %>
           <% wishlist.items.forEach(item => { %>
-            <div class="cart-item" data-product-id="<%= item.productId %>" onclick="goToProduct('<%= item.productId %>')">
-              <img
-                src="<%= item.image %>"
-                alt="<%= item.name %>"
-                class="item-image"
-              />
+            <div class="cart-item"
+              data-product-id="<%= item.productId %>"
+              data-item-id="<%= item._id %>"
+              onclick="goToProduct('<%= item.productId %>')">
+
+              <img src="<%= item.image %>" alt="<%= item.name %>" class="item-image"/>
+
               <div class="item-details">
                 <div class="item-header">
                   <div>
                     <div class="item-name"><%= item.name %></div>
                     <div class="item-brand"><%= item.brand %></div>
-                    <div class="item-variants">Available in <%= item.numVariants %> sizes</div>
+                    <div class="item-variants">
+                      Available in <%= item.numVariants %> sizes
+                    </div>
                   </div>
+
                   <div class="item-controls">
-                    <form
-                      action="/wishlist/remove/<%= item.productId %>"
-                      method="POST"
-                      style="display: inline"
-                      id="deleteForm_<%= item._id %>"
-                    >
-                      <button type="button" class="remove-btn" onclick="event.stopPropagation(); confirmDelete('<%= item.productId %>')">
-                        <svg
-                          width="16"
-                          height="16"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+
+                    <!-- REMOVE FORM -->
+                    <form action="/wishlist/remove/<%= item.productId %>"
+                          method="POST"
+                          id="deleteForm_<%= item.productId %>"
+                          style="display: inline-block">
+
+                      <button type="button"
+                              class="remove-btn"
+                              data-product-id="<%= item.productId %>"
+                              onclick="confirmDelete(event)">
+                        <svg width="16" height="16" fill="none" stroke="currentColor"
+                          viewBox="0 0 24 24">
+                          <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4
+                                   a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
                       </button>
                     </form>
-                    <button class="add-to-cart-btn" onclick="event.stopPropagation(); addToCart('<%= item.productId %>')">
+
+                    <!-- ADD TO CART -->
+                    <button class="add-to-cart-btn"
+                            onclick="event.stopPropagation(); addToCartFromWishlist('<%= item._id %>')">
                       Add to Cart
                     </button>
+
                   </div>
                 </div>
               </div>
             </div>
           <% }); %>
+
         <% } else { %>
           <div class="no-items">
             <p>No items in your wishlist yet.</p>
@@ -512,24 +522,21 @@
         <% } %>
       </section>
 
-      <!-- Suggestions Section -->
+      <!-- SUGGESTIONS -->
       <% if (suggestedProducts && suggestedProducts.length > 0) { %>
         <section class="suggestions-section">
           <h3 class="suggestions-title">Suggested Products</h3>
+
           <div class="suggestions-grid">
             <% suggestedProducts.forEach(product => { %>
               <div class="suggestion-card">
-                <img 
-                  src="<%= product.images[0] || '/default-image.jpg' %>" 
-                  alt="<%= product.name %>" 
-                />
+                <img src="<%= product.images[0] || '/default-image.jpg' %>" />
                 <h4><%= product.name %></h4>
                 <p><%= product.brand %> - <%= product.concentration %></p>
-                <button 
-                  class="add-suggestion-btn" 
-                  data-product-id="<%= product._id %>"
-                  onclick="addToWishlistSuggestion(this)"
-                >
+
+                <button class="add-suggestion-btn"
+                        data-product-id="<%= product._id %>"
+                        onclick="addToWishlistSuggestion(this)">
                   Add to Wishlist
                 </button>
               </div>
@@ -542,99 +549,98 @@
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
 
-    <!-- Toast Container -->
+    <!-- Toast -->
     <div id="toast-container" class="toast-container"></div>
 
     <script>
+      function goToProduct(id) {
+        window.location.href = `/product/${id}`;
+      }
+
       function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
+
         toast.innerHTML = `
           <span>${message}</span>
-          <button class="close" onclick="const t=this.closest('.toast'); t.classList.add('fadeOut'); setTimeout(() => { if (t.parentElement) t.parentElement.removeChild(t); }, 300);">&times;</button>
+          <button class="close"
+            onclick="const t=this.closest('.toast'); t.classList.add('fadeOut');
+                     setTimeout(() => t.remove(), 300);">&times;</button>
         `;
+
         container.appendChild(toast);
 
         setTimeout(() => {
           toast.classList.add('fadeOut');
-          setTimeout(() => {
-            if (container.contains(toast)) {
-              container.removeChild(toast);
-            }
-          }, 300);
+          setTimeout(() => toast.remove(), 300);
         }, 5000);
       }
+    </script>
 
-      function confirmDelete(productId) {
+    <script>
+      /* FIXED VERSION — SAFE PRODUCT ID */
+      function confirmDelete(event) {
+        event.stopPropagation();
+        
+        const productId = event.currentTarget.dataset.productId;
+        const form = document.getElementById(`deleteForm_${productId}`);
+
         Swal.fire({
           title: 'Are you sure?',
-          text: "You are removing this item from the wishlist!",
+          text: 'You are removing this item from the wishlist!',
           icon: 'warning',
           showCancelButton: true,
           confirmButtonColor: '#ef4444',
           cancelButtonColor: '#666',
           confirmButtonText: 'Yes, remove it!',
-          cancelButtonText: 'Cancel',
           background: '#2a2a2a',
           color: '#ffffff'
-        }).then((result) => {
+        }).then(result => {
           if (result.isConfirmed) {
-            // Submit the form (now using productId)
-            const formId = 'deleteForm_' + document.querySelector(`form[action*="${productId}"]`).id.split('_')[1]; // Fallback ID match
-            document.getElementById(formId).submit();
+            form.submit();
           }
         });
       }
+    </script>
 
-      function addToCart(productId) {
-        fetch('/cart/add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId, quantity: 1 })
-        }).then(res => res.json()).then(data => {
-          if (data.success) {
-            showToast('Added to cart!', 'success');
-          } else {
-            showToast(data.message || 'Failed to add to cart', 'error');
-          }
-        }).catch(err => {
-          showToast('An error occurred', 'error');
-        });
+    <script>
+      function addToCartFromWishlist(itemId) {
+        fetch(`/wishlist/addToCart/${itemId}`, { method: "POST" })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              // Reload to update cart count header and ensure consistent state
+              window.location.reload();
+            } else {
+              showToast(data.message || 'Error adding to cart', 'error');
+            }
+          })
+          .catch(err => {
+            console.error('Error:', err);
+            showToast('Server error. Please try again.', 'error');
+          });
       }
 
       function addToWishlistSuggestion(btn) {
-        const productId = btn.dataset.productId;
+        const pid = btn.dataset.productId;
 
-        fetch('/wishlist/add/' + productId, {  // Match shop route
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId })
-        }).then(res => res.json()).then(data => {
-          if (data.success) {
-            showToast('Added to wishlist!', 'success');
-            window.location.reload();
-          } else {
-            showToast(data.message || 'Failed to add to wishlist', 'error');
-          }
-        }).catch(err => {
-          showToast('An error occurred', 'error');
-        });
+        fetch(`/wishlist/add/${pid}`, { method: "POST" })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              showToast(data.message || 'Added to wishlist', 'success');
+              // Optional: reload or disable button
+            } else {
+              showToast(data.message || 'Could not add to wishlist', 'error');
+            }
+          })
+          .catch(err => {
+              console.error('Error:', err);
+              showToast('Server error. Please try again.', 'error');
+          });
       }
-
-      function goToProduct(productId) {
-        window.location.href = `/shop/${productId}`;
-      }
-
-      // Show success/error toasts if passed
-      document.addEventListener('DOMContentLoaded', function() {
-        <% if (typeof success !== 'undefined' && success) { %>
-          showToast('<%= success %>', 'success');
-        <% } %>
-        <% if (typeof error !== 'undefined' && error) { %>
-          showToast('<%= error %>', 'error');
-        <% } %>
-      });
     </script>
+
   </body>
 </html>

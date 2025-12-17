@@ -1,6 +1,8 @@
 import { User } from "../../models/userModels.js";
 import Cart from "../../models/cartModel.js";
 import Products from "../../models/productsModels.js";
+import Wishlist from "../../models/wishlistModel.js";
+import Offer from "../../models/offerModel.js";
 const getCart = async (req, res) => {
   try {
     const email = req.session.user;
@@ -27,20 +29,123 @@ const getCart = async (req, res) => {
         error: error,
       });
     }
+
+    // Validate Stock and Availability
+    let cartUpdated = false;
+    for (const item of cart.items) {
+      const product = item.productId;
+      // Check if product is available
+      if (!product || product.isDeleted || !product.isListed) {
+        if (item.stockStatus !== "Out of Stock") {
+          item.stockStatus = "Out of Stock";
+          cartUpdated = true;
+        }
+        continue;
+      }
+
+      // Check variant stock
+      const variant = product.variants.find(v => v.mlSize === Number(item.size));
+      if (!variant) {
+         if (item.stockStatus !== "Out of Stock") {
+           item.stockStatus = "Out of Stock"; // Variant gone
+           cartUpdated = true;
+         }
+      } else {
+        if (variant.stock < item.quantity || variant.stock === 0) {
+           if (item.stockStatus !== "Out of Stock") {
+             item.stockStatus = "Out of Stock";
+             cartUpdated = true;
+           }
+        } else if (variant.stock < 5) {
+           if (item.stockStatus !== "Limited Stock") {
+             item.stockStatus = "Limited Stock";
+             cartUpdated = true;
+           }
+        } else {
+           if (item.stockStatus !== "In Stock") {
+             item.stockStatus = "In Stock";
+             cartUpdated = true;
+           }
+        }
+        // Update price if changed (optional but good practice)
+        if(item.basePrice !== variant.basePrice || item.discountedPrice !== variant.discountedPrice) {
+            item.basePrice = variant.basePrice;
+            item.discountedPrice = variant.discountedPrice;
+            cartUpdated = true;
+        }
+      }
+    }
+
+    if (cartUpdated) {
+      await cart.save();
+    }
+
     const subtotal = cart.items.reduce(
-      (acc, item) => acc + item.basePrice * item.quantity,
+      (acc, item) => {
+         // Only sum available items? Usually cart shows total of all, but checkout validation prevents purchase.
+         // Let's keep logic simple: Sum all, but view will visually indicate OOS.
+         return acc + item.discountedPrice * item.quantity;
+      },
       0
     );
-    const total = cart.items.reduce(
-      (acc, item) => acc + item.discountedPrice * item.quantity,
-      0
-    );
+    const total = subtotal; // Total is same as subtotal (sum of discounted prices)
+
+    // Fetch active offers logic
+    const offersMap = {};
+    const currentDate = new Date();
+    if (cart.items.length > 0) {
+      const productIds = cart.items.map(item => item.productId ? item.productId._id : null).filter(id => id);
+      const categoryIds = cart.items.map(item => item.productId ? item.productId.category : null).filter(id => id); // Assuming category is ObjectId field
+
+      const offers = await Offer.find({
+        $or: [
+          { targetModel: 'Product', targetId: { $in: productIds } },
+          { targetModel: 'Categories', targetId: { $in: categoryIds } }
+        ],
+        isActive: true,
+        isDeleted: false,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate }
+      });
+
+      cart.items.forEach(item => {
+        const product = item.productId;
+        // Find all offers applicable to this item
+        const applicableOffers = offers.filter(offer => 
+          (offer.targetModel === 'Product' && offer.targetId.toString() === product._id.toString()) ||
+          (offer.targetModel === 'Categories' && offer.targetId.toString() === product.category.toString())
+        );
+
+        // Find the "best" offer (one giving max discount)
+        let bestOffer = null;
+        let maxDiscountAmount = 0;
+
+        applicableOffers.forEach(offer => {
+            let discount = 0;
+            if (offer.discountType === 'flat') {
+                discount = offer.discountValue;
+            } else {
+                discount = (item.basePrice * offer.discountValue) / 100;
+            }
+            if (discount > maxDiscountAmount) {
+                maxDiscountAmount = discount;
+                bestOffer = offer;
+            }
+        });
+
+        if (bestOffer) {
+            offersMap[item._id] = bestOffer;
+        }
+      });
+    }
+
     res.render("user/cart/cart", {
       cart: cart,
       subtotal: subtotal,
       total: total,
       success: success,
       error: error,
+      offersMap: offersMap, // Pass the map to the view
     });
   } catch (error) {
     console.error(error);
@@ -108,6 +213,17 @@ const addToCart = async (req, res) => {
       if (itemIndex > -1) {
         const existingQuantity = cart.items[itemIndex].quantity;
         const newQuantity = existingQuantity + Number(quantity);
+        
+        // Check total cart quantity limit (10 items max across all products)
+        const currentTotalQuantity = cart.items.reduce((acc, ele) => acc + ele.quantity, 0);
+        // We are adding 'quantity' to the cart.
+        if (currentTotalQuantity + Number(quantity) > 10) {
+           const remaining = 10 - currentTotalQuantity;
+           return res.redirect(
+             `/shop/${productId}?error=Cart limit is 10 units total. Only ${remaining} more can be added.`
+           );
+        }
+
         if (newQuantity > selectedVarient.stock) {
           const remaining = selectedVarient.stock - existingQuantity;
           return res.redirect(
@@ -150,6 +266,12 @@ const addToCart = async (req, res) => {
     }
 
     await cart.save();
+
+    // Remove from wishlist if exists
+    await Wishlist.updateOne(
+      { userId: user._id },
+      { $pull: { items: { productId: productId } } }
+    );
     res.redirect(`/shop/${productId}`);
   } catch (error) {
     console.error(error);
@@ -180,7 +302,7 @@ const deleteCart = async (req, res) => {
   }
 };
 
-const updateQuatity = async (req, res) => {
+const updateQuantity = async (req, res) => {
   try {
     const userEmail = req.session.user;
     if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
@@ -216,10 +338,18 @@ const updateQuatity = async (req, res) => {
     let updated = false;
 
     if (action === "inc") {
+      // Check global limit
+      const currentTotalQuantity = cart.items.reduce((acc, ele) => acc + ele.quantity, 0);
+      if (currentTotalQuantity >= 10) {
+        return res
+          .status(400)
+          .json({ message: "Cart limit is 10 items total." });
+      }
+
       if (item.quantity >= 10) {
         return res
           .status(400)
-          .json({ message: "Maximum quantity of 10 reached" });
+          .json({ message: "Maximum quantity of 10 reached for this item" });
       }
       if (selectedVariant.stock < item.quantity + 1) {
         return res.status(400).json({ message: "The product is out of stock" });
@@ -240,9 +370,25 @@ const updateQuatity = async (req, res) => {
 
     if (updated) {
       await cart.save();
+      
+      const savedItem = cart.items.id(itemId);
+      const itemTotal = savedItem ? (savedItem.basePrice * savedItem.quantity) : 0;
+      const itemDiscountedTotal = savedItem ? (savedItem.discountedPrice * savedItem.quantity) : 0;
+      const itemSavings = savedItem ? (savedItem.basePrice - savedItem.discountedPrice) * savedItem.quantity : 0;
+      
+      const cartTotal = cart.items.reduce(
+        (acc, item) => acc + item.discountedPrice * item.quantity,
+        0
+      );
+
       return res.json({
         success: true,
         message: "Quantity updated successfully",
+        newQuantity: savedItem ? savedItem.quantity : 0,
+        itemTotal: itemTotal, // Base Price Total
+        itemDiscountedTotal: itemDiscountedTotal, // Discounted Total (Final)
+        itemSavings: itemSavings,
+        cartTotal: cartTotal
       });
     } else {
       return res.status(400).json({ message: "No changes made" });
@@ -253,4 +399,4 @@ const updateQuatity = async (req, res) => {
   }
 };
 
-export { getCart, addToCart, deleteCart, updateQuatity };
+export { getCart, addToCart, deleteCart, updateQuantity };
