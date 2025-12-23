@@ -45,6 +45,7 @@ import {
   getReturnSelect,
   postReturnSelect,
   getWallet,
+  getWalletHistory,
   getSecurity,
   getDeleteAcount,
   userlogOut,
@@ -85,6 +86,7 @@ import {
   getSuccessPage,
   getFailedPage,
   getWalletBalanceAPI,
+  applyCoupon,
 } from "../controller/user/checkoutController.js";
 
 import {
@@ -162,6 +164,7 @@ router.post(
 );
 
 router.get("/wishlist", isAuthenticatedUser, isBlocked, getWishlist);
+router.post("/wishlist/add", isAuthenticatedUser, isBlocked, addToWishlist);
 router.post("/wishlist/add/:id", isAuthenticatedUser, isBlocked, addToWishlist);
 router.post(
   "/wishlist/remove/:id",
@@ -297,6 +300,7 @@ router.post(
   addNewAddress
 );
 router.post("/checkout/placeOrder", isAuthenticatedUser, isBlocked, placeOrder);
+router.post("/checkout/apply-coupon", isAuthenticatedUser, isBlocked, applyCoupon);
 
 router.get(
   "/checkout/payment/:id",
@@ -323,6 +327,7 @@ router.get("/checkout/failed", isAuthenticatedUser, isBlocked, getFailedPage);
 
 
 router.get('/wallet',isAuthenticatedUser, isBlocked, getWallet)
+router.get('/wallet/history',isAuthenticatedUser, isBlocked, getWalletHistory)
 router.post('/wallet/add-funds', isAuthenticatedUser, isBlocked, addFundsToWallet);
 router.get('/wallet/api/balance', getWalletBalanceAPI); // For checkout wallet fetch
 

@@ -25,7 +25,7 @@
       /* Main Content */
       .checkout-container {
         max-width: 1400px;
-        margin: 0 auto;
+        margin: 6rem auto 2rem;
         padding: 2rem;
       }
 
@@ -516,6 +516,25 @@
           align-self: flex-end;
         }
       }
+      /* Back Button Style */
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #d4c5a9;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 1rem;
+        transition: color 0.2s;
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 1rem;
+        padding: 0;
+      }
+      .back-btn:hover {
+        color: #fff;
+      }
     </style>
   </head>
 
@@ -523,6 +542,10 @@
         <%- include("../../partials/user/header") %>
     <!-- Main Content -->
     <main class="checkout-container">
+      <button onclick="history.back()" class="back-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Back
+      </button>
       <h1 class="checkout-title">FINAL CHECKOUT</h1>
 
       <div class="checkout-content">
@@ -588,7 +611,7 @@
                 <div class="address-line">Alternate Phone: <%= selectedAddress.altPhone %></div>
                 <% } %>
                 <div class="address-line">Country: <%= selectedAddress.country %></div>
-                <button type="button" class="view-btn" onclick="openViewModal(<%= JSON.stringify(selectedAddress) %>)">
+                <button type="button" class="view-btn" onclick="openViewModal(selectedAddressData)">
                   View Full Details
                 </button>
               </div>
@@ -638,6 +661,17 @@
           </div>
           <% } %>
 
+          
+          <!-- Coupon Section -->
+          <div class="coupon-section" style="margin-bottom: 2rem; border-bottom: 1px solid #444; padding-bottom: 1.5rem;">
+            <h3 class="summary-title">Have a Coupon?</h3>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" id="couponInput" placeholder="Enter code" style="flex: 1; padding: 0.75rem; border-radius: 4px; border: 1px solid #444; background: #333; color: #fff; text-transform: uppercase;">
+              <button id="applyCouponBtn" onclick="applyCoupon()" style="padding: 0.5rem 1rem; background: #d4c5a9; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">APPLY</button>
+            </div>
+             <p id="couponMessage" style="font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.2em;"></p>
+          </div>
+
           <div>
             <h2 class="price-title">Price Details</h2>
             <% let subtotal = 0; %>
@@ -646,7 +680,11 @@
             <% } %>
             <div class="price-detail">
               <span>Subtotal</span>
-              <span>Rs. <%= subtotal.toFixed(2) %></span>
+              <span id="checkoutSubtotal">Rs. <%= subtotal.toFixed(2) %></span>
+            </div>
+            <div class="price-detail" id="discountRow" style="display: none;">
+               <span>Discount</span>
+               <span id="discountDisplay" style="color: #4ade80;">- Rs. 0.00</span>
             </div>
             <div class="price-detail">
               <span>Delivery Charges</span>
@@ -654,7 +692,7 @@
             </div>
             <div class="price-detail">
               <span>Total</span>
-              <span>Rs. <%= subtotal.toFixed(2) %></span>
+              <span id="checkoutTotal">Rs. <%= subtotal.toFixed(2) %></span>
             </div>
           </div>
           <button class="confirm-btn" id="confirmBtn" onclick="confirmOrder()">
@@ -719,23 +757,96 @@
       <div id="paymentMessage">Processing payment...</div>
     </div>
 
+    <!-- Error Modal -->
+    <div class="modal-overlay" id="errorModal" style="z-index: 200;">
+      <div class="modal" style="max-width: 400px; text-align: center; border: 1px solid #444;">
+        <button class="modal-close" onclick="closeErrorModal()">&times;</button>
+        <div style="margin-bottom: 1rem; color: #ef4444;">
+           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        </div>
+        <h2 class="modal-title" style="margin-bottom: 0.5rem;" id="errorTitle">Action Required</h2>
+        <p style="color: #9ca3af; margin-bottom: 1.5rem;" id="errorMessage">Please select a payment method.</p>
+        <button onclick="closeErrorModal()" style="padding: 0.6rem 2rem; background: #333; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='#333'">OK</button>
+      </div>
+    </div>
+
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
 
    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<%
+  let globalSubtotal = 0;
+  if (cart && cart.items.length > 0) {
+    cart.items.forEach(item => { globalSubtotal += item.discountedPrice * item.quantity; });
+  }
+%>
 <script>
-  // Calculate subtotal globally in EJS scope (move this calculation OUTSIDE the price-details block in your EJS template)
-  <% let globalSubtotal = 0; %>
-  <% if (cart && cart.items.length > 0) { %>
-    <% cart.items.forEach(item => { globalSubtotal += item.discountedPrice * item.quantity; }); %>
-  <% } %>
   // Pass data from EJS to JS
   const subtotal = <%= globalSubtotal %>;
   const cartItems = <%- JSON.stringify(cart ? cart.items : []) %>;
   const selectedAddressId = '<%= selectedAddress ? selectedAddress._id : "" %>';
+  const selectedAddressData = <%- JSON.stringify(selectedAddress || null) %>;
   const selectedAddress = <%- JSON.stringify(selectedAddress) %>;
   const userEmail = '<%= user ? user.email : "" %>'; // Assume user object from backend; fallback empty
   let razorpayInstance = null;
+  let appliedCouponCode = null;
+  let currentTotal = subtotal;
+
+  async function applyCoupon() {
+    const couponInput = document.getElementById('couponInput');
+    const messageEl = document.getElementById('couponMessage');
+    const code = couponInput.value.trim();
+
+    if (!code) {
+      messageEl.textContent = 'Please enter a coupon code.';
+      messageEl.style.color = '#ef4444';
+      return;
+    }
+
+    // Disable button to prevent double clicks
+    const applyBtn = document.getElementById('applyCouponBtn');
+    applyBtn.disabled = true;
+    applyBtn.textContent = '...';
+
+    try {
+      const response = await fetch('/checkout/apply-coupon', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ couponCode: code, subtotal: subtotal }) // Use base subtotal for calculation
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        messageEl.textContent = `Coupon '${data.couponCode}' applied! You saved Rs. ${data.discountAmount.toFixed(2)}`;
+        messageEl.style.color = '#4ade80';
+        
+        // Update UI
+        document.getElementById('discountRow').style.display = 'flex';
+        document.getElementById('discountDisplay').textContent = `- Rs. ${data.discountAmount.toFixed(2)}`;
+        document.getElementById('checkoutTotal').textContent = `Rs. ${data.newTotal.toFixed(2)}`;
+        
+        appliedCouponCode = data.couponCode;
+        currentTotal = data.newTotal;
+        
+        // Disable input
+        couponInput.disabled = true;
+        applyBtn.textContent = 'APPLIED';
+      } else {
+        messageEl.textContent = data.message;
+        messageEl.style.color = '#ef4444';
+        applyBtn.disabled = false;
+        applyBtn.textContent = 'APPLY';
+        appliedCouponCode = null;
+      }
+    } catch (error) {
+      console.error('Error applying coupon:', error);
+      messageEl.textContent = 'Error applying coupon. Please try again.';
+      messageEl.style.color = '#ef4444';
+      applyBtn.disabled = false;
+      applyBtn.textContent = 'APPLY';
+    }
+  }
 
   // Utility to redirect to failed page with error message and type
   function redirectToFailed(errorMsg, errorType = 'unknown', deleteCart = false) {
@@ -761,7 +872,7 @@
     }
     const selectedPayment = document.querySelector(".payment-radio:checked");
     if (!selectedPayment) {
-      alert("Please select a payment method.");
+      showErrorModal("Please select a valid payment option to complete your order.", "Payment Method Missing");
       return;
     }
     const paymentMethod = selectedPayment.value;
@@ -775,7 +886,8 @@
         body: JSON.stringify({
           items: cartItems,
           addressId: selectedAddressId,
-          paymentMethod: 'cod'
+          paymentMethod: 'cod',
+          couponCode: appliedCouponCode
         })
       })
       .then(res => res.json())
@@ -810,7 +922,8 @@
         body: JSON.stringify({
           items: cartItems,
           addressId: selectedAddressId,
-          paymentMethod: 'wallet'
+          paymentMethod: 'wallet',
+          couponCode: appliedCouponCode // Add coupon code to wallet payment
         })
       })
       .then(res => res.json())
@@ -834,7 +947,7 @@
 
   // Initiate Razorpay (added try-catch)
   function initiateRazorpay() {
-    if (!subtotal || subtotal < 1) {
+    if (!currentTotal || currentTotal < 1) { // Use currentTotal
       const errorMsg = 'Invalid order amount. Please check your cart.';
       showPaymentStatus(errorMsg, true);
       setTimeout(() => redirectToFailed(errorMsg, 'invalid_amount'), 1500);
@@ -843,7 +956,12 @@
     fetch('/createOrder', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: subtotal }) // Rupees
+      body: JSON.stringify({
+        amount: currentTotal, // Use currentTotal which includes discount
+        currency: "INR",
+        receipt: "receipt#" + Date.now(),
+        notes: { desc: "Order Payment" }
+      })
     })
     .then(res => res.json())
     .then(data => {
@@ -865,11 +983,11 @@
   // Open Razorpay Checkout (added email prefill)
   function openRazorpayCheckout(order) {
     const options = {
-      key: '<%= process.env.RAZORPAY_KEY_ID || "rzp_test_your_key" %>', // Replace with real key via env
-      amount: order.amount, // In paise (backend should set this)
-      currency: order.currency || 'INR',
-      name: 'Dité',
-      description: `Payment of Rs. ${subtotal.toFixed(2)}`,
+      key: '<%= process.env.RAZORPAY_KEY_ID %>', // Make sure this env var is exposed or hardcoded if safe
+      amount: Math.round(currentTotal * 100), // Amount in paise, using updated total
+      currency: "INR",
+      name: "Dité",
+      description: `Payment of Rs. ${currentTotal.toFixed(2)}`, // Use currentTotal for description
       order_id: order.id,
       handler: function(response) {
         verifyRazorpayPayment(response);
@@ -940,7 +1058,8 @@
         addressId: selectedAddressId,
         paymentMethod: paymentMethod,
         razorpayPaymentId: paymentId,
-        razorpayOrderId: razorpayOrderId
+        razorpayOrderId: razorpayOrderId,
+        couponCode: appliedCouponCode // Add coupon code to Razorpay order
       })
     })
     .then(res => res.json())
@@ -960,7 +1079,29 @@
     });
   }
 
-  // Utility Functions (unchanged)
+  // Utility Functions
+  function showErrorModal(message, title = "Action Required") {
+      const modal = document.getElementById('errorModal');
+      const msgEl = document.getElementById('errorMessage');
+      const titleEl = document.getElementById('errorTitle');
+      
+      if(msgEl) msgEl.textContent = message;
+      if(titleEl) titleEl.textContent = title;
+      
+      if(modal) {
+        modal.classList.add('show');
+        // Close on outside click
+        modal.onclick = function(e) {
+          if (e.target === modal) closeErrorModal();
+        }
+      }
+  }
+
+  function closeErrorModal() {
+      const modal = document.getElementById('errorModal');
+      if(modal) modal.classList.remove('show');
+  }
+
   function showPaymentStatus(message, isError = false) {
     const overlay = document.getElementById('paymentOverlay');
     const msgEl = document.getElementById('paymentMessage');

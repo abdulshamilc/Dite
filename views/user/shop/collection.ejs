@@ -401,7 +401,9 @@
       <!-- Men Category -->
       <% if (products.some(product => product.gender === 'MEN')) { %>
       <section class="category-section">
-        <h2 class="category-heading">Men</h2>
+        <a href="/shop/men">
+          <h2 class="category-heading">Men</h2>
+        </a>
         <div class="product-list">
           <% let menProducts = products.filter(product => product.gender ===
           'MEN').slice(0, 5); %> <% menProducts.forEach(product => { %>
@@ -443,7 +445,9 @@
       <!-- Women Category -->
       <% if (products.some(product => product.gender === 'WOMEN')) { %>
       <section class="category-section">
-        <h2 class="category-heading">Women</h2>
+        <a href="/shop/women">
+          <h2 class="category-heading">Women</h2>
+        </a>
         <div class="product-list">
           <% let womenProducts = products.filter(product => product.gender ===
           'WOMEN').slice(0, 5); %> <% womenProducts.forEach(product => { %>
@@ -485,7 +489,9 @@
       <!-- Unisex Category -->
       <% if (products.some(product => product.gender === 'UNISEX')) { %>
       <section class="category-section">
-        <h2 class="category-heading">Unisex</h2>
+        <a href="/shop/unisex">
+          <h2 class="category-heading">Unisex</h2>
+        </a>
         <div class="product-list">
           <% let unisexProducts = products.filter(product => product.gender ===
           'UNISEX').slice(0, 5); %> <% unisexProducts.forEach(product => { %>
@@ -529,7 +535,9 @@
       products.filter(product => category.products.includes(product._id)); %> <%
       if (validCategoryProducts.length > 0) { %>
       <section class="category-section">
-        <h2 class="category-heading"><%= category.name %></h2>
+        <a href="/categories/<%= category.name %>">
+          <h2 class="category-heading"><%= category.name %></h2>
+        </a>
         <div class="product-list">
           <% let categoryProducts = validCategoryProducts.slice(0, 5); %> <%
           categoryProducts.forEach(product => { %>
@@ -555,7 +563,7 @@
           <% }); %> 
           <!-- "More" only shows if >5 products in this category exist -->
           <% if (validCategoryProducts.length > 5) { %>
-          <a href="categories/<%=category._id%>">
+          <a href="/categories/<%=category.name%>">
             <div class="more-item">
               <div class="more-content">
                 <p class="more-text">More</p>

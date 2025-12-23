@@ -266,7 +266,9 @@ const login = async (req, res) => {
   });
 
   req.session.user = email;
-  res.redirect("/");
+  const returnTo = req.session.returnTo || "/";
+  delete req.session.returnTo;
+  res.redirect(returnTo);
 };
 
 // Forget Password

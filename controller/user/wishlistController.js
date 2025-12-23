@@ -7,11 +7,17 @@ const getWishlist = async (req, res) => {
   try {
     const userEmail = req.session.user;
 
-    if(!userEmail)return res.redirect('/login') ;
+    if(!userEmail){
+        req.session.returnTo = req.originalUrl;
+        return res.redirect('/login') ;
+    }
 
     const user = await User.findOne({email:userEmail}) ;
     
-    if(!user)return res.redirect('/login') ;
+    if(!user){
+        req.session.returnTo = req.originalUrl;
+        return res.redirect('/login') ;
+    }
 
     const userId = user._id ;
 
@@ -94,16 +100,20 @@ const addToWishlist = async (req, res) => {
 
     if (!userEmail) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Please log in to add to wishlist.' });
+        req.session.returnTo = req.get('Referer') || "/";
+        return res.json({ success: false, message: 'Please log in to add to wishlist.', redirect: '/login' });
       }
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
     }
 
     const user = await User.findOne({ email: userEmail });
     if (!user) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'User not found.' });
+        req.session.returnTo = req.get('Referer') || "/";
+        return res.json({ success: false, message: 'User not found.', redirect: '/login' });
       }
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
     }
 
@@ -145,7 +155,7 @@ const addToWishlist = async (req, res) => {
       res.json({ success: true, message: 'Added to wishlist!' });
     } else {
       req.session.success = 'Added to wishlist!';
-      res.redirect('/wishlist');
+      res.redirect(req.get('Referer') || '/shop');
     }
 
   } catch (error) {
@@ -175,6 +185,7 @@ const removeFromWishlist = async (req, res) => {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
         return res.json({ success: false, message: 'Please log in to manage your wishlist.' });
       }
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login') ;
     }
 
@@ -183,6 +194,7 @@ const removeFromWishlist = async (req, res) => {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
         return res.json({ success: false, message: 'User not found.' });
       }
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login') ;
     }
 
@@ -233,16 +245,20 @@ const addToCartFromWishlist = async (req, res) => {
 
     if (!userEmail) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Please log in to add to cart.' });
+        req.session.returnTo = req.get('Referer') || "/";
+        return res.json({ success: false, message: 'Please log in to add to cart.', redirect: '/login' });
       }
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
     }
 
     const user = await User.findOne({ email: userEmail });
     if (!user) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'User not found.' });
+        req.session.returnTo = req.get('Referer') || "/";
+        return res.json({ success: false, message: 'User not found.', redirect: '/login' });
       }
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
     }
 

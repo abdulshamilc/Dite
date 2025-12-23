@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wallet History - Dité</title>
+  <%- include("../../partials/user/headerHead") %>
+  <%- include("../../partials/user/footerHead") %>
+  <style>
+  :root {
+    --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+    --text:#f5f5f5;
+    --surface:#ffffff;
+    --accent:#d3a35b;
+    --radius:14px;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color .25s; }
+  a:hover { color: #b5823d; }
+  .container {
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: 10px 0px;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 2rem;
+    margin: 20px 0;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  @media (min-width: 960px) {
+    .layout { flex-direction: row; }
+  }
+  .card {
+    flex: 1;
+    background: var(--surface);
+    color: #1a1a1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+  }
+  .header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #3a2e22;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .back-btn:hover {
+    color: var(--accent);
+  }
+  .transactions-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+  }
+  .transactions-table th, .transactions-table td {
+    padding: 16px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .transactions-table th {
+    background-color: #fafafa;
+    color: #3a2e22;
+    font-weight: 700;
+  }
+  .transactions-table tr:hover {
+    background-color: #f9f9f9;
+  }
+  .amount.positive { color: #28a745; font-weight: 700; }
+  .amount.negative { color: #dc3545; font-weight: 700; }
+  .transaction-date { color: #666; font-size: 0.9em; }
+
+  /* Pagination */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 30px;
+  }
+  .page-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    color: #333;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .page-link:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .page-link.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .page-link.disabled {
+    background: #f5f5f5;
+    color: #ccc;
+    pointer-events: none;
+    border-color: #eee;
+  }
+  </style>
+</head>
+<body>
+  <%- include("../../partials/user/header") %>
+  <div class="container">
+    <h1 class="page-title">TRANSACTION HISTORY</h1>
+    <section class="layout" aria-label="Wallet layout">
+      <%- include("../../partials/user/profileSideBar") %>
+      <main class="card" aria-labelledby="wallet-history-title">
+        <div class="header-actions">
+           <a href="/wallet" class="back-btn">
+             <i class="lucide-arrow-left"></i> Back to Wallet
+           </a>
+           <div style="font-weight: 600; color: #3a2e22;">
+             Balance: ₹<%= wallet.balance.toFixed(2) %>
+           </div>
+        </div>
+
+        <% if (transactions && transactions.length > 0) { %>
+          <div style="overflow-x: auto;">
+            <table class="transactions-table">
+              <thead>
+                <tr>
+                  <th>Description</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% transactions.forEach(function(tx) { %>
+                  <tr>
+                    <td>
+                      <div style="font-weight: 600; margin-bottom: 4px;"><%= tx.description %></div>
+                      <div style="font-size: 0.8em; color: #888;">ID: <%= tx._id %></div>
+                    </td>
+                    <td class="transaction-date">
+                       <%= new Date(tx.date).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: 'numeric' }) %>
+                    </td>
+                    <td class="amount <%= tx.amount > 0 ? 'positive' : 'negative' %>">
+                      <%= tx.amount > 0 ? '+' : '' %>₹<%= Math.abs(tx.amount).toFixed(2) %>
+                    </td>
+                    <td>
+                      <span style="display:inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; background: #e8f5e9; color: #2e7d32; font-weight: 600;">Success</span>
+                    </td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <% if (totalPages > 1) { %>
+            <div class="pagination">
+              <!-- Previous -->
+              <% if (currentPage > 1) { %>
+                <a href="?page=<%= currentPage - 1 %>" class="page-link">‹</a>
+              <% } else { %>
+                <span class="page-link disabled">‹</span>
+              <% } %>
+
+              <!-- Pages -->
+              <% for(let i = 1; i <= totalPages; i++) { %>
+                 <% if (i === currentPage) { %>
+                    <span class="page-link active"><%= i %></span>
+                 <% } else if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) { %>
+                    <a href="?page=<%= i %>" class="page-link"><%= i %></a>
+                 <% } else if (i === currentPage - 3 || i === currentPage + 3) { %>
+                    <span class="page-link disabled" style="border:none; background:transparent;">...</span>
+                 <% } %>
+              <% } %>
+
+              <!-- Next -->
+              <% if (currentPage < totalPages) { %>
+                <a href="?page=<%= currentPage + 1 %>" class="page-link">›</a>
+              <% } else { %>
+                <span class="page-link disabled">›</span>
+              <% } %>
+            </div>
+          <% } %>
+
+        <% } else { %>
+          <div style="text-align: center; padding: 60px 20px; color: #666;">
+            <div style="font-size: 3rem; margin-bottom: 20px; color: #ddd;">💸</div>
+            <p>No transactions found.</p>
+          </div>
+        <% } %>
+      </main>
+    </section>
+  </div>
+  <%- include("../../partials/user/footer") %>
+</body>
+</html>

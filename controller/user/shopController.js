@@ -3,9 +3,213 @@ import Products from "../../models/productsModels.js";
 import Wishlist from '../../models/wishlistModel.js' ;
 import {User} from '../../models/userModels.js';
 import Offer from "../../models/offerModel.js";
+import Cart from "../../models/cartModel.js";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
+  try {
+    const {
+      search = "",
+      sort = "",
+      page = 1,
+      limit = 12,
+      minPrice: minPriceQuery,
+      maxPrice: maxPriceQuery,
+      brands,
+      concentrations: concentrationsQuery,
+      filter = "ALL", // stock, sale, new
+    } = req.query;
+
+    // Aggregations for Stats (Brands, Concentrations, Prices)
+    // We filter these aggregations by the baseQuery (e.g. only men's products)
+    const [brandStats, uniqueConcentrations, priceStats] = await Promise.all([
+      Products.aggregate([
+        { $match: { ...baseQuery, isDeleted: false, isListed: true, brand: { $ne: null, $exists: true } } }, 
+        { $group: { _id: { $toLower: "$brand" }, count: { $sum: 1 }, originalBrand: { $first: "$brand" } } },
+        { $sort: { count: -1 } },
+      ]),
+      Products.distinct("concentration", { ...baseQuery, isDeleted: false, isListed: true }),
+      Products.aggregate([
+        { $match: { ...baseQuery, isDeleted: false, isListed: true } },
+        { $unwind: "$variants" },
+        {
+          $group: {
+            _id: null,
+            minPrice: { $min: "$variants.discountedPrice" },
+            maxPrice: { $max: "$variants.discountedPrice" },
+          },
+        },
+      ]),
+    ]);
+
+    const overallMinPrice = priceStats[0]?.minPrice || 0;
+    const overallMaxPrice = priceStats[0]?.maxPrice || 10000;
+    const maxPriceOptions = [overallMinPrice, 1000, 3000, 5000, 10000, overallMaxPrice];
+    const minPriceOptions = [5000, 10000, 15000, 30000, 50000, overallMaxPrice];
+    
+    const topBrands = brandStats.slice(0, 5).map(stat => stat.originalBrand);
+    const otherBrands = brandStats.slice(5).map(stat => stat.originalBrand);
+    const allBrands = [...topBrands, ...otherBrands];
+
+    const queryMinPrice = minPriceQuery ? parseFloat(minPriceQuery) : undefined;
+    const queryMaxPrice = maxPriceQuery ? parseFloat(maxPriceQuery) : undefined;
+    const selectedBrands = brands ? brands.split(",").map((b) => b.trim().toLowerCase()).filter(Boolean) : [];
+    const selectedConcentrations = concentrationsQuery ? concentrationsQuery.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [];
+    const effectiveSort = sort || "newest";
+
+    // Build Query
+    let query = { ...baseQuery, isDeleted: false, isListed: true };
+
+    // Search
+    if (search.trim()) {
+      const escapedSearch = escapeRegex(search.trim());
+      query.$or = [
+        { name: { $regex: new RegExp("^" + escapedSearch, "i") } },
+        { brand: { $regex: new RegExp(escapedSearch, "i") } },
+      ];
+    }
+
+    // Brands & Concentrations
+    if (selectedBrands.length > 0) {
+      query.brand = { $in: selectedBrands.map(b => new RegExp('^' + escapeRegex(b) + '$', 'i')) };
+    }
+    if (selectedConcentrations.length > 0) {
+      query.concentration = { $in: selectedConcentrations.map(c => new RegExp('^' + escapeRegex(c) + '$', 'i')) };
+    }
+
+    // Variants Match (Price, Stock)
+    let variantMatch = {};
+    const priceMatch = {};
+    if (queryMinPrice !== undefined) priceMatch.$gte = queryMinPrice;
+    if (queryMaxPrice !== undefined) priceMatch.$lte = queryMaxPrice;
+    
+    if (Object.keys(priceMatch).length > 0) {
+        variantMatch.discountedPrice = priceMatch;
+    }
+    if (filter === "stock") {
+        variantMatch.stock = { $gt: 0 };
+    }
+    if (Object.keys(variantMatch).length > 0) {
+        query.variants = { $elemMatch: variantMatch };
+    }
+
+    // New Arrivals
+    if (filter === "new") {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        query.createdAt = { $gte: thirtyDaysAgo };
+    }
+
+    // Pipeline for Sale filter
+    let aggregatePipeline = [];
+    if (filter === "sale") {
+         aggregatePipeline = [
+            {
+              $addFields: {
+                hasDiscount: {
+                  $anyElementTrue: {
+                    $map: {
+                      input: { $ifNull: ["$variants", []] },
+                      as: "v",
+                      in: { $lt: ["$$v.discountedPrice", "$$v.basePrice"] },
+                    },
+                  },
+                },
+              },
+            },
+            { $match: { hasDiscount: true } },
+          ];
+    }
+
+    // Sorting
+    const sortOptions = {
+        price_asc: { "variants.0.discountedPrice": 1 },
+        price_desc: { "variants.0.discountedPrice": -1 },
+        newest: { createdAt: -1 },
+        popular: { views: -1 },
+    };
+    const sortObj = sortOptions[effectiveSort] || sortOptions.newest;
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    let total, products;
+    if (aggregatePipeline.length > 0) {
+        const aggregateResult = await Products.aggregate([
+            ...aggregatePipeline,
+            { $match: query },
+            { $sort: sortObj },
+            { $skip: skip },
+            { $limit: parseInt(limit) },
+            { $lookup: { from: "categories", localField: "category", foreignField: "_id", as: "category" } }
+        ]);
+        const countAggregate = await Products.aggregate([
+            ...aggregatePipeline,
+            { $match: query },
+            { $count: "total" }
+        ]);
+        total = countAggregate[0]?.total || 0;
+        products = aggregateResult;
+    } else {
+        total = await Products.countDocuments(query);
+        products = await Products.find(query).sort(sortObj).skip(skip).limit(parseInt(limit)).populate('category');
+    }
+
+    // Wishlist
+    let wishlist = [];
+    if (req.session.user) {
+      const user = await User.findOne({ email: req.session.user });
+      if (user) {
+        const wishlistDoc = await Wishlist.findOne({ userId: user._id }).populate('items.productId');
+        if (wishlistDoc) {
+          wishlist = wishlistDoc.items.map(item => ({ product: item.productId }));
+        }
+      }
+    }
+    
+    // Render
+    res.render("user/shop/categoryShop", {
+        products,
+        wishlist,
+        name: pageTitle,
+        search,
+        sort: sort || "",
+        page: parseInt(page),
+        totalPages: Math.ceil(total / parseInt(limit)),
+        limit: parseInt(limit),
+        total,
+        error: null,
+        minPrice: overallMinPrice,
+        maxPrice: overallMaxPrice,
+        queryMinPrice,
+        queryMaxPrice,
+        minPriceOptions,
+        maxPriceOptions,
+        topBrands,
+        otherBrands,
+        brands: allBrands,
+        concentrations: uniqueConcentrations,
+        selectedBrands,
+        selectedConcentrations,
+    });
+  } catch (error) {
+     console.error("Helper Error:", error);
+     res.status(500).render("user/shop/categoryShop", {
+       name: pageTitle,
+       products: [],
+       wishlist: [],
+       error: "Something went wrong!",
+       minPrice: 0, maxPrice: 10000,
+       minPriceOptions: [], maxPriceOptions: [],
+       topBrands: [], otherBrands: [], brands: [],
+       concentrations: [], selectedBrands: [], selectedConcentrations: [],
+       totalPages: 0, page: 1, limit: 12, total: 0,
+       search: "", sort: ""
+     });
+  }
 };
 const getShop = async (req, res) => {
   try {
@@ -294,10 +498,40 @@ const productDetail = async (req, res) => {
       isDeleted: false,
       isListed: true,
     }).limit(3);
+    const representativePrice = product.variants && product.variants.length > 0 ? product.variants[0].basePrice : 0;
+    let bestOffer = null;
+    let maxDiscountAmount = 0;
+
+    activeOffers.forEach(offer => {
+      let discountAmount = 0;
+      if (offer.discountType === 'percentage') {
+        discountAmount = (representativePrice * offer.discountValue) / 100;
+      } else {
+        discountAmount = offer.discountValue;
+      }
+
+      if (discountAmount > maxDiscountAmount) {
+        maxDiscountAmount = discountAmount;
+        bestOffer = offer;
+      }
+    });
+
+    let totalCartQty = 0;
+    if (req.session.user) {
+        const user = await User.findOne({ email: req.session.user });
+        if (user) {
+            const cart = await Cart.findOne({ userId: user._id });
+            if (cart) {
+                totalCartQty = cart.items.reduce((acc, item) => acc + item.quantity, 0);
+            }
+        }
+    }
+
     res.render("user/shop/productDetail", {
       product,
       suggestions,
-      activeOffers,
+      activeOffers: bestOffer ? [bestOffer] : [],
+      totalCartQty,
       error: req.query.error || null,
     });
   } catch (error) {
@@ -326,229 +560,49 @@ const getCollections = async (req, res) => {
 };
 
 const getMenShop = async (req, res) => {
-  try {
-    const name = "MEN";
-    const {
-      page = 1,
-      limit = 12,
-      search = "",
-      sort = "newest",
-      filter = "ALL",
-    } = req.query;
-
-    let query = {
-      isDeleted: false,
-      isListed: true,
-      gender: "MEN",
-    };
-
-    // Search filter 
-    if (search.trim()) {
-      const escapedSearch = escapeRegex(search.trim());
-      query.$or = [
-        { name: { $regex: new RegExp('^' + escapedSearch, 'i') } },
-        { brand: { $regex: new RegExp(escapedSearch, 'i') } },
-      ];
-    }
-
-    // Sorting options
-    const sortOptions = {
-      price_asc: { "variants.0.discountedPrice": 1 },
-      price_desc: { "variants.0.discountedPrice": -1 },
-      newest: { createdAt: -1 },
-      popular: { views: -1 },
-    };
-    const sortObj = sortOptions[sort] || sortOptions.newest;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Products.countDocuments(query);
-    const products = await Products.find(query)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(parseInt(limit));
-    res.render("user/shop/menShop", {
-      products,
-      name,
-      search,
-      sort,
-      filter,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit)),
-    });
-  } catch (error) {
-    console.log(error);
-  }
+  await getCategoryShopHelper(req, res, { gender: "MEN" }, "MEN");
 };
 
 const getWomenShop = async (req, res) => {
-  try {
-    const name = "WOMEN";
-    const {
-      page = 1,
-      limit = 12,
-      search = "",
-      sort = "newest",
-      filter = "ALL",
-    } = req.query;
-
-    let query = {
-      isDeleted: false,
-      isListed: true,
-      gender: "WOMEN",
-    };
-
-    // Search filter -
-    if (search.trim()) {
-      const escapedSearch = escapeRegex(search.trim());
-      query.$or = [
-        { name: { $regex: new RegExp('^' + escapedSearch, 'i') } },
-        { brand: { $regex: new RegExp(escapedSearch, 'i') } },
-      ];
-    }
-
-    // Sorting options
-    const sortOptions = {
-      price_asc: { "variants.0.discountedPrice": 1 },
-      price_desc: { "variants.0.discountedPrice": -1 },
-      newest: { createdAt: -1 },
-      popular: { views: -1 },
-    };
-    const sortObj = sortOptions[sort] || sortOptions.newest;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Products.countDocuments(query);
-    const products = await Products.find(query)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(parseInt(limit));
-    res.render("user/shop/womenShop", {
-      products,
-      name,
-      search,
-      sort,
-      filter,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit)),
-    });
-  } catch (error) {
-    console.log(error);
-  }
+    await getCategoryShopHelper(req, res, { gender: "WOMEN" }, "WOMEN");
 };
 
 const getUnisexShop = async (req, res) => {
-  try {
-    const name = "UNISEX";
-    const {
-      page = 1,
-      limit = 12,
-      search = "",
-      sort = "newest",
-      filter = "ALL",
-    } = req.query;
-
-    let query = {
-      isDeleted: false,
-      isListed: true,
-      gender: "UNISEX",
-    };
-
-    // Search filter - starts with for name, contains for description
-    if (search.trim()) {
-      const escapedSearch = escapeRegex(search.trim());
-      query.$or = [
-        { name: { $regex: new RegExp('^' + escapedSearch, 'i') } },
-        { brand: { $regex: new RegExp(escapedSearch, 'i') } },
-      ];
-    }
-
-    // Sorting options
-    const sortOptions = {
-      price_asc: { "variants.0.discountedPrice": 1 },
-      price_desc: { "variants.0.discountedPrice": -1 },
-      newest: { createdAt: -1 },
-      popular: { views: -1 },
-    };
-    const sortObj = sortOptions[sort] || sortOptions.newest;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Products.countDocuments(query);
-    const products = await Products.find(query)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(parseInt(limit));
-    res.render("user/shop/unisexShop", {
-      products,
-      name,
-      search,
-      sort,
-      filter,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit)),
-    });
-  } catch (error) {
-    console.log(error);
-  }
+    await getCategoryShopHelper(req, res, { gender: "UNISEX" }, "UNISEX");
 };
 
 const getCatogoryShop = async (req, res) => {
   try {
     const categorie = await Categories.findOne({ name: req.params.id });
     if (!categorie) {
-      return res.status(404).render("user/shop/catogoryShop", {
+      return res.status(404).render("user/shop/categoryShop", {
+        name: "Category Not Found",
         products: [],
-        catName: "",
+        wishlist: [],
         error: "Category not found!",
+        minPrice: 0, maxPrice: 10000,
+        minPriceOptions: [], maxPriceOptions: [],
+        topBrands: [], otherBrands: [], brands: [],
+        concentrations: [], selectedBrands: [], selectedConcentrations: [],
+        totalPages: 0, page: 1, limit: 12, total: 0,
+        search: "", sort: ""
       });
     }
-    const catName = categorie.name.toUpperCase();
-    const {
-      page = 1,
-      limit = 12,
-      search = "",
-      sort = "newest",
-      filter = "ALL",
-    } = req.query;
-    let query = {
-      _id: { $in: categorie.products },
-      isDeleted: false,
-      isListed: true,
-    };
-
-    // Search filter - starts with for name, contains for description
-    if (search.trim()) {
-      const escapedSearch = escapeRegex(search.trim());
-      query.$or = [
-        { name: { $regex: new RegExp('^' + escapedSearch, 'i') } },
-        { brand: { $regex: new RegExp(escapedSearch, 'i') } },
-      ];
-    }
-
-    // Sorting options
-    const sortOptions = {
-      price_asc: { "variants.0.discountedPrice": 1 },
-      price_desc: { "variants.0.discountedPrice": -1 },
-      newest: { createdAt: -1 },
-      popular: { views: -1 },
-    };
-    const sortObj = sortOptions[sort] || sortOptions.newest;
-
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const total = await Products.countDocuments(query);
-    const products = await Products.find(query)
-      .sort(sortObj)
-      .skip(skip)
-      .limit(parseInt(limit));
-    res.render("user/shop/catogoryShop", {
-      products,
-      catName,
-      search,
-      sort,
-      filter,
-      page: parseInt(page),
-      totalPages: Math.ceil(total / parseInt(limit)),
-    });
+    await getCategoryShopHelper(req, res, { _id: { $in: categorie.products } }, categorie.name.toUpperCase());
   } catch (error) {
     console.error(error);
+      res.status(500).render("user/shop/categoryShop", {
+        name: "Error",
+        products: [],
+        wishlist: [],
+        error: "Something went wrong!",
+        minPrice: 0, maxPrice: 10000,
+        minPriceOptions: [], maxPriceOptions: [],
+        topBrands: [], otherBrands: [], brands: [],
+        concentrations: [], selectedBrands: [], selectedConcentrations: [],
+        totalPages: 0, page: 1, limit: 12, total: 0,
+        search: "", sort: ""
+      });
   }
 };
 

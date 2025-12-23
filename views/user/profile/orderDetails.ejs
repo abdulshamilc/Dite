@@ -506,7 +506,19 @@
                                         </p>
                                         </div>
                                         <div class="text-right flex-shrink-0">
-                                            <p class="font-semibold">₹<%= ((item.discountedPrice || item.basePrice || 0) * (item.effectiveQuantity || 1)).toFixed(2) %></p>
+                                            <% 
+                                                // Display the price BEFORE coupon discount (revert net price)
+                                                // Since we now store net price in DB, we add back the coupon portion for display
+                                                const storedPrice = item.discoundedPrice || item.discountedPrice || item.basePrice || 0;
+                                                const priceBeforeCoupon = storedPrice + (item.couponDiscount || 0);
+                                                
+                                                const total = priceBeforeCoupon * (item.effectiveQuantity || 1);
+                                                const baseTotal = (item.basePrice || 0) * (item.effectiveQuantity || 1);
+                                            %>
+                                            <% if (item.basePrice > priceBeforeCoupon) { %>
+                                                <p class="text-xs text-gray-500 line-through">₹<%= baseTotal.toFixed(2) %></p>
+                                            <% } %>
+                                            <p class="font-semibold">₹<%= total.toFixed(2) %></p>
                                             <p class="text-sm text-gray-400">Qty: <%= item.effectiveQuantity || 1 %></p>
                                         </div>
                                     </div>
@@ -603,12 +615,22 @@
                         <div class="space-y-2">
                             <div class="flex justify-between text-gray-300">
                                 <span>Subtotal</span>
-                                <span>₹<%= (order.subTotal || 0).toFixed(2) %></span>
+                                <span>₹<%= (order.totalAmount + (order.discountAmount || 0)).toFixed(2) %></span>
                             </div>
+                            
+                            <% if (order.couponCode) { %>
                             <div class="flex justify-between text-gray-300">
-                                <span>Discount</span>
-                                <span class="text-red-400">-₹<%= (order.discount || 0).toFixed(2) %></span>
+                                <span>Coupon Applied (<span class="text-green-400 font-semibold"><%= order.couponCode %></span>)</span>
+                                <span class="text-green-400">-₹<%= (order.discountAmount || 0).toFixed(2) %></span>
                             </div>
+                            <% } else if (order.discount > 0) { %>
+                             <!-- Check if generic discount exists if no specific coupon code (fallback) -->
+                             <div class="flex justify-between text-gray-300">
+                                <span>Discount</span>
+                                <span class="text-green-400">-₹<%= (order.discount || 0).toFixed(2) %></span>
+                            </div>
+                            <% } %>
+
                             <div class="flex justify-between text-gray-300">
                                 <span>Shipping</span>
                                 <span>₹<%= (order.shipping || 0).toFixed(2) %></span>
@@ -618,7 +640,7 @@
                                 <span>₹<%= (order.tax || 0).toFixed(2) %></span>
                             </div>
                             <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600">
-                                <span>Total</span>
+                                <span>Total Paid</span>
                                 <span>₹<%= (order.totalAmount || 0).toFixed(2) %></span>
                             </div>
                         </div>

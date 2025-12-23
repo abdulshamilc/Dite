@@ -353,7 +353,7 @@
                             <p class="text-gray-500 text-sm"><%= (item.mlSize || 0) + ' ml' %></p>
                           </div>
                           <div class="text-right flex-shrink-0">
-                            <p class="font-semibold">₹<%= ((item.discountedPrice || item.basePrice || 0) * originalQuantity).toFixed(2) %></p>
+                            <p class="font-semibold">₹<%= ((item.discoundedPrice || item.discountedPrice || item.basePrice || 0) * originalQuantity).toFixed(2) %></p>
                             <p class="text-sm text-gray-400">Qty: <%= originalQuantity %></p>
                           </div>
                         </div>
@@ -445,12 +445,21 @@
                 <div class="space-y-2">
                   <div class="flex justify-between text-gray-300">
                     <span>Subtotal</span>
-                    <span>₹<%= subTotal || 0 %></span>
+                    <span>₹<%= (order.totalAmount + (order.discountAmount || 0)).toFixed(2) %></span>
                   </div>
-                  <div class="flex justify-between text-gray-300">
-                    <span>Discount</span>
-                    <span class="text-red-400">-₹<%= discount || 0 %></span>
-                  </div>
+                  
+                  <% if (order.couponCode) { %>
+                    <div class="flex justify-between text-gray-300">
+                        <span>Coupon Applied (<span class="text-brand font-semibold"><%= order.couponCode %></span>)</span>
+                        <span class="text-brand">-₹<%= (order.discountAmount || 0).toFixed(2) %></span>
+                    </div>
+                  <% } else if (order.discountAmount > 0 || discount > 0) { %>
+                    <div class="flex justify-between text-gray-300">
+                        <span>Discount</span>
+                        <span class="text-brand">-₹<%= Number(order.discountAmount || discount || 0).toFixed(2) %></span>
+                    </div>
+                  <% } %>
+
                   <div class="flex justify-between text-gray-300">
                     <span>Shipping</span>
                     <span>₹<%= (order.shipping || 0).toFixed(2) %></span>
@@ -460,8 +469,8 @@
                     <span>₹<%= (order.tax || 0).toFixed(2) %></span>
                   </div>
                   <div class="flex justify-between text-lg font-bold text-brand pt-2 border-t border-gray-700">
-                    <span>Total</span>
-                    <span>₹<%= totalAmount || order.totalAmount || 0 %></span>
+                    <span>Total Paid</span>
+                    <span>₹<%= (order.totalAmount || 0).toFixed(2) %></span>
                   </div>
                 </div>
               </div>

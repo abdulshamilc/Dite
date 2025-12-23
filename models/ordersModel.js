@@ -23,6 +23,10 @@ const orderedProductSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  couponDiscount: {
+    type: Number,
+    default: 0,
+  },
   image: String,
 });
 
@@ -110,6 +114,10 @@ const returndProductSchema = new mongoose.Schema({
     required: true,
     default: "Requested",
   },
+  rejectReason: {
+    type: String,
+    default: "",
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -172,6 +180,14 @@ const orderSchema = new mongoose.Schema(
     totalAmount: {
       type: Number,
       required: true,
+    },
+    couponCode: {
+      type: String,
+      default: null,
+    },
+    discountAmount: {
+      type: Number,
+      default: 0,
     },
 
     deliveredAt: {

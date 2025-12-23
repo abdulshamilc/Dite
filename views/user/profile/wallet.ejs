@@ -672,12 +672,10 @@
       }
     }
     function viewTransactions() {
-      showMessage('Full transaction history view coming soon! Check recent above.', 'info');
-      // In real app, redirect to /wallet/transactions or expand section
+      window.location.href = '/wallet/history';
     }
     function viewAllTransactions() {
-      showMessage('Redirecting to full history...', 'info');
-      // window.location.href = '/wallet/transactions';
+      window.location.href = '/wallet/history';
     }
     // Close modal on outside click
     window.onclick = function(event) {

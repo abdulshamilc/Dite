@@ -24,6 +24,7 @@ import {
     deleteProduct,
     getSalesReport,
     exportSalesReport,
+    exportSalesPdf,
     getcustomers,
     blockUser,
     getCategories, 
@@ -34,12 +35,23 @@ import {
     getReturnDetails,
     getReturn,
     returnApprove,
+    returnReject,
     getOffers,
     createOffer,
     getOfferDetails,
     toggleOfferStatus,
     updateOfferEndDate,
+    getEditOffer,
+    postEditOffer,
     deleteOffer,
+    getCoupons,
+    createCoupon,
+    getCouponDetails,
+    toggleCouponStatus,
+    updateCouponEndDate,
+    getEditCoupon,
+    postEditCoupon,
+    deleteCoupon,
     logOut,
 } from '../controller/admin/adminController.js'
 import { pagination } from '../middlewares/paginationMiddleware.js';
@@ -78,6 +90,7 @@ router.post('/products/delete/:id',isAuthenticatedAdmin,deleteProduct)
 
 router.get('/sales',isAuthenticatedAdmin,pagination,getSalesReport)
 router.post('/sales-report/export',isAuthenticatedAdmin,exportSalesReport) 
+router.post('/sales-report/export-pdf',isAuthenticatedAdmin,exportSalesPdf) 
 
 router.get('/customers',isAuthenticatedAdmin,pagination,getcustomers) 
 router.post('/customers/block/:id',isAuthenticatedAdmin,blockUser)
@@ -89,19 +102,29 @@ router.post('/categories/delete/:id',isAuthenticatedAdmin,deleteCategory)
 router.post('/categories/edit/:id',isAuthenticatedAdmin,editCategory)
 
 
-router.get('/coupons',isAuthenticatedAdmin,pageNotFound)  
+
+router.get('/coupons',isAuthenticatedAdmin,getCoupons)  
+router.post('/coupons/add',isAuthenticatedAdmin,createCoupon)  
+router.get('/coupons/:id',isAuthenticatedAdmin,getCouponDetails) 
+router.get('/coupons/edit/:id',isAuthenticatedAdmin,getEditCoupon)
+router.post('/coupons/edit/:id',isAuthenticatedAdmin,postEditCoupon)
+router.post('/coupons/:id/toggleStatus',isAuthenticatedAdmin,toggleCouponStatus)  
+router.post('/coupons/update-end-date/:id',isAuthenticatedAdmin,updateCouponEndDate)  
+router.post('/coupons/delete/:id',isAuthenticatedAdmin,deleteCoupon)  
 
 router.get('/return',isAuthenticatedAdmin,getReturn) 
 router.get('/return/:orderId/',isAuthenticatedAdmin,getReturnDetails) 
 router.post('/return/:orderId/approve',isAuthenticatedAdmin,returnApprove) 
+router.post('/return/:orderId/reject',isAuthenticatedAdmin,returnReject) 
 
 router.get('/offers',isAuthenticatedAdmin,getOffers)  
 router.post('/offers',isAuthenticatedAdmin,createOffer)  
 router.get('/offers/:id',isAuthenticatedAdmin,getOfferDetails)  
+router.get('/offers/edit/:id',isAuthenticatedAdmin,getEditOffer)
+router.post('/offers/edit/:id',isAuthenticatedAdmin,postEditOffer)
 router.post('/offers/:id/toggleStatus',isAuthenticatedAdmin,toggleOfferStatus)  
 router.post('/offers/update-end-date/:id',isAuthenticatedAdmin,updateOfferEndDate)  
 router.post('/offers/delete/:id',isAuthenticatedAdmin,deleteOffer)  
-
 
 router.get('/referrals',isAuthenticatedAdmin,pageNotFound)  
 

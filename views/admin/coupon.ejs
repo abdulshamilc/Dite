@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coupons</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .logout-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .logout-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .status-active {
+        color: #10b981;
+      }
+      .status-inactive {
+        color: #ef4444;
+      }
+      .status-pending {
+        color: #f59e0b;
+      }
+      .status-processing {
+        color: #3b82f6;
+      }
+      .status-completed {
+        color: #10b981;
+      }
+      .status-cancelled {
+        color: #ef4444;
+      }
+      /* Enhanced View Modal Styles */
+      .view-modal {
+        background: linear-gradient(145deg, #1f2937, #111827);
+        border: 2px solid #c5a987;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+      }
+      .view-modal-title {
+        background: #c5a987;
+        color: #1f2937;
+        padding: 1rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        text-align: center;
+        font-size: 1.75rem;
+        font-weight: bold;
+      }
+      .view-modal-images {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        padding: 1rem;
+        background: #1f2937;
+        border-radius: 0.5rem;
+        margin: 1rem 0;
+      }
+      .view-modal-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        border: 2px solid #c5a987;
+        transition: transform 0.3s ease;
+      }
+      .view-modal-image:hover {
+        transform: scale(1.05);
+      }
+      .view-modal-details {
+        background: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+      }
+      .view-modal-details p {
+        margin-bottom: 0.5rem;
+        display: flex;
+        justify-content: space-between;
+        border-bottom: 1px solid #374151;
+        padding-bottom: 0.5rem;
+      }
+      .view-modal-details strong {
+        color: #c5a987;
+        flex: 1;
+      }
+      .view-modal-details span {
+        flex: 2;
+        text-align: right;
+      }
+      .view-modal-variants table {
+        background: #1a202c;
+        border: 1px solid #c5a987;
+      }
+      .view-modal-variants th {
+        background: #c5a987;
+        color: #1f2937;
+        font-weight: bold;
+      }
+      .view-modal-variants tr:hover {
+        background: #2d3748;
+      }
+      /* Add Coupon Modal Styles */
+      .add-coupon-modal {
+        background: linear-gradient(145deg, #1f2937, #111827);
+        border: 2px solid #c5a987;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+      }
+      .add-coupon-modal-title {
+        background: #c5a987;
+        color: #1f2937;
+        padding: 1rem;
+        border-radius: 0.5rem 0.5rem 0 0;
+        text-align: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+      }
+      .add-coupon-form {
+        padding: 1.5rem;
+      }
+      .add-coupon-form .form-group {
+        margin-bottom: 1rem;
+      }
+      .add-coupon-form label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #c5a987;
+        font-weight: bold;
+      }
+      .add-coupon-form .required-asterisk {
+        color: #ef4444;
+      }
+      .add-coupon-form input,
+      .add-coupon-form select,
+      .add-coupon-form textarea {
+        width: 100%;
+        padding: 0.75rem;
+        background: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+        color: white;
+      }
+      .add-coupon-form input[type="date"] {
+        color: white;
+      }
+      .add-coupon-form input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+      }
+      .add-coupon-form input[type="date"]::-webkit-datetime-edit {
+        color: white;
+      }
+      .add-coupon-form textarea {
+        resize: vertical;
+        min-height: 100px;
+      }
+      .add-coupon-form input:focus,
+      .add-coupon-form select:focus,
+      .add-coupon-form textarea:focus {
+        outline: none;
+        border-color: #c5a987;
+      }
+      .add-coupon-form .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+      }
+      .add-coupon-form .error {
+        border-color: #ef4444;
+      }
+      .radio-group {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: nowrap;
+        align-items: center;
+      }
+      .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+      }
+      .target-select {
+        display: none;
+      }
+      .target-select.active {
+        display: block;
+      }
+      .modal-buttons {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        padding: 1rem;
+        border-top: 1px solid #374151;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../partials/admin/admin-header") %>
+
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../partials/admin/admin-sidebar") %>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <!-- Heading + Add Button -->
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold">Coupon Management</h1>
+          <button onclick="openAddCouponModal()" class="bg-green-600 px-4 py-2 rounded hover:bg-green-700">
+            + Add Coupon
+          </button>
+        </div>
+
+        <!-- Counts -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="count-box">
+            <p class="text-gray-400">Total Coupons</p>
+            <p class="text-xl font-bold"><%= totalCoupons %></p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Active Coupons</p>
+            <p class="text-xl font-bold text-green-400">
+              <%= activeCouponsCount %>
+            </p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Inactive Coupons</p>
+            <p class="text-xl font-bold text-red-400">
+              <%= inactiveCouponsCount %>
+            </p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Total Discount Value</p>
+            <p class="text-xl font-bold">
+              Rs.<%= totalDiscountCount.totalDiscount %>
+            </p>
+          </div>
+        </div>
+
+        <!-- Filter + Search -->
+        <div class="flex justify-between mb-4">
+          <span>All Coupons</span>
+          <div class="flex space-x-4">
+            <select id="statusFilter" class="bg-gray-800 p-2 rounded">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <div class="flex space-x-2">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search Coupon Name..."
+                class="bg-gray-800 p-2 rounded"
+              />
+              <button
+                id="clearSearch"
+                class="bg-gray-600 px-3 py-2 rounded hover:bg-gray-700"
+                title="Clear Search"
+              >
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coupons Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-800">
+                <th class="px-4 py-2 text-left">NAME</th>
+                <th class="px-4 py-2 text-left">START DATE</th>
+                <th class="px-4 py-2 text-left">END DATE</th>
+                <th class="px-4 py-2 text-left">DISCOUNT</th>
+                <th class="px-4 py-2 text-left">TYPE</th>
+                <th class="px-4 py-2 text-left">STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% coupons.forEach(coupon => { %>
+              <tr class="border-b border-gray-700 hover:bg-gray-900 cursor-pointer" onclick="window.location.href='/admin/coupons/<%= coupon._id %>'">
+                <td class="px-4 py-2"><%= coupon.name %></td>
+                <td class="px-4 py-2"><%= new Date(coupon.startDate).toLocaleDateString() %></td>
+                <td class="px-4 py-2"><%= new Date(coupon.endDate).toLocaleDateString() %></td>
+                <td class="px-4 py-2">
+                  <%= coupon.discountType === 'percentage' ? coupon.discountValue + '%' : 'Rs ' + coupon.discountValue %>
+                </td>
+                <td class="px-4 py-2">
+                  <%= coupon.discountType.charAt(0).toUpperCase() + coupon.discountType.slice(1) %>
+                </td>
+                <td class="px-4 py-2">
+                  <% if(coupon.isActive) { %>
+                  <span class="status-active">Active</span>
+                  <% } else { %>
+                  <span class="status-inactive">Inactive</span>
+                  <% } %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination and Page Limit -->
+        <div class="flex justify-between items-center mt-4">
+          <!-- Pagination -->
+          <div class="flex-1 flex justify-center items-center space-x-4">
+            <% if (totalPages > 1) { %>
+              <% if (currentPage > 1) { %>
+                <a
+                  href="/admin/coupons?page=<%= currentPage - 1 %>&limit=<%= limit %>"
+                  class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </a>
+              <% } %>
+              <span class="text-gray-400"><%= currentPage %> / <%= totalPages %></span>
+              <% if (currentPage < totalPages) { %>
+                <a
+                  href="/admin/coupons?page=<%= currentPage + 1 %>&limit=<%= limit %>"
+                  class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </a>
+              <% } %>
+            <% } %>
+          </div>
+
+          <!-- Page Limit -->
+          <div class="flex items-center space-x-2">
+            <label for="pageLimit" class="text-gray-400">Show</label>
+            <select id="limitSelect" onchange="changePageLimit(this.value)">
+              <option value="5" <%= limit == 5 ? "selected" : "" %>>5</option>
+              <option value="10" <%= limit == 10 ? "selected" : "" %>>10</option>
+              <option value="20" <%= limit == 20 ? "selected" : "" %>>20</option>
+              <option value="50" <%= limit == 50 ? "selected" : "" %>>50</option>
+            </select>
+            <span class="text-gray-400">per page</span>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Add Coupon Modal -->
+    <div id="addCouponModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50 p-4">
+      <div class="add-coupon-modal w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-lg">
+        <div class="add-coupon-modal-title">Add New Coupon</div>
+        <form id="addCouponForm" class="add-coupon-form" action="/admin/coupons/add" method="POST">
+          <div class="form-group">
+            <label for="couponName">Name <span class="required-asterisk">*</span></label>
+            <input type="text" id="couponName" name="name" maxlength="255" />
+            <div class="error-message" id="nameError">Name is required.</div>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <textarea id="description" name="description" maxlength="1000" placeholder="Optional description..."></textarea>
+            <div class="error-message" id="descriptionError">Description must be less than 1000 characters.</div>
+          </div>
+          <div class="form-group">
+            <label>Coupon Code <span class="required-asterisk">*</span></label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="autoCode" name="codeType" value="auto" checked />
+                <label for="autoCode">Auto Generate</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="customCode" name="codeType" value="custom" />
+                <label for="customCode">Custom</label>
+              </div>
+            </div>
+            <div id="customCodeSection" class="target-select">
+              <label for="couponCode">Custom Code <span class="required-asterisk">*</span></label>
+              <input type="text" id="couponCode" maxlength="20" placeholder="Enter 4-20 uppercase chars (e.g., SAVE20)" />
+              <div class="error-message" id="codeError">Custom code is required, 4-20 uppercase letters/numbers only.</div>
+            </div>
+            <input type="hidden" id="generatedCode" name="code" value="" />
+            <div class="error-message" id="codeTypeError">Please select a code generation method.</div>
+          </div>
+          <div class="form-group">
+            <label>Discount Type <span class="required-asterisk">*</span></label>
+            <div class="radio-group">
+              <div class="radio-option">
+                <input type="radio" id="discountFlat" name="discountType" value="flat" />
+                <label for="discountFlat">Flat (Rs)</label>
+              </div>
+              <div class="radio-option">
+                <input type="radio" id="discountPercentage" name="discountType" value="percentage" />
+                <label for="discountPercentage">Percentage (%)</label>
+              </div>
+            </div>
+            <div class="error-message" id="discountTypeError">Discount type is required.</div>
+          </div>
+          <div class="form-group">
+            <label for="discountValue">Discount Value <span class="required-asterisk">*</span></label>
+            <input type="number" id="discountValue" name="discountValue" min="0" step="0.01" />
+            <div class="error-message" id="discountValueError">Discount value must be greater than 0.</div>
+          </div>
+          <div class="form-group">
+            <label for="minCartValue">Min Cart Value (Rs) <span class="required-asterisk">*</span></label>
+            <input type="number" id="minCartValue" name="minCartValue" min="0" step="1" value="0" />
+            <div class="error-message" id="minCartValueError">Min cart value must be 0 or greater.</div>
+          </div>
+          <div id="maxDiscountSection" class="target-select">
+            <div class="form-group">
+              <label for="maxDiscountAmount">Max Discount Amount (Rs) <span class="required-asterisk">*</span></label>
+              <input type="number" id="maxDiscountAmount" name="maxDiscountAmount" min="0" step="1" value="0" />
+              <div class="error-message" id="maxDiscountAmountError">Max discount amount must be 0 or greater.</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="usageLimit">Usage Limit <span class="required-asterisk">*</span></label>
+            <input type="number" id="usageLimit" name="usageLimit" min="1" step="1" />
+            <div class="error-message" id="usageLimitError">Usage limit must be 1 or greater.</div>
+          </div>
+          <div class="form-group">
+            <label for="startDate">Start Date <span class="required-asterisk">*</span></label>
+            <input type="date" id="startDate" name="startDate" />
+            <div class="error-message" id="startDateError">Start date is required.</div>
+          </div>
+          <div class="form-group">
+            <label for="endDate">End Date <span class="required-asterisk">*</span></label>
+            <input type="date" id="endDate" name="endDate" />
+            <div class="error-message" id="endDateError">End date is required and must be after start date.</div>
+          </div>
+          <div class="modal-buttons">
+            <button type="button" onclick="closeAddCouponModal()" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700">Cancel</button>
+            <button type="submit" class="px-4 py-2 bg-green-600 rounded hover:bg-green-700">Add Coupon</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Error Popup Modal -->
+    <div
+      id="errorPopup"
+      class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span id="errorMessage">Something went wrong!</span>
+      <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Success Popup Modal -->
+    <div
+      id="successPopup"
+      class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+      <span id="successMessage">Success!</span>
+      <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- JS for actions -->
+    <script>
+      lucide.createIcons();
+
+      // Function to generate random coupon code
+      function generateCouponCode() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 8; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      }
+
+      // Handle code type radio change
+      document.querySelectorAll('input[name="codeType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+          const codeType = this.value;
+          const customSection = document.getElementById('customCodeSection');
+          const generatedInput = document.getElementById('generatedCode');
+          const codeInput = document.getElementById('couponCode');
+          const codeError = document.getElementById('codeError');
+
+          if (codeType === 'auto') {
+            customSection.classList.remove('active');
+            const autoCode = generateCouponCode();
+            generatedInput.value = autoCode;
+            codeError.style.display = 'none';
+            codeInput.classList.remove('error');
+          } else if (codeType === 'custom') {
+            customSection.classList.add('active');
+            generatedInput.value = ''; // Clear hidden if switching
+            codeInput.value = ''; // Clear input
+            codeError.style.display = 'none';
+            codeInput.classList.remove('error');
+          }
+          document.getElementById('codeTypeError').style.display = 'none';
+        });
+      });
+
+      // Handle discount type radio change
+      document.querySelectorAll('input[name="discountType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+          const discountType = this.value;
+          const maxDiscountSection = document.getElementById('maxDiscountSection');
+          const maxDiscountInput = document.getElementById('maxDiscountAmount');
+          const maxDiscountError = document.getElementById('maxDiscountAmountError');
+
+          if (discountType === 'percentage') {
+            maxDiscountSection.classList.add('active');
+            maxDiscountInput.required = true;
+            maxDiscountError.style.display = 'none';
+            maxDiscountInput.classList.remove('error');
+          } else if (discountType === 'flat') {
+            maxDiscountSection.classList.remove('active');
+            maxDiscountInput.required = false;
+            maxDiscountInput.value = '0'; // Default to 0 for flat
+            maxDiscountError.style.display = 'none';
+            maxDiscountInput.classList.remove('error');
+          }
+          document.getElementById('discountTypeError').style.display = 'none';
+        });
+      });
+
+      // Modal functions
+      function openAddCouponModal() {
+        document.getElementById('addCouponModal').classList.remove('hidden');
+        document.getElementById('addCouponForm').reset();
+        // Default to auto
+        document.getElementById('autoCode').checked = true;
+        document.getElementById('customCodeSection').classList.remove('active');
+        const generatedInput = document.getElementById('generatedCode');
+        generatedInput.value = generateCouponCode();
+        // Default discount type to flat (hide max discount)
+        document.getElementById('discountFlat').checked = true;
+        document.getElementById('maxDiscountSection').classList.remove('active');
+        document.getElementById('maxDiscountAmount').value = '0';
+        document.getElementById('maxDiscountAmount').required = false;
+        // Clear all errors
+        clearFormErrors();
+        // Set min date for startDate to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('startDate').min = today;
+        document.getElementById('startDate').value = today; // Default to today
+        document.getElementById('endDate').min = today;
+        document.getElementById('endDate').value = '';
+        // Set max date for endDate to 1 year from today
+        const oneYearFromToday = new Date();
+        oneYearFromToday.setFullYear(oneYearFromToday.getFullYear() + 1);
+        document.getElementById('endDate').max = oneYearFromToday.toISOString().split('T')[0];
+      }
+
+      function closeAddCouponModal() {
+        document.getElementById('addCouponModal').classList.add('hidden');
+        clearFormErrors();
+      }
+
+      function clearFormErrors() {
+        const errorElements = document.querySelectorAll('.error-message');
+        errorElements.forEach(el => {
+          el.style.display = 'none';
+        });
+        const inputElements = document.querySelectorAll('.add-coupon-form input, .add-coupon-form select, .add-coupon-form textarea');
+        inputElements.forEach(el => {
+          el.classList.remove('error');
+        });
+      }
+
+      function showFieldError(fieldId, message) {
+        const errorEl = document.getElementById(fieldId + 'Error');
+        if (errorEl) {
+          errorEl.textContent = message;
+          errorEl.style.display = 'block';
+        }
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.classList.add('error');
+        }
+      }
+
+      // Handle startDate change to update endDate min
+      document.getElementById('startDate').addEventListener('change', function() {
+        const start = this.value;
+        const endInput = document.getElementById('endDate');
+        if (start) {
+          endInput.min = start;
+          if (endInput.value < start) {
+            endInput.value = '';
+          }
+        }
+        document.getElementById('startDateError').style.display = 'none';
+        this.classList.remove('error');
+      });
+
+      // Date validation (endDate > startDate)
+      document.getElementById('endDate').addEventListener('change', function() {
+        const start = document.getElementById('startDate').value;
+        const end = this.value;
+        if (start && end && new Date(end) <= new Date(start)) {
+          showFieldError('endDate', 'End date must be after start date.');
+          this.value = '';
+        } else {
+          document.getElementById('endDateError').style.display = 'none';
+          this.classList.remove('error');
+        }
+      });
+
+      // Form validation before submit
+      document.getElementById('addCouponForm').addEventListener('submit', function(e) {
+        clearFormErrors();
+        let hasErrors = false;
+        let errorMessages = [];
+
+        // Name
+        const name = document.getElementById('couponName').value.trim();
+        if (!name) {
+          showFieldError('couponName', 'Name is required.');
+          hasErrors = true;
+          errorMessages.push('Name is required.');
+        }
+
+        // Description length
+        const description = document.getElementById('description').value.trim();
+        if (description && description.length > 1000) {
+          showFieldError('description', 'Description must be less than 1000 characters.');
+          hasErrors = true;
+          errorMessages.push('Description too long.');
+        }
+
+        // Code Type
+        const codeType = document.querySelector('input[name="codeType"]:checked');
+        if (!codeType) {
+          showFieldError('codeType', 'Please select a code generation method.');
+          hasErrors = true;
+          errorMessages.push('Code generation method is required.');
+        }
+
+        // Code Validation
+        const generatedCode = document.getElementById('generatedCode').value.trim();
+        const customCodeInput = document.getElementById('couponCode');
+        let codeValue = '';
+        if (codeType && codeType.value === 'auto') {
+          codeValue = generatedCode;
+          if (!codeValue) {
+            showFieldError('codeType', 'Auto-generated code failed. Please try again.');
+            hasErrors = true;
+            errorMessages.push('Auto code generation failed.');
+          }
+        } else if (codeType && codeType.value === 'custom') {
+          codeValue = customCodeInput.value.trim().toUpperCase();
+          if (!codeValue) {
+            showFieldError('couponCode', 'Custom code is required.');
+            hasErrors = true;
+            errorMessages.push('Custom code is required.');
+          } else if (codeValue.length < 4 || codeValue.length > 20) {
+            showFieldError('couponCode', 'Custom code must be 4-20 characters.');
+            hasErrors = true;
+            errorMessages.push('Custom code length invalid.');
+          } else if (!/^[A-Z0-9]+$/.test(codeValue)) {
+            showFieldError('couponCode', 'Custom code must be uppercase letters and numbers only.');
+            hasErrors = true;
+            errorMessages.push('Custom code format invalid.');
+          }
+          // Set the value to hidden or directly to name="code"
+          document.getElementById('generatedCode').value = codeValue;
+        }
+
+        // Discount Type
+        const discountType = document.querySelector('input[name="discountType"]:checked');
+        if (!discountType) {
+          showFieldError('discountType', 'Discount type is required.');
+          hasErrors = true;
+          errorMessages.push('Discount type is required.');
+        }
+
+        // Discount Value
+        const discountValue = parseFloat(document.getElementById('discountValue').value);
+        if (isNaN(discountValue) || discountValue <= 0) {
+          showFieldError('discountValue', 'Discount value must be greater than 0.');
+          hasErrors = true;
+          errorMessages.push('Discount value must be greater than 0.');
+        } else if (discountType && discountType.value === 'percentage' && discountValue > 100) {
+          showFieldError('discountValue', 'Percentage discount cannot exceed 100%.');
+          hasErrors = true;
+          errorMessages.push('Percentage discount cannot exceed 100%.');
+        }
+
+        // Min Cart Value
+        const minCartValue = parseInt(document.getElementById('minCartValue').value);
+        if (isNaN(minCartValue) || minCartValue < 0) {
+          showFieldError('minCartValue', 'Min cart value must be 0 or greater.');
+          hasErrors = true;
+          errorMessages.push('Min cart value invalid.');
+        }
+
+        // Max Discount Amount (only validate if percentage)
+        const maxDiscountAmount = parseInt(document.getElementById('maxDiscountAmount').value);
+        if (discountType && discountType.value === 'percentage') {
+          if (isNaN(maxDiscountAmount) || maxDiscountAmount < 0) {
+            showFieldError('maxDiscountAmount', 'Max discount amount must be 0 or greater.');
+            hasErrors = true;
+            errorMessages.push('Max discount amount invalid.');
+          }
+        }
+
+        // Usage Limit
+        const usageLimit = parseInt(document.getElementById('usageLimit').value);
+        if (isNaN(usageLimit) || usageLimit < 1) {
+          showFieldError('usageLimit', 'Usage limit must be 1 or greater.');
+          hasErrors = true;
+          errorMessages.push('Usage limit invalid.');
+        }
+
+        // Start Date
+        const startDate = document.getElementById('startDate').value;
+        if (!startDate) {
+          showFieldError('startDate', 'Start date is required.');
+          hasErrors = true;
+          errorMessages.push('Start date is required.');
+        }
+
+        // End Date
+        const endDate = document.getElementById('endDate').value;
+        if (!endDate) {
+          showFieldError('endDate', 'End date is required.');
+          hasErrors = true;
+          errorMessages.push('End date is required.');
+        } else if (startDate && new Date(endDate) <= new Date(startDate)) {
+          showFieldError('endDate', 'End date must be after start date.');
+          hasErrors = true;
+          errorMessages.push('End date must be after start date.');
+        }
+
+        if (hasErrors) {
+          e.preventDefault();
+          showErrorPopup(errorMessages.join(' '));
+        }
+      });
+
+      // Handle page limit change
+      function changePageLimit(limit) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("limit", limit);
+        url.searchParams.set("page", 1);
+        window.location.href = url.toString();
+      }
+
+      // Function to filter table rows based on search and status
+      function filterTable() {
+        const searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+        const statusFilter = document.getElementById("statusFilter").value;
+        const rows = document.querySelectorAll("tbody tr");
+
+        rows.forEach((row) => {
+          const name = row.cells[0].textContent.toLowerCase();
+          const status = row
+            .querySelector("td:nth-child(6) span")
+            .textContent.toLowerCase();
+
+          const matchesSearch = searchQuery === "" || name.includes(searchQuery);
+          const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && status === "active") ||
+            (statusFilter === "inactive" && status === "inactive");
+
+          row.style.display = matchesSearch && matchesStatus ? "" : "none";
+        });
+      }
+
+      // Search functionality (triggered by Enter key)
+      document.getElementById("searchInput").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          filterTable();
+        }
+      });
+
+      // Clear search
+      document.getElementById("clearSearch").addEventListener("click", () => {
+        document.getElementById("searchInput").value = "";
+        filterTable();
+      });
+
+      // Status filter
+      document.getElementById("statusFilter").addEventListener("change", filterTable);
+
+      // Function to show error popup
+      function showErrorPopup(message) {
+        const popup = document.getElementById("errorPopup");
+        const messageElement = document.getElementById("errorMessage");
+
+        messageElement.textContent = message || "An unexpected error occurred.";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close manually
+      document.getElementById("closeErrorPopup").addEventListener("click", () => {
+        document.getElementById("errorPopup").classList.add("hidden");
+      });
+
+      // Function to show success popup
+      function showSuccessPopup(message) {
+        const popup = document.getElementById("successPopup");
+        const messageElement = document.getElementById("successMessage");
+
+        messageElement.textContent = message || "Success!";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close success popup manually
+      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+        document.getElementById("successPopup").classList.add("hidden");
+      });
+
+      // Display server-side flash messages on load
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        showErrorPopup("<%= errorMessage %>");
+      <% } %>
+      <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+        showSuccessPopup("<%= successMessage %>");
+      <% } %>
+
+      // Close modal on outside click
+      document.getElementById('addCouponModal').addEventListener('click', function(e) {
+        if (e.target === this) closeAddCouponModal();
+      });
+    </script>
+  </body>
+</html>

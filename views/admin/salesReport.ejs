@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
       .bg-brand {
         background-color: #c5a987;
@@ -33,11 +33,16 @@
       .nav-btn.active {
         box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
       }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
       .stat-card {
-        background: linear-gradient(135deg, #1f2937, #111827);
-        border: 1px solid #374151;
-        border-radius: 0.75rem;
-        padding: 1.5rem;
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
         text-align: center;
         transition: transform 0.3s ease;
       }
@@ -45,7 +50,7 @@
         transform: translateY(-2px);
       }
       .stat-value {
-        font-size: 2rem;
+        font-size: 1.25rem;
         font-weight: bold;
         color: #c5a987;
         margin-bottom: 0.25rem;
@@ -55,9 +60,9 @@
         font-size: 0.875rem;
       }
       .chart-container {
-        background: linear-gradient(135deg, #1f2937, #111827);
+        background-color: #1a202c;
         border: 1px solid #374151;
-        border-radius: 0.75rem;
+        border-radius: 0.5rem;
         padding: 1.5rem;
         margin-bottom: 2rem;
         height: 400px; /* Adjusted to match top products height */
@@ -78,9 +83,9 @@
         align-items: center;
       }
       .small-chart-container {
-        background: linear-gradient(135deg, #1f2937, #111827);
+        background-color: #1a202c;
         border: 1px solid #374151;
-        border-radius: 0.75rem;
+        border-radius: 0.5rem;
         padding: 1rem;
         margin-bottom: 1rem;
         height: 250px; /* Consistent height for small charts */
@@ -139,6 +144,30 @@
       .export-btn:hover {
         background: #b7947a;
       }
+      .period-btn {
+        background: #374151;
+        color: #9ca3af;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        border: 1px solid #4b5563;
+      }
+      .period-btn:hover {
+        background: #4b5563;
+        color: #ffffff;
+      }
+      .period-btn.active {
+        background: #c5a987;
+        color: #1f2937;
+      }
+      .period-btn.active:hover {
+        background: #b7947a;
+      }
+      .revenue {
+        color: #c5a987;
+        font-weight: bold;
+      }
       /* Ensure canvas fills container properly */
       canvas {
         max-height: 100%;
@@ -174,56 +203,86 @@
         font-weight: bold;
         color: #c5a987;
       }
-      /* Styles for sales table */
-      .sales-table {
-        background: linear-gradient(135deg, #1f2937, #111827);
-        border: 1px solid #374151;
-        border-radius: 0.75rem;
-        overflow: hidden;
-        margin-top: 2rem;
+      .pagination-ellipsis {
+        color: #9ca3af;
+        padding: 0.5rem;
       }
-      .sales-table th {
+      .pagination-page {
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+      }
+      .pagination-page:hover {
+        background-color: #4b5563 !important;
+      }
+      .pagination-page.active {
+        background-color: #c5a987 !important;
+        color: #1f2937 !important;
+      }
+      .pagination-prev, .pagination-next {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
         background-color: #374151;
         color: #9ca3af;
-        padding: 1rem;
-        text-align: left;
-        font-weight: bold;
+        border: 1px solid #4b5563;
       }
-      .sales-table td {
-        padding: 1rem;
-        border-bottom: 1px solid #374151;
-        color: #9ca3af;
+      .pagination-prev:hover:not(:disabled), .pagination-next:hover:not(:disabled) {
+        background-color: #4b5563;
+        color: #ffffff;
       }
-      .sales-table tr:hover td {
-        background-color: #374151;
+      .pagination-prev:disabled, .pagination-next:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
-      .sales-table .revenue {
-        color: #c5a987;
-        font-weight: bold;
+      /* Global SweetAlert2 customizations */
+      .swal2-popup {
+        background: #060412 !important;
+      }
+      .swal2-title {
+        color: #c5a987 !important;
+      }
+      .swal2-content {
+        color: #9ca3af !important;
+      }
+      .swal2-confirm {
+        background-color: #c5a987 !important;
+        color: #1f2937 !important;
+        border-color: #c5a987 !important;
+      }
+      .swal2-confirm:hover {
+        background-color: #b7947a !important;
       }
     </style>
   </head>
   <body class="min-h-screen bg-black text-white">
     <!-- Header Partial -->
     <%- include("../partials/admin/admin-header") %>
-
     <div class="flex">
       <!-- Sidebar Partial -->
       <%- include("../partials/admin/admin-sidebar") %>
-
       <!-- Page Content -->
       <main class="flex-1 p-6">
         <!-- Heading + Export Button -->
-        <div class="flex justify-between items-center mb-6">
-          <h1 class="text-3xl font-bold text-white">Sales Report</h1>
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold">Sales Report</h1>
           <button class="export-btn" id="exportBtn">
             <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
-            Export Excel
+            Export Report
           </button>
         </div>
-
+        <!-- Period Selection Buttons -->
+        <div class="flex gap-2 mb-6 flex-wrap">
+          <button class="period-btn <%= period === 'today' ? 'active' : '' %>" data-period="today">Today</button>
+          <button class="period-btn <%= period === 'week' ? 'active' : '' %>" data-period="week">Week</button>
+          <button class="period-btn <%= period === 'month' ? 'active' : '' %>" data-period="month">Month</button>
+          <button class="period-btn <%= period === 'year' ? 'active' : '' %>" data-period="year">Year</button>
+          <button class="period-btn <%= period === 'custom' ? 'active' : '' %>" id="customBtn" data-period="custom">Custom</button>
+        </div>
         <!-- Stats Cards -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div class="stat-card">
             <div class="stat-value"><%= totalRevenue %></div>
             <div class="stat-label">Total Revenue</div>
@@ -241,7 +300,6 @@
             <div class="stat-label">Total Customers</div>
           </div>
         </div>
-
         <!-- Revenue Overview Chart - Full Width -->
         <div class="mb-8">
           <div class="chart-container">
@@ -249,7 +307,6 @@
             <canvas id="revenueChart"></canvas>
           </div>
         </div>
-
         <!-- Last 2 Charts in a Single Row (Small Size) -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
           <!-- Sales by Category -->
@@ -257,7 +314,6 @@
             <div class="small-chart-title">Sales by Category</div>
             <canvas id="categoryChart"></canvas>
           </div>
-
           <!-- Sales by Gender -->
           <div class="small-chart-container">
             <div class="small-chart-title">Sales by Gender</div>
@@ -278,63 +334,136 @@
             </div>
           </div>
         </div>
-
         <!-- Sales Report Table - Order Based -->
         <div class="sales-table-container">
           <h2 class="text-2xl font-bold text-white mb-4">Sales Report - Orders & Transactions</h2>
           <% if (orderSalesData && orderSalesData.length > 0) { %>
           <div class="overflow-x-auto">
-            <table class="sales-table w-full">
+            <table class="min-w-full table-auto border-collapse">
               <thead>
-                <tr>
-                  <th>Order ID</th>
-                  <th>Date & Time</th>
-                  <th>Customer</th>
-                  <th>Items</th>
-                  <th>Items Count</th>
-                  <th>Total Amount</th>
-                  <th>Payment Method</th>
-                  <th>Transaction ID</th>
-                  <th>Status</th>
-                  <th>Delivered Date</th>
+                <tr class="bg-gray-800">
+                  <th class="px-4 py-2 text-left">Order ID</th>
+                  <th class="px-4 py-2 text-left">Date & Time</th>
+                  <th class="px-4 py-2 text-left">Customer</th>
+                  <th class="px-4 py-2 text-left">Total Amount</th>
+                  <th class="px-4 py-2 text-left">Payment Method</th>
+                  <th class="px-4 py-2 text-left">Status</th>
                 </tr>
               </thead>
               <tbody>
                 <% orderSalesData.forEach(function(order) { %>
-                <tr>
-                  <td class="font-mono text-sm"><%= order.orderId %></td>
-                  <td><%= order.date %></td>
-                  <td>
-                    <div><%= order.customerName %></div>
+                <tr class="border-b border-gray-700 hover:bg-gray-900">
+                  <td class="px-4 py-2 font-mono text-sm"><%= order.orderId %></td>
+                  <td class="px-4 py-2"><%= order.date %></td>
+                  <td class="px-4 py-2">
+                    <div class="font-medium"><%= order.customerName %></div>
                     <div class="text-xs text-gray-500"><%= order.customerEmail %></div>
                   </td>
-                  <td class="text-sm max-w-xs truncate" title="<%= order.items %>"><%= order.items %></td>
-                  <td><%= order.itemsCount %></td>
-                  <td class="revenue">₹<%= order.totalAmount.toLocaleString() %></td>
-                  <td><%= order.paymentMethod %></td>
-                  <td class="font-mono text-xs"><%= order.transactionId %></td>
-                  <td>
+                  <td class="px-4 py-2 revenue">₹<%= order.totalAmount.toLocaleString() %></td>
+                  <td class="px-4 py-2"><%= order.paymentMethod %></td>
+                  <td class="px-4 py-2">
                     <span class="px-2 py-1 text-xs rounded <%= order.orderStatus === 'Delivered' ? 'bg-green-600' : order.orderStatus === 'Cancelled' ? 'bg-red-600' : order.orderStatus === 'Returned' ? 'bg-purple-600' : 'bg-yellow-600' %>">
                       <%= order.orderStatus %>
                     </span>
                   </td>
-                  <td><%= order.deliveredAt %></td>
                 </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
+          <!-- Pagination Controls -->
+          <% if (totalPages > 1) { %>
+          <div class="flex items-center justify-center gap-1 mt-4">
+            <%
+              const queryParams = `limit=${limit}&startDate=${dateRange.startDate || ''}&endDate=${dateRange.endDate || ''}&period=${period}`;
+              const getPageUrl = (pageNum) => `?page=${pageNum}&${queryParams}`;
+            %>
+            <!-- Previous Button -->
+            <% if (currentPage > 1) { %>
+              <a href="<%= getPageUrl(currentPage - 1) %>" class="pagination-prev">‹ Previous</a>
+            <% } else { %>
+              <button class="pagination-prev" disabled>‹ Previous</button>
+            <% } %>
+            <!-- Page Numbers -->
+            <% if (totalPages <= 5) { %>
+              <% for(let i = 1; i <= totalPages; i++) { %>
+                <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+              <% } %>
+            <% } else { %>
+              <% if (currentPage <= 3) { %>
+                <% for(let i = 1; i <= 4; i++) { %>
+                  <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+                <span class="pagination-ellipsis">...</span>
+                <a href="<%= getPageUrl(totalPages) %>" class="pagination-page"> <%= totalPages %> </a>
+              <% } else if (currentPage >= totalPages - 2) { %>
+                <a href="<%= getPageUrl(1) %>" class="pagination-page">1</a>
+                <span class="pagination-ellipsis">...</span>
+                <% for(let i = totalPages - 3; i <= totalPages; i++) { %>
+                  <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+              <% } else { %>
+                <a href="<%= getPageUrl(1) %>" class="pagination-page">1</a>
+                <span class="pagination-ellipsis">...</span>
+                <% for(let i = currentPage - 1; i <= currentPage + 1; i++) { %>
+                  <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+                <span class="pagination-ellipsis">...</span>
+                <a href="<%= getPageUrl(totalPages) %>" class="pagination-page"><%= totalPages %></a>
+              <% } %>
+            <% } %>
+            <!-- Next Button -->
+            <% if (currentPage < totalPages) { %>
+              <a href="<%= getPageUrl(currentPage + 1) %>" class="pagination-next">Next ›</a>
+            <% } else { %>
+              <button class="pagination-next" disabled>Next ›</button>
+            <% } %>
+          </div>
+          <% } %>
           <% } else { %>
           <p class="text-center text-gray-500 py-8">No order data available</p>
           <% } %>
         </div>
       </main>
     </div>
-
+    <!-- Custom Date Modal -->
+    <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
+        <h3 class="text-lg font-bold text-white mb-4">Custom Date Range</h3>
+      
+        <div class="mb-4">
+          <label class="block text-gray-400 text-sm mb-1">Start Date</label>
+          <input type="date" id="modalStartDate" value="<%= dateRange.startDate || '' %>" class="w-full bg-gray-700 text-white rounded px-3 py-2 border border-gray-600 focus:border-brand outline-none transition-colors">
+        </div>
+      
+        <div class="mb-4">
+          <label class="block text-gray-400 text-sm mb-1">End Date</label>
+          <input type="date" id="modalEndDate" value="<%= dateRange.endDate || '' %>" class="w-full bg-gray-700 text-white rounded px-3 py-2 border border-gray-600 focus:border-brand outline-none transition-colors">
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button id="resetDates" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Reset</button>
+          <button id="applyCustom" class="px-4 py-2 bg-brand text-gray-800 rounded hover:bg-[#b7947a]">Apply</button>
+        </div>
+      </div>
+    </div>
     <!-- Export Modal -->
     <div id="exportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
       <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
         <h3 class="text-lg font-bold text-white mb-4">Export Sales Report</h3>
+      
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Select Format:</label>
+          <div class="flex space-x-4">
+            <label class="flex items-center">
+              <input type="radio" name="exportFormat" value="excel" checked class="mr-2">
+              <span class="text-gray-300">Excel</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="exportFormat" value="pdf" class="mr-2">
+              <span class="text-gray-300">PDF</span>
+            </label>
+          </div>
+        </div>
         <div class="mb-4">
           <label class="block text-sm font-medium text-gray-300 mb-2">Select Period:</label>
           <div class="space-y-2">
@@ -368,16 +497,13 @@
         </div>
       </div>
     </div>
-
     <!-- JS for Charts and Actions -->
     <script>
      lucide.createIcons();
-
       // Use raw injection + JSON.stringify in template to produce valid JS objects
       const revenueData = <%- JSON.stringify(revenueData || { labels: [], datasets: [] }) %>;
       const categoryData = <%- JSON.stringify(categoryData || { labels: [], datasets: [] }) %>;
       const genderData = <%- JSON.stringify(genderData || { labels: ["Men", "Women", "Unisex"], datasets:[{ data:[0,0,0], backgroundColor:["#3b82f6","#ec4899","#10b981"] }] }) %>;
-
       // Initialize Revenue Chart
       if (revenueData && revenueData.labels && revenueData.labels.length > 0) {
         new Chart(document.getElementById('revenueChart'), {
@@ -387,19 +513,19 @@
             responsive: true,
             maintainAspectRatio: false,
             scales: {
-              y: { 
-                beginAtZero: true, 
-                ticks: { 
+              y: {
+                beginAtZero: true,
+                ticks: {
                   color: '#9ca3af',
                   callback: function(value) {
                     return '₹' + value.toLocaleString();
                   }
-                }, 
-                grid: { color: '#374151' } 
+                },
+                grid: { color: '#374151' }
               },
               x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
             },
-            plugins: { 
+            plugins: {
               legend: { display: false },
               tooltip: {
                 callbacks: {
@@ -424,7 +550,6 @@
           }
         });
       }
-
       // Category Chart (with fallback)
       if (categoryData && categoryData.labels && categoryData.labels.length > 0 && categoryData.datasets && categoryData.datasets[0].data.some(d => d > 0)) {
         new Chart(document.getElementById('categoryChart'), {
@@ -461,7 +586,6 @@
           }
         });
       }
-
       // Gender Chart (always render - data/labels always valid, even zeros)
       new Chart(document.getElementById('genderChart'), {
         type: 'bar',
@@ -471,22 +595,22 @@
           maintainAspectRatio: false,
           indexAxis: 'y',
           scales: {
-            x: { 
-              beginAtZero: true, 
-              ticks: { 
+            x: {
+              beginAtZero: true,
+              ticks: {
                 color: '#9ca3af',
                 callback: function(value) {
                   return '₹' + value.toLocaleString();
                 }
-              }, 
-              grid: { color: '#374151' } 
+              },
+              grid: { color: '#374151' }
             },
-            y: { 
+            y: {
               ticks: { color: '#9ca3af' },
               grid: { color: '#374151' }
             }
           },
-          plugins: { 
+          plugins: {
             legend: { display: false },
             tooltip: {
               callbacks: {
@@ -498,7 +622,89 @@
           }
         }
       });
-
+      // Period Selection Logic
+      const periodButtons = document.querySelectorAll('[data-period]');
+      const currentPeriod = '<%= period || "today" %>'; // Assume default or from backend
+      periodButtons.forEach(btn => {
+        if (btn.dataset.period === currentPeriod) {
+          btn.classList.add('active');
+        }
+        btn.addEventListener('click', () => {
+          // Special handling for Custom: Open modal instead of redirect
+          if (btn.dataset.period === 'custom') {
+            document.getElementById('customModal').classList.remove('hidden');
+            return; // Don't redirect
+          }
+          let startDate, endDate;
+          const today = new Date().toISOString().split('T')[0];
+          if (btn.dataset.period === 'today') {
+            startDate = endDate = today;
+          } else if (btn.dataset.period === 'week') {
+            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            startDate = oneWeekAgo;
+            endDate = today;
+          } else if (btn.dataset.period === 'month') {
+            const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            startDate = oneMonthAgo;
+            endDate = today;
+          } else if (btn.dataset.period === 'year') {
+            const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            startDate = oneYearAgo;
+            endDate = today;
+          }
+          // Update active class
+          periodButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          window.location.href = `/admin/sales?startDate=${startDate}&endDate=${endDate}&period=${btn.dataset.period}`;
+        });
+      });
+      // Custom Modal Logic
+      const customModal = document.getElementById('customModal');
+      const applyCustomBtn = document.getElementById('applyCustom');
+      const resetDatesBtn = document.getElementById('resetDates');
+      applyCustomBtn.addEventListener('click', () => {
+        const startDate = document.getElementById('modalStartDate').value;
+        const endDate = document.getElementById('modalEndDate').value;
+        const today = new Date().toISOString().split('T')[0];
+        if (!startDate || !endDate) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Please provide both start and end dates.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        if (startDate > today || endDate > today) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Dates cannot be in the future. Please select dates up to today.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        if (endDate < startDate) {
+          Swal.fire({
+            title: 'Error',
+            text: 'End date cannot be before the start date.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        window.location.href = `/admin/sales?startDate=${startDate}&endDate=${endDate}&period=custom`;
+        customModal.classList.add('hidden');
+      });
+      resetDatesBtn.addEventListener('click', () => {
+        window.location.href = `/admin/sales`;
+      });
+      // Close custom modal on outside click
+      customModal.addEventListener('click', (e) => {
+        if (e.target === customModal) {
+          customModal.classList.add('hidden');
+        }
+      });
       // Export Modal Logic
       const modal = document.getElementById('exportModal');
       const exportBtn = document.getElementById('exportBtn');
@@ -506,16 +712,13 @@
       const confirmBtn = document.getElementById('confirmExport');
       const customRange = document.getElementById('customDateRange');
       const periodRadios = document.querySelectorAll('input[name="periodType"]');
-
       exportBtn.addEventListener('click', () => {
         modal.classList.remove('hidden');
       });
-
       cancelBtn.addEventListener('click', () => {
         modal.classList.add('hidden');
         customRange.classList.add('hidden');
       });
-
       periodRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
           if (e.target.value === 'custom') {
@@ -525,20 +728,23 @@
           }
         });
       });
-
       confirmBtn.addEventListener('click', async () => {
         const selectedType = document.querySelector('input[name="periodType"]:checked')?.value;
+        const selectedFormat = document.querySelector('input[name="exportFormat"]:checked')?.value || 'excel';
         if (!selectedType) {
-          alert('Please select a period type.');
+          Swal.fire({
+            title: 'Error',
+            text: 'Please select a period type.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
           return;
         }
-
         let startDate, endDate;
         const today = new Date().toISOString().split('T')[0];
         const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
         const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
         if (selectedType === 'weekly') {
           startDate = oneWeekAgo;
           endDate = today;
@@ -552,37 +758,70 @@
           startDate = document.getElementById('startDate').value;
           endDate = document.getElementById('endDate').value;
           if (!startDate || !endDate) {
-            alert('Please select both start and end dates.');
+            Swal.fire({
+              title: 'Error',
+              text: 'Please select both start and end dates.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
+          if (startDate > today || endDate > today) {
+            Swal.fire({
+              title: 'Error',
+              text: 'Dates cannot be in the future. Please select dates up to today.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
+          if (endDate < startDate) {
+            Swal.fire({
+              title: 'Error',
+              text: 'End date cannot be before the start date.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
             return;
           }
         }
-
         try {
-          const response = await fetch('/admin/sales-report/export', {
+          const endpoint = selectedFormat === 'pdf' ? '/admin/sales-report/export-pdf' : '/admin/sales-report/export';
+          const extension = selectedFormat === 'pdf' ? 'pdf' : 'xlsx';
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ startDate, endDate }),
           });
-
           if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `sales-report-${startDate}-to-${endDate}.xlsx`;
+            a.download = `sales-report-${startDate}-to-${endDate}.${extension}`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
             modal.classList.add('hidden');
           } else {
-            alert('Export failed. Please try again.');
+            Swal.fire({
+              title: 'Error',
+              text: 'Export failed. Please try again.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
           }
         } catch (error) {
           console.error('Export error:', error);
-          alert('Export failed. Please try again.');
+          Swal.fire({
+            title: 'Error',
+            text: 'Export failed. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
         }
       });
     </script>

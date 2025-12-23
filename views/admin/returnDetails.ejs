@@ -372,6 +372,9 @@
                     <div class="text-right flex-shrink-0">
                       <p class="font-semibold text-red-400">₹<%= ((returnItem.discountedPrice || returnItem.basePrice || 0) * (returnItem.returndQuantity || 1)).toFixed(2) %></p>
                       <p class="text-sm text-gray-400">Returned Qty: <%= returnItem.returndQuantity || 1 %></p>
+                      <% if (order.couponCode && (returnItem.basePrice > returnItem.discountedPrice)) { %>
+                        <p class="text-xs text-green-400">Coupon applied</p>
+                      <% } %>
                       <span class="approval-badge <%= returnItem.adminApproved === 'Requested' ? 'status-requested' : returnItem.adminApproved === 'Approved' ? 'status-approved' : 'status-rejected' %>">
                         <%= returnItem.adminApproved %>
                       </span>
@@ -452,7 +455,8 @@
                 <form method="POST" action="/admin/return/<%= order._id %>/approve?returnId=<%= returnItem._id %>" class="block" id="approveForm">
                   <button type="submit" class="block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition text-center">Approve Return</button>
                 </form>
-                <form method="POST" action="/admin/return/<%= order._id %>/reject" class="block" id="rejectForm">
+                <form method="POST" action="/admin/return/<%= order._id %>/reject?returnId=<%= returnItem._id %>" class="block" id="rejectForm">
+                  <input type="hidden" name="reason" id="rejectReasonInput">
                   <button type="submit" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition text-center">Reject Return</button>
                 </form>
                 <% } %>
@@ -613,13 +617,18 @@
       document.getElementById('rejectForm').addEventListener('submit', function(e) {
         e.preventDefault();
         Swal.fire({
-          title: 'Are you sure?',
-          text: 'Reject this return request?',
+          title: 'Reject Return Request?',
+          text: 'Please provide a reason for rejection:',
           icon: 'warning',
+          input: 'textarea',
+          inputPlaceholder: 'Enter rejection reason...',
+          inputAttributes: {
+            'aria-label': 'Reject reason'
+          },
           showCancelButton: true,
           confirmButtonColor: '#ef4444',
           cancelButtonColor: '#6b7280',
-          confirmButtonText: 'Yes, reject it!',
+          confirmButtonText: 'Reject Return',
           background: '#1f2937',
           color: '#ffffff',
           customClass: {
@@ -627,11 +636,19 @@
             title: 'swal-dark-title',
             content: 'swal-dark-content',
             confirmButton: 'swal-dark-confirm',
-            cancelButton: 'swal-dark-cancel'
+            cancelButton: 'swal-dark-cancel',
+            input: 'bg-gray-700 text-white border-gray-600 rounded' 
           },
-          buttonsStyling: true
+          buttonsStyling: true,
+          preConfirm: (reason) => {
+            if (!reason) {
+              Swal.showValidationMessage('Please enter a reason for rejection');
+            }
+            return reason;
+          }
         }).then((result) => {
           if (result.isConfirmed) {
+            document.getElementById('rejectReasonInput').value = result.value;
             this.submit();
           }
         });

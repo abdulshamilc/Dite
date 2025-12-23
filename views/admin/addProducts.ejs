@@ -501,9 +501,23 @@
         showError('brand-error', 'Brand name is required.');
         return false;
       }
-      if (!/^[A-Z\s]+$/.test(brand)) {
-        showError('brand-error', 'Brand name must be in uppercase letters only.');
+      if (brand.length < 3) {
+        showError('brand-error', 'Brand name must be at least 3 characters.');
         return false;
+      }
+      if (brand.length > 24) {
+        showError('brand-error', 'Brand name cannot exceed 24 characters.');
+        return false;
+      }
+      if (!/[a-zA-Z]/.test(brand)) {
+        showError('brand-error', 'Brand name must contain at least one letter.');
+        return false;
+      }
+      // Optional: Check for special characters if "only char is not fine" meant no special chars?
+      // Assuming alphanumeric + spaces is safe based on "combined is fine".
+      if (!/^[a-zA-Z0-9\s]+$/.test(brand)) {
+         showError('brand-error', 'Brand name can only contain letters, numbers, and spaces.');
+         return false;
       }
       hideError('brand-error');
       return true;
@@ -743,6 +757,9 @@
         
         const form = e.target;
         const formData = new FormData(form);
+        
+        // Remove original file inputs to prevent duplicate/excess files
+        formData.delete('images');
         
         // Validate that we have exactly 4 cropped images
         const blobCount = Object.keys(window.croppedBlobs).length;

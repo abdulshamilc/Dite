@@ -5,6 +5,8 @@ import Order from "../../models/ordersModel.js";
 import { nanoid } from "nanoid";
 import Products from "../../models/productsModels.js";
 import Wallet from '../../models/walletModel.js';
+import Coupon from "../../models/couponModel.js";
+import Offer from "../../models/offerModel.js";
 
 const getCheckout = async (req, res) => {
   const userEmail = req.session.user;
@@ -36,14 +38,60 @@ const getCheckout = async (req, res) => {
 
   const addresses = await Address.find({ userId: user._id , isDeleted:false}); ;
 
+  // Calculate Subtotal with Offers
   let subtotal = 0;
   let total = 0;
+
   if (cart && cart.items.length > 0) {
-    subtotal = cart.items.reduce(
-      (acc, item) => acc + item.discountedPrice * item.quantity,
-      0
-    );
-    total = subtotal;
+      const currentDate = new Date();
+      const productIds = cart.items.map(item => item.productId._id);
+      const categoryIds = cart.items.map(item => item.productId.category);
+       
+      const offers = await Offer.find({
+        $or: [
+          { targetModel: 'Product', targetId: { $in: productIds } },
+          { targetModel: 'Categories', targetId: { $in: categoryIds } }
+        ],
+        isActive: true,
+        isDeleted: false,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate }
+      });
+
+      for (const item of cart.items) {
+          const product = item.productId;
+          const size = Number(item.size);
+          const variant = product.variants.find(v => v.mlSize === size);
+          
+          let price = item.discountedPrice; // Default
+          if (variant) {
+               price = variant.basePrice; // Start with fresh base price
+               
+               let bestOfferDiscount = 0;
+               const applicableOffers = offers.filter(offer => 
+                  (offer.targetModel === 'Product' && offer.targetId.toString() === product._id.toString()) ||
+                  (offer.targetModel === 'Categories' && offer.targetId.toString() === product.category.toString())
+               );
+               
+               if (applicableOffers.length > 0) {
+                   applicableOffers.forEach(offer => {
+                        let discount = 0;
+                        if (offer.discountType === 'flat') {
+                            discount = offer.discountValue;
+                        } else {
+                            discount = (price * offer.discountValue) / 100;
+                        }
+                        if (discount > bestOfferDiscount) {
+                            bestOfferDiscount = discount;
+                        }
+                   });
+                   price = Math.max(0, price - bestOfferDiscount);
+               }
+          }
+          
+          subtotal += price * item.quantity;
+      }
+      total = subtotal;
   }
 
   res.render("user/checkout/selectAddress", {
@@ -166,6 +214,67 @@ const getWalletBalanceAPI = async (req, res) => {
   }
 };
 
+const applyCoupon = async (req, res) => {
+  try {
+    const { couponCode, subtotal } = req.body;
+    const userEmail = req.session.user;
+
+    if (!userEmail) return res.json({ success: false, message: "User not logged in" });
+
+    const coupon = await Coupon.findOne({ code: couponCode, isDeleted: false });
+
+    if (!coupon) {
+      return res.json({ success: false, message: "Invalid coupon code" });
+    }
+
+    if (!coupon.isActive) {
+      return res.json({ success: false, message: "Coupon is inactive" });
+    }
+
+    const currentDate = new Date();
+    if (currentDate < coupon.startDate || currentDate > coupon.endDate) {
+      return res.json({ success: false, message: "Coupon is expired" });
+    }
+
+    if (coupon.usageLimit <= 0) {
+      return res.json({ success: false, message: "Coupon usage limit reached" });
+    }
+
+    if (subtotal < coupon.minCartValue) {
+      return res.json({ success: false, message: `Minimum cart value of ${coupon.minCartValue} required` });
+    }
+
+    let discountAmount = 0;
+    if (coupon.discountType === 'percentage') {
+      discountAmount = (subtotal * coupon.discountValue) / 100;
+      if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
+        discountAmount = coupon.maxDiscountAmount;
+      }
+    } else if (coupon.discountType === 'flat') {
+      discountAmount = coupon.discountValue;
+    }
+
+    // Ensure discount doesn't exceed subtotal
+    if (discountAmount > subtotal) {
+      discountAmount = subtotal;
+    }
+
+    const newTotal = subtotal - discountAmount;
+
+    return res.json({
+      success: true,
+      message: "Coupon applied successfully",
+      discountAmount,
+      newTotal,
+      couponCode: coupon.code
+    });
+
+  } catch (error) {
+    console.error("Error applying coupon:", error);
+    return res.json({ success: false, message: "Error applying coupon" });
+  }
+};
+
 const placeOrder = async (req, res) => {
   try {
     // Fetch user from session (email-based auth)
@@ -174,7 +283,7 @@ const placeOrder = async (req, res) => {
       return res.status(401).json({ success: false, message: "User not authenticated. Please log in." });
     }
 
-    const { addressId, items, paymentMethod, razorpayPaymentId, razorpayOrderId } = req.body;
+    const { addressId, items, paymentMethod, razorpayPaymentId, razorpayOrderId, couponCode } = req.body;
 
     // Validation
     if (!items || items.length === 0) {
@@ -194,36 +303,142 @@ const placeOrder = async (req, res) => {
     delete address._id;
     delete address.__v;
 
-    // Final Stock Validation
-    for (const item of items) { // items from request body
-       const product = await Products.findById(item.productId || item._id);
+    // Optimize: Fetch all products and active offers at once
+    const currentDate = new Date();
+    const productIds = items.map(item => item.productId || item._id);
+    const uniqueProductIds = [...new Set(productIds)];
+    
+    // Fetch Products to get fresh prices and validate stock
+    const products = await Products.find({ _id: { $in: uniqueProductIds } });
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+    
+    // Fetch Active Offers
+    const categoryIds = products.map(p => p.category);
+    const offers = await Offer.find({
+        $or: [
+          { targetModel: 'Product', targetId: { $in: uniqueProductIds } },
+          { targetModel: 'Categories', targetId: { $in: categoryIds } }
+        ],
+        isActive: true,
+        isDeleted: false,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate }
+    });
+
+    const validatedItems = [];
+    let totalAmount = 0;
+
+    // Pass 1: Validate Stock, Calculate Offer Prices, and Build Items Tuple
+    for (const item of items) {
+       const productIdStr = (item.productId || item._id).toString();
+       const product = productMap.get(productIdStr);
+       
        if (!product || product.isDeleted || !product.isListed) {
            return res.status(400).json({ success: false, message: `Product ${product ? product.name : 'Unknown'} is no longer available.` });
        }
-       const size = item.mlSize || item.size;
-       const variant = product.variants.find(v => v.mlSize === Number(size));
+       const size = Number(item.mlSize || item.size);
+       const variant = product.variants.find(v => v.mlSize === size);
        if (!variant || variant.stock < item.quantity) {
            return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name} (Size: ${size}).` });
        }
+
+       // Calculate Best Offer for this Item
+       let bestOfferDiscount = 0;
+       const applicableOffers = offers.filter(offer => 
+          (offer.targetModel === 'Product' && offer.targetId.toString() === productIdStr) ||
+          (offer.targetModel === 'Categories' && offer.targetId.toString() === product.category.toString())
+       );
+       
+       applicableOffers.forEach(offer => {
+            let discount = 0;
+            if (offer.discountType === 'flat') {
+                discount = offer.discountValue;
+            } else {
+                discount = (variant.basePrice * offer.discountValue) / 100;
+            }
+            if (discount > bestOfferDiscount) {
+                bestOfferDiscount = discount;
+            }
+       });
+
+       // Effective Price = Base Price - Offer Discount. 
+       // We must also consider the variant.discountedPrice (manual sale) if it's lower than the calculated offer price.
+       const calculatedOfferPrice = Math.max(0, variant.basePrice - bestOfferDiscount);
+       const manualPrice = variant.discountedPrice || variant.basePrice;
+       
+       const finalProductPrice = Math.min(calculatedOfferPrice, manualPrice);
+       
+       totalAmount += finalProductPrice * item.quantity;
+       
+       validatedItems.push({
+           productId: product._id,
+           name: product.name,
+           mlSize: size,
+           quantity: (item.quantity),
+           basePrice: variant.basePrice,
+           discountedPrice: finalProductPrice, // For calculation
+           discoundedPrice: finalProductPrice, // For Schema (typo fix)
+           image: item.image || product.images[0] || "",
+           productStatus: "Placed"
+       });
     }
 
-    // Calculate totalAmount (prioritize discountedPrice if available)
-    const totalAmount = items.reduce((acc, item) => {
-      const price = item.discountedPrice || item.basePrice || 0;
-      return acc + (price * item.quantity);
-    }, 0);
+    let finalDiscountAmount = 0;
+    let appliedCouponCode = null;
 
-    // Map items to schema format (fix field names, add defaults)
-    const mappedItems = items.map((item) => ({
-      productId: item.productId || item._id, // Fallback if needed
-      name: item.name,
-      mlSize: item.mlSize || item.size, // Map size to mlSize
-      basePrice: item.basePrice || 0,
-      discountedPrice: item.discountedPrice || item.basePrice || 0, // Fixed: Use 'discountedPrice' (update schema too!)
-      quantity: item.quantity,
-      image: item.image || "",
-      productStatus: "Placed" // Default as per schema
-    }));
+    // Apply Coupon Logic (on top of total offer price)
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ code: couponCode, isDeleted: false });
+      if (coupon && coupon.isActive) {
+        if (currentDate >= coupon.startDate && currentDate <= coupon.endDate && coupon.usageLimit > 0) {
+           if (totalAmount >= coupon.minCartValue) {
+             let discount = 0;
+             if (coupon.discountType === 'percentage') {
+                discount = (totalAmount * coupon.discountValue) / 100;
+                if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
+                  discount = coupon.maxDiscountAmount;
+                }
+             } else if (coupon.discountType === 'flat') {
+                discount = coupon.discountValue;
+             }
+             
+             if (discount > totalAmount) discount = totalAmount;
+
+             totalAmount -= discount;
+             finalDiscountAmount = discount;
+             appliedCouponCode = coupon.code;
+
+             const updatedCoupon = await Coupon.findOneAndUpdate(
+               { _id: coupon._id }, 
+               { $inc: { usageLimit: -1 } }, 
+               { new: true }
+             );
+             if (updatedCoupon && updatedCoupon.usageLimit <= 0) {
+                 await Coupon.updateOne({ _id: coupon._id }, { $set: { isActive: false } });
+             }
+           }
+        }
+      }
+    }
+
+    // Pass 2: Distribute Coupon Discount and Create Mapped Items
+    const currentSubtotal = validatedItems.reduce((acc, i) => acc + (i.discountedPrice * i.quantity), 0);
+
+    const mappedItems = validatedItems.map((item) => {
+      let itemCouponDiscount = 0;
+       if (currentSubtotal > 0 && finalDiscountAmount > 0) {
+          itemCouponDiscount = (item.discountedPrice / currentSubtotal) * finalDiscountAmount;
+       }
+      
+      const distinctPaidPrice = Math.max(0, item.discountedPrice - itemCouponDiscount);
+
+      return {
+        ...item,
+        discountedPrice: distinctPaidPrice,
+        discoundedPrice: distinctPaidPrice, // Update legacy typo field too
+        couponDiscount: itemCouponDiscount
+      };
+    });
 
     // Normalize paymentMethod to schema enum (map 'razorpay' to 'online')
     const normalizedPaymentMethod = paymentMethod === 'razorpay' ? 'online' : paymentMethod;
@@ -240,6 +455,9 @@ const placeOrder = async (req, res) => {
       paymentInfo.razorpayPaymentId = razorpayPaymentId;
       paymentInfo.razorpayOrderId = razorpayOrderId; // Requires schema field: razorpayOrderId: { type: String }
     }
+    // Generate Order ID early
+    const orderID = `ORD-${nanoid(8)}`;
+
     // For Wallet: Deduction
     if (normalizedPaymentMethod === 'wallet') {
       // Check wallet balance
@@ -249,13 +467,13 @@ const placeOrder = async (req, res) => {
       }
       wallet.balance -= totalAmount;
       wallet.transactions.unshift({
-        description: `Purchase from wallet. Order ID: ${newOrder.orderID}`,
+        description: `Purchase from wallet. Order ID: ${orderID}`,
         amount: totalAmount,
         type: 'debit',
         date: new Date(),
         source: 'purchase',
-        referenceId: newOrder._id.toString(),
-      });
+        referenceId: user._id.toString(), // We can update this later if we really need the order _id, but orderID is good enough for ref usually
+      }); 
       if (wallet.transactions.length > 100) wallet.transactions = wallet.transactions.slice(0, 100);
       await wallet.save();
       paymentInfo.paymentStatus = 'Paid'; // Mark as paid
@@ -263,13 +481,15 @@ const placeOrder = async (req, res) => {
 
     // Create order (use schema defaults; orderStatus always starts as "Placed")
     const newOrder = new Order({
-      orderID: `ORD-${nanoid(8)}`, // Custom ID as in your code
+      orderID: orderID,
       userId: user._id,
       address, // Embedded object
       items: mappedItems,
       paymentMethod: normalizedPaymentMethod, // "online", "cod", or "Wallet"
       paymentInfo, // Structured as per schema
       totalAmount,
+      discountAmount: finalDiscountAmount,
+      couponCode: appliedCouponCode,
       orderStatus: "Placed", // Schema default; separate from paymentStatus
       tracking: [
         {
@@ -372,4 +592,5 @@ export {
   placeOrder,
   getSuccessPage,
   getFailedPage,
+  applyCoupon,
 };

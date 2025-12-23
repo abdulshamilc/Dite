@@ -43,7 +43,8 @@ const postProfile = async (req, res) => {
 
     let imageUrl = user.image; // keep existing one
     if (req.file) {
-      imageUrl = req.file.path;
+      imageUrl = req.file.path || req.file.secure_url || req.file.url;
+      console.log('Profile Image Uploaded:', imageUrl);
     }
 
     // Phone Validation
@@ -609,7 +610,10 @@ const confirmCancel = async (req, res) => {
       let cancelSubtotal = 0;
 
       fullCancelledItems.forEach(({ item, cancelQty }) => {
-        const itemTotal = (item.discountedPrice || item.basePrice || 0) * cancelQty;
+        const price = item.discountedPrice || item.discoundedPrice || item.basePrice || 0;
+        // Adjusted for coupon discount per unit - Now natively stored in discountedPrice
+        const effectivePrice = price;
+        const itemTotal = effectivePrice * cancelQty;
         cancelSubtotal += itemTotal;
 
         let existingCancel = order.cancelProducts.find(
@@ -878,7 +882,8 @@ const getReturn = async (req, res) => {
     returnItems.forEach((itemReturn) => {
       const item = itemReturn.item;
       const returnQty = itemReturn.returnQty;
-      const itemTotal = (item.basePrice || 0) * returnQty;
+      // Use discountedPrice (which includes coupon discount) for accurate refund estimation
+      const itemTotal = (item.discountedPrice || item.basePrice || 0) * returnQty;
       returnSubtotal += itemTotal;
     });
 
@@ -1028,6 +1033,7 @@ const postReturnSelect = async (req, res) => {
             name: pi.item.name,
             mlSize: orderItem.mlSize || 0,
             basePrice: orderItem.basePrice || 0,
+            discountedPrice: orderItem.discountedPrice || orderItem.basePrice || 0,
             image: orderItem.image || pi.item.image,
           },
           returnQty: returnQty,
@@ -1099,10 +1105,25 @@ const postReturnSelect = async (req, res) => {
         return res.redirect(`/return/${orderId}/return-select?error=reason`);
       }
 
+      // Proportional Refund Calculation:
+      // We calculate the ratio of (Total Paid Amount / Sum of Item Prices).
+      // This implicitly handles coupons, offers, and legacy data where stored prices might be Gross vs Net.
+      // Refund = Item Price * Ratio.
+      const totalStoredItemPrice = order.items.reduce((acc, i) => acc + ((i.discountedPrice || i.basePrice || 0) * i.quantity), 0);
+      
+      // Avoid division by zero
+      const paidRatio = totalStoredItemPrice > 0 ? (order.totalAmount / totalStoredItemPrice) : 0;
+      
       let returnSubtotal = 0;
 
       fullReturnItems.forEach(({ item, returnQty }) => {
-        const itemTotal = (item.discountedPrice || item.basePrice || 0) * returnQty;
+        const price = item.discountedPrice || item.basePrice || 0;
+        
+        // Effective Refund Price = Price * Ratio
+        // This ensures the user gets back exactly the proportion of what they paid.
+        let effectivePrice = price * paidRatio;
+
+        const itemTotal = effectivePrice * returnQty;
         returnSubtotal += itemTotal;
 
         // Create new return request (Always create new entry to keep requests distinct)
@@ -1111,7 +1132,8 @@ const postReturnSelect = async (req, res) => {
           name: item.name,
           mlSize: item.mlSize,
           basePrice: item.basePrice,
-          discountedPrice: item.discountedPrice || 0,
+          // Store the effective price (paid amount after coupon) here so admin refunds this exact amount
+          discountedPrice: effectivePrice, 
           returndQuantity: returnQty,
           image: item.image,
           reason: returnReason,
@@ -1135,13 +1157,8 @@ const postReturnSelect = async (req, res) => {
       delete req.session.orderId;
 
       await req.session.save(); 
+      // Refund logic REMOVED from here. Refund is handled by Admin Approval (returnApprove).
 
-      // Refund logic: always refund to wallet for online/wallet, refund to wallet for COD only on return (not cancel)
-      if (returnSubtotal > 0) {
-        if (order.paymentMethod === 'online' || order.paymentMethod === 'Wallet' || order.paymentMethod === 'cod') {
-          await Wallet.refundToWallet(user._id, returnSubtotal, `Refund for returned product in order ${order.orderID}`, order._id.toString());
-        }
-      }
 
       return res.redirect(
         `/order/${orderId}?returnRequested=true&subtotal=${returnSubtotal}`
@@ -1209,7 +1226,52 @@ const getWallet = async (req, res) => {
   }
 };
 
+const getWalletHistory = async (req, res) => {
+  if (!req.session.user) return res.redirect('/login');
 
+  try {
+    const user = await User.findOne({ email: req.session.user });
+    if (!user) return res.redirect('/login');
+
+    const wallet = await Wallet.findOne({ user: user._id });
+    
+    // Pagination
+    let page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    if (page < 1) page = 1;
+
+    let transactions = [];
+    let totalPages = 0;
+
+    if (wallet && wallet.transactions) {
+        const totalTx = wallet.transactions.length;
+        totalPages = Math.ceil(totalTx / limit);
+        if (page > totalPages && totalPages > 0) page = totalPages;
+
+        const skip = (page - 1) * limit;
+        transactions = wallet.transactions.slice(skip, skip + limit);
+    } else if (wallet) {
+      // Wallet exists but no transactions
+       transactions = [];
+    } else {
+      // No wallet
+      transactions = [];
+    }
+
+    res.render('user/profile/walletHistory', {
+        user,
+        wallet: wallet || { balance: 0 },
+        transactions,
+        currentPage: page,
+        totalPages,
+        currentPath: '/wallet/history' 
+    });
+
+  } catch (error) {
+    console.error("Wallet History Error:", error);
+    res.status(500).send("Server Error");
+  }
+};
 
 const getSecurity = async (req, res) => {
   const userEmail = req.session.user;
@@ -1290,6 +1352,7 @@ export {
   getReturnSelect,
   postReturnSelect,
   getWallet,
+  getWalletHistory,
   getSecurity,
   getDeleteAcount,
   userlogOut,

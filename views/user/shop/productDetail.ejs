@@ -25,9 +25,7 @@
           rgba(0, 0, 0, 1) 100%
         );
       }
-      body {
-        padding-top: 80px;
-      }
+      /* Removed padding-top: 80px from body to prevent huge gap */
       #mainImage {
         transition: transform 0.3s ease;
       }
@@ -37,17 +35,13 @@
     </style>
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body class="min-h-screen bg-black text-white px-10">
     <%- include("../../partials/user/header") %>
 
     <main class="pt-20">
-      <!-- Error Alert -->
-      <% if (typeof error !== 'undefined' && error) { %>
-      <div class="text-red-500 text-center py-4 mb-4">
-        <%= error %>
-      </div>
-      <% } %>
+      <!-- Error Alert handled via SweetAlert below -->
 
       <div class="max-w-7xl mx-auto px-6 py-12">
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -118,6 +112,12 @@
                         <span class="font-semibold text-white"><%= offer.name %>:</span>
                         <%= offer.discountType === 'percentage' ? offer.discountValue + '% Off' : 'Flat ₹' + offer.discountValue + ' Off' %>
                         <% if(offer.description) { %> - <span class="text-gray-400 italic"><%= offer.description %></span><% } %>
+                        <div class="mt-1 text-xs text-red-400 flex items-center gap-1">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                          </svg>
+                          Ends in: <%= new Date(offer.endDate).toLocaleDateString() %>
+                        </div>
                       </li>
                     <% }); %>
                   </ul>
@@ -147,10 +147,6 @@
 
               <!-- Action Buttons -->
               <div class="space-y-4 mb-8">
-                <form action="/cart/add" method="POST">
-                  <input type="hidden" name="productId" value="<%= product._id %>">
-                  <input type="hidden" name="variantSize" id="selectedVariantSize" value="<%= product.variants[0].mlSize %>">
-                  
                   <!-- Quantity Selection -->
                   <div class="flex items-center gap-3 mb-4">
                     <label for="quantityInput" class="text-sm font-medium text-gray-300">Quantity:</label>
@@ -165,15 +161,16 @@
                   </div>
                   
                   <button 
-                    type="submit"
+                    onclick="addToCart('<%= product._id %>')"
                     id="addToCartBtn"
                     class="w-full bg-yellow-500 hover:bg-yellow-600 text-black font-medium py-3 px-4 rounded-md transition-colors"
                   >
                     ADD TO CART
                   </button>
-                </form>
+                  <input type="hidden" id="selectedVariantSize" value="<%= product.variants[0].mlSize %>">
 
                 <button
+                  onclick="addToWishlist('<%= product._id %>')"
                   class="w-full border border-gray-600 text-white hover:bg-gray-800 bg-transparent py-3 px-4 rounded-md transition-colors"
                 >
                   ADD TO WISHLIST
@@ -284,6 +281,9 @@
 
     <!-- JS -->
     <script>
+      const totalInCart = <%= totalCartQty %>;
+      const MAX_CART_LIMIT = 10;
+
       function changeImage(src, index) {
         document.getElementById("mainImage").src = src;
         document.querySelectorAll(".thumbnail").forEach((thumb, i) => {
@@ -296,26 +296,56 @@
         });
       }
 
+      function getEffectiveMax(stock) {
+         // The global limit is strict: Total items in cart <= MAX_CART_LIMIT.
+         // Effectively, we can only add (MAX - CurrentTotal) items.
+         // Note: If we are just browsing, we don't know if we are 'adding' distinct items or not, 
+         // but simply, the 'addable amount' is remaining capacity.
+         
+         const remainingCapacity = Math.max(0, MAX_CART_LIMIT - totalInCart);
+         return Math.min(stock, remainingCapacity);
+      }
+
       function updatePriceDisplay(discountedPrice, basePrice, stock, quantity) {
         const priceSection = document.getElementById("priceSection");
         const addButton = document.getElementById("addToCartBtn");
-        const isOutOfStock = (stock === 0 || quantity > stock);
+        
+        const currentSize = window.currentSize; 
+        const effectiveMax = getEffectiveMax(stock, currentSize);
+        
+        const isOutOfStock = (stock === 0); 
+        const isLimitReached = (quantity > effectiveMax); // Should be prevented by input clamp, but good for safety
+        
         if (isOutOfStock) {
           priceSection.innerHTML = '<span class="text-red-600 font-semibold">Out of Stock</span>';
           addButton.disabled = true;
           addButton.textContent = 'Out of Stock';
           addButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
           addButton.classList.add('bg-gray-600', 'cursor-not-allowed');
+        } else if (effectiveMax === 0) {
+           priceSection.innerHTML = `<span class="text-yellow-500">You have ${MAX_PER_PRODUCT} of this item in cart</span>`;
+           addButton.disabled = true;
+           addButton.textContent = 'Limit Reached';
+           addButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+           addButton.classList.add('bg-gray-600', 'cursor-not-allowed');
         } else {
-          let html = `<span class="text-yellow-500">₹${discountedPrice ? discountedPrice.toFixed(2) : 'N/A'}</span>`;
-          if (discountedPrice < basePrice) {
-            html += `<span class="line-through text-gray-500 ml-2">₹${basePrice ? basePrice.toFixed(2) : 'N/A'}</span>`;
-          }
-          priceSection.innerHTML = html;
-          addButton.disabled = false;
-          addButton.textContent = 'ADD TO CART';
-          addButton.classList.remove('bg-gray-600', 'cursor-not-allowed');
-          addButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+           let html = `<span class="text-yellow-500">₹${discountedPrice ? discountedPrice.toFixed(2) : 'N/A'}</span>`;
+           if (discountedPrice < basePrice) {
+             html += `<span class="line-through text-gray-500 ml-2">₹${basePrice ? basePrice.toFixed(2) : 'N/A'}</span>`;
+           }
+           priceSection.innerHTML = html;
+           
+           if (isLimitReached) {
+             addButton.disabled = true;
+             addButton.textContent = `Max ${effectiveMax} allowed`;
+              addButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+              addButton.classList.add('bg-gray-600', 'cursor-not-allowed');
+           } else {
+             addButton.disabled = false;
+             addButton.textContent = 'ADD TO CART';
+             addButton.classList.remove('bg-gray-600', 'cursor-not-allowed');
+             addButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
+           }
         }
       }
 
@@ -339,11 +369,18 @@
         window.currentDiscounted = discountedPrice;
         window.currentBase = basePrice;
         window.currentStock = stock;
+        window.currentSize = size;
 
         const quantityInput = document.getElementById('quantityInput');
-        const quantity = parseInt(quantityInput.value) || 1;
-        updatePriceDisplay(discountedPrice, basePrice, stock, quantity);
-
+        const effectiveMax = getEffectiveMax(stock, size);
+        quantityInput.max = effectiveMax;
+        
+        let currentVal = parseInt(quantityInput.value) || 1;
+        if (currentVal > effectiveMax) {
+           quantityInput.value = effectiveMax > 0 ? effectiveMax : 1; 
+        }
+        
+        updatePriceDisplay(discountedPrice, basePrice, stock, parseInt(quantityInput.value));
         document.getElementById("selectedVariantSize").value = size;
       }
 
@@ -367,23 +404,159 @@
         });
 
         // Initialize current values for first variant
+        const firstVariantSize = "<%= product.variants.length > 0 ? product.variants[0].mlSize : '' %>";
+        window.currentSize = firstVariantSize;
         window.currentDiscounted = <%= product.variants.length > 0 ? product.variants[0].discountedPrice : 0 %>;
         window.currentBase = <%= product.variants.length > 0 ? product.variants[0].basePrice : 0 %>;
         window.currentStock = <%= product.variants.length > 0 ? product.variants[0].stock : 0 %>;
 
         // Quantity input handler
         const quantityInput = document.getElementById('quantityInput');
+        
+        // Initial setup
+        const initialMax = getEffectiveMax(window.currentStock, window.currentSize);
+        quantityInput.max = initialMax;
+        updatePriceDisplay(window.currentDiscounted, window.currentBase, window.currentStock, 1);
+
         quantityInput.addEventListener('input', function() {
           let q = parseInt(this.value) || 1;
+          const effectiveMax = getEffectiveMax(window.currentStock, window.currentSize);
+
           if (q < 1) {
             q = 1;
             this.value = 1;
           }
+          // Clamp to effective max
+          if (q > effectiveMax && effectiveMax > 0) {
+             q = effectiveMax;
+             this.value = effectiveMax;
+          }
+
           if (window.currentStock !== undefined) {
             updatePriceDisplay(window.currentDiscounted, window.currentBase, window.currentStock, q);
           }
         });
       });
+
+      function addToCart(productId) {
+        const quantity = document.getElementById('quantityInput').value;
+        const variantSize = document.getElementById('selectedVariantSize').value;
+
+        fetch('/cart/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({ 
+            productId: productId,
+            quantity: quantity,
+            variantSize: variantSize
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Added to Cart!',
+              text: data.message || 'Product added to your cart',
+              showConfirmButton: false,
+              timer: 1500,
+              background: '#1a1a1a', 
+              color: '#ffffff'
+            }).then(() => {
+                // Update cart count if available in DOM, or reload if preferred, 
+                // but usually user stays on page to shop more.
+                // If the header has a cart count badge, we might want to update it here.
+                // For now, we just let them stay on the page.
+            });
+          } else {
+             if (data.redirect) {
+               window.location.href = data.redirect;
+             } else {
+               Swal.fire({
+                 icon: 'error',
+                 title: 'Oops...',
+                 text: data.message || 'Could not add to cart',
+                 background: '#1a1a1a', 
+                 color: '#ffffff'
+               });
+             }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Something went wrong. Please try again.',
+            background: '#1a1a1a', 
+            color: '#ffffff'
+          });
+        });
+      }
+
+      function addToWishlist(productId) {
+        fetch('/wishlist/add', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({ productId: productId })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Added!',
+              text: data.message || 'Product added to wishlist',
+              showConfirmButton: false,
+              timer: 1500,
+              background: '#1a1a1a', 
+              color: '#ffffff'
+            });
+          } else {
+            if (data.redirect) {
+              window.location.href = data.redirect;
+            } else {
+              Swal.fire({
+                icon: 'info',
+                title: 'Note',
+                text: data.message,
+                background: '#1a1a1a',
+                color: '#ffffff'
+              });
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Something went wrong!',
+            background: '#1a1a1a',
+            color: '#ffffff'
+          });
+        });
+      }
+
+      // Check for server-side error and display via SweetAlert
+      <% if (typeof error !== 'undefined' && error) { %>
+        document.addEventListener('DOMContentLoaded', () => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: <%- JSON.stringify(error) %>,
+            background: '#1a1a1a', 
+            color: '#ffffff',
+            confirmButtonColor: '#eab308'
+          });
+        });
+      <% } %>
     </script>
     <%- include("../../partials/user/footer") %>
   </body>

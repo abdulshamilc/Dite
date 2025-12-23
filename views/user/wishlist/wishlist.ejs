@@ -606,12 +606,28 @@
 
     <script>
       function addToCartFromWishlist(itemId) {
-        fetch(`/wishlist/addToCart/${itemId}`, { method: "POST" })
+        fetch(`/wishlist/addToCart/${itemId}`, { 
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              // Reload to update cart count header and ensure consistent state
-              window.location.reload();
+              Swal.fire({
+                icon: 'success',
+                title: 'Moved to Cart!',
+                text: data.message || 'Item moved to cart successfully',
+                showConfirmButton: false,
+                timer: 1500,
+                background: '#1a1a1a',
+                color: '#ffffff'
+              }).then(() => {
+                // Reload to remove item from wishlist and update cart count
+                window.location.reload();
+              });
             } else {
               showToast(data.message || 'Error adding to cart', 'error');
             }
@@ -625,12 +641,27 @@
       function addToWishlistSuggestion(btn) {
         const pid = btn.dataset.productId;
 
-        fetch(`/wishlist/add/${pid}`, { method: "POST" })
+        fetch(`/wishlist/add/${pid}`, { 
+          method: "POST",
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
           .then(res => res.json())
           .then(data => {
             if (data.success) {
-              showToast(data.message || 'Added to wishlist', 'success');
-              // Optional: reload or disable button
+              Swal.fire({
+                icon: 'success',
+                title: 'Added!',
+                text: data.message || 'Added to wishlist',
+                showConfirmButton: false,
+                timer: 1500,
+                background: '#1a1a1a',
+                color: '#ffffff'
+              }).then(() => {
+                window.location.reload();
+              });
             } else {
               showToast(data.message || 'Could not add to wishlist', 'error');
             }

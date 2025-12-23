@@ -181,9 +181,10 @@
       /* Main Content */
       .cart-container {
         max-width: 1400px;
-        margin: 0 auto;
+        margin: 3rem auto 1rem;
         padding: 2rem;
       }
+
 
       .cart-title {
         text-align: center;
@@ -216,6 +217,11 @@
         margin-bottom: 1.5rem;
         position: relative;
         align-items: flex-start; /* Ensure top alignment for items */
+      }
+
+      .cart-item.out-of-stock-dim {
+        opacity: 0.5;
+        border: 1px solid #444; /* Optional visual cue */
       }
 
       .item-image {
@@ -535,6 +541,7 @@
 
     <!-- Main Content -->
     <main class="cart-container">
+
       <h1 class="cart-title">CART</h1>
 
       <div class="cart-content">
@@ -542,7 +549,7 @@
         <div class="cart-items">
           <% if (cart && cart.items.length > 0) { %>
             <% cart.items.forEach(item => { %>
-              <div class="cart-item">
+              <div class="cart-item <%= item.stockStatus === 'Out of Stock' ? 'out-of-stock-dim' : '' %>">
                 <img
                   src="<%= item.image %>"
                   alt="<%= item.name %>"
@@ -594,6 +601,9 @@
                         class="quantity-btn"
                         id="btn-inc-<%= item._id %>"
                         onclick="updateQuantity('<%= item._id %>', '<%= item.size %>', 'inc', <%= item.quantity %>)"
+                        <% if (item.stockStatus === 'Out of Stock' || item.stockStatus === 'Unlisted') { %>
+                          disabled style="opacity: 0.3; cursor: not-allowed;"
+                        <% } %>
                       >
                         +
                       </button>

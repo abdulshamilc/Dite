@@ -6,10 +6,16 @@ import Offer from "../../models/offerModel.js";
 const getCart = async (req, res) => {
   try {
     const email = req.session.user;
-    if (!email) return res.redirect("/login");
+    if (!email) {
+        req.session.returnTo = req.originalUrl;
+        return res.redirect("/login");
+    }
 
     const user = await User.findOne({ email: email });
-    if (!user) return res.redirect("/login"); // Ensure user exists
+    if (!user) {
+        req.session.returnTo = req.originalUrl;
+        return res.redirect("/login"); // Ensure user exists
+    }
 
     const success = req.session.success;
     const error = req.session.error;
@@ -154,12 +160,26 @@ const getCart = async (req, res) => {
 
 const addToCart = async (req, res) => {
   try {
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.xhr;
     const userEmail = req.session.user;
     const { productId, variantSize, quantity } = req.body;
-    if (!userEmail) return res.redirect("/login");
+    
+    if (!userEmail) {
+        req.session.returnTo = req.get('Referer') || "/";
+        if (isAjax) {
+            return res.status(401).json({ success: false, redirect: "/login", message: "Please login to continue" });
+        }
+        return res.redirect("/login");
+    }
 
     const user = await User.findOne({ email: userEmail });
-    if (!user) return res.redirect("/login");
+    if (!user) {
+        req.session.returnTo = req.get('Referer') || "/";
+        if (isAjax) {
+             return res.status(401).json({ success: false, redirect: "/login", message: "User session invalid" });
+        }
+        return res.redirect("/login");
+    }
 
     const product = await Products.findById(productId);
     const selectedVarient = product.variants.find(
@@ -167,17 +187,19 @@ const addToCart = async (req, res) => {
     );
 
     if (!selectedVarient) {
+      if (isAjax) return res.json({ success: false, message: "Variant not found" });
       return res.redirect(`/shop/${productId}?error=Variant not found`);
     }
 
     if (selectedVarient.stock === 0) {
+      if (isAjax) return res.json({ success: false, message: "Out of Stock" });
       return res.redirect(`/shop/${productId}?error=Out of Stock`);
     }
 
     if (Number(quantity) > selectedVarient.stock) {
-      return res.redirect(
-        `/shop/${productId}?error=Not enough stock. Only ${selectedVarient.stock} available.`
-      );
+      const msg = `Not enough stock. Only ${selectedVarient.stock} available.`;
+      if (isAjax) return res.json({ success: false, message: msg });
+      return res.redirect(`/shop/${productId}?error=${msg}`);
     }
 
     let stockStatus = "In Stock";
@@ -219,24 +241,24 @@ const addToCart = async (req, res) => {
         // We are adding 'quantity' to the cart.
         if (currentTotalQuantity + Number(quantity) > 10) {
            const remaining = 10 - currentTotalQuantity;
-           return res.redirect(
-             `/shop/${productId}?error=Cart limit is 10 units total. Only ${remaining} more can be added.`
-           );
+           const msg = `Cart limit is 10 units total. Only ${remaining} more can be added.`;
+           if (isAjax) return res.json({ success: false, message: msg });
+           return res.redirect(`/shop/${productId}?error=${msg}`);
         }
 
         if (newQuantity > selectedVarient.stock) {
           const remaining = selectedVarient.stock - existingQuantity;
-          return res.redirect(
-            `/shop/${productId}?error=Not enough stock. Only ${remaining} left for this item.`
-          );
+          const msg = `Not enough stock. Only ${remaining} left for this item.`;
+          if (isAjax) return res.json({ success: false, message: msg });
+          return res.redirect(`/shop/${productId}?error=${msg}`);
         }
         cart.items[itemIndex].quantity = newQuantity;
       } else {
         
         if (cart.items.length >= 10) {
-          return res.redirect(
-            `/shop/${productId}?error=Cart has reached the maximum of 10 distinct products!`
-          );
+          const msg = "Cart has reached the maximum of 10 distinct products!";
+          if (isAjax) return res.json({ success: false, message: msg });
+          return res.redirect(`/shop/${productId}?error=${msg}`);
         }
         let currentTotalQuantity = cart.items.reduce(
           (acc, ele) => acc + ele.quantity,
@@ -246,9 +268,9 @@ const addToCart = async (req, res) => {
         const newTotalQuantity = currentTotalQuantity + Number(quantity);
         if (newTotalQuantity > 10) {
           const remaining = 10 - currentTotalQuantity;
-          return res.redirect(
-            `/shop/${productId}?error=Cart limit is 10 units total. Only ${remaining} more can be added.`
-          );
+          const msg = `Cart limit is 10 units total. Only ${remaining} more can be added.`;
+          if (isAjax) return res.json({ success: false, message: msg });
+          return res.redirect(`/shop/${productId}?error=${msg}`);
         }
 
         cart.items.push({
@@ -272,9 +294,15 @@ const addToCart = async (req, res) => {
       { userId: user._id },
       { $pull: { items: { productId: productId } } }
     );
+    
+    if (isAjax) {
+        return res.json({ success: true, message: "Product added to cart successfully!" });
+    }
     res.redirect(`/shop/${productId}`);
   } catch (error) {
     console.error(error);
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.xhr;
+    if (isAjax) return res.status(500).json({ success: false, message: "Something went wrong" });
     res.status(500).send("Something went wrong");
   }
 };
@@ -285,6 +313,7 @@ const deleteCart = async (req, res) => {
     const itemId = req.params.id;
 
     if (!userEmail) {
+      req.session.returnTo = req.get('Referer') || "/";
       return res.redirect("/login");
     }
 

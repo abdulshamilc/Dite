@@ -6,6 +6,8 @@
   <title>Profile - Dité</title>
   <%- include("../../partials/user/headerHead") %>
   <%- include("../../partials/user/footerHead") %>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
   <style>
   :root {
     --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
@@ -360,6 +362,108 @@
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
   }
+
+  /* Crop Modal Custom Styles */
+  #crop-modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 9999; /* Higher than everything else */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+  }
+  
+  .crop-container {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 500px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #333;
+    animation: modalPop 0.3s ease-out;
+  }
+
+  @keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .crop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+  }
+
+  .crop-title {
+    color: var(--text);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .crop-close {
+    color: #9ca3af;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+  }
+  .crop-close:hover { color: white; }
+
+  .crop-image-wrapper {
+    height: 400px;
+    background: #000;
+    overflow: hidden;
+    position: relative;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  #crop-image {
+    max-width: 100%;
+    display: block;
+    /* max-height handled by cropper */
+  }
+
+  .crop-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+  }
+
+  .crop-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel {
+    background: #374151;
+    color: #e5e7eb;
+  }
+  .btn-cancel:hover { background: #4b5563; }
+
+  .btn-apply {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-apply:hover { background: #b5823d; }
 </style>
 </head>
 <body>
@@ -474,6 +578,23 @@
         <button class="modal-btn" id="verifyBtn" onclick="verifyOTPFromModal()">Verify</button>
       </div>
       <div class="resend-timer" id="resendTimer"></div>
+    </div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div id="crop-modal">
+    <div class="crop-container">
+      <div class="crop-header">
+        <h3 class="crop-title">Crop Image</h3>
+        <button id="close-crop-modal" class="crop-close" onclick="closeCropModal(true)">&times;</button>
+      </div>
+      <div class="crop-image-wrapper">
+        <img id="crop-image" />
+      </div>
+      <div class="crop-footer">
+        <button id="cancel-crop" class="crop-btn btn-cancel" onclick="closeCropModal(true)">Cancel</button>
+        <button id="apply-crop" class="crop-btn btn-apply" onclick="applyCrop()">Apply Crop</button>
+      </div>
     </div>
   </div>
 
@@ -725,17 +846,16 @@
       }
     }
 
-    function handleSubmit(event) {
+    async function handleSubmit(event) {
+      event.preventDefault();
       const newEmail = document.getElementById('email').value.trim();
       if (newEmail !== originalEmail) {
         if (!currentVerified) {
           showMessage('Please verify your current email before changing it.', 'error');
-          event.preventDefault();
           return false;
         }
         if (!newVerified) {
           showMessage('Please verify the new email with OTP.', 'error');
-          event.preventDefault();
           return false;
         }
       }
@@ -744,36 +864,141 @@
       const phone = document.getElementById('phone').value.trim();
       if (phone && phone.length <= 5) {
         showMessage('Enter Valid Phone Number ...', 'error');
-        event.preventDefault();
         return false;
       }
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerText;
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Saving...';
 
-      // Simulate form submission success (in real, handle via backend response)
-      // For demo, show success after submit
-      setTimeout(() => {
-        showMessage('Profile updated successfully!', 'success');
-      }, 1000);
-      return true;
+      try {
+        const form = document.querySelector('.form');
+        const formData = new FormData(form);
+        
+        // Remove file input to avoid sending original file if we have a crop or nothing
+        formData.delete('image');
+
+        if (profileImageBlob) {
+          formData.append('image', profileImageBlob, 'profile.jpg');
+        }
+
+        const response = await fetch('/profile', {
+            method: 'POST',
+            body: formData
+        });
+
+        // Depending on how backend responds (HTML or JSON? Usually existing express apps redirect. Fetch follows redirects automatically but we might want to reload).
+        if (response.redirected) {
+             window.location.href = response.url;
+             return;
+        }
+        
+        // If it returns HTML (common in old express apps), we might replace document or assume success.
+        // Assuming your controller redirects on success or renders profile.
+        // If it renders, we can reload.
+        // Let's reload to be safe if successful status.
+        if (response.ok) {
+           showMessage('Profile updated successfully!', 'success');
+           setTimeout(() => {
+             window.location.reload();
+           }, 1000);
+        } else {
+           showMessage('Failed to update profile.', 'error');
+           submitBtn.disabled = false;
+           submitBtn.innerText = originalText;
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage('An error occurred. Please try again.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      }
+
+      return false;
     }
 
-    // Image Upload Function - Simple Preview
+    // Image Upload & Cropping Logic
+    let cropper = null;
+    let profileImageBlob = null;
+
     function handleImageUpload(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
       reader.onload = function(e) {
-        document.getElementById('avatarLg').src = e.target.result;
-        showMessage('Profile picture updated!', 'success');
+        const cropImg = document.getElementById('crop-image');
+        cropImg.src = e.target.result;
+        
+        const modal = document.getElementById('crop-modal');
+        modal.classList.remove('hidden'); // Tailwind hidden
+        modal.style.display = 'flex'; // Ensure flex override if needed for non-tailwind
+        
+        if (cropper) {
+          cropper.destroy();
+        }
+        
+        // Wait for image load
+        setTimeout(() => {
+            cropper = new Cropper(cropImg, {
+                aspectRatio: 1, // Profile usually square
+                viewMode: 1,
+                autoCropArea: 0.8,
+                scalable: true,
+                zoomable: true,
+                dragMode: 'crop',
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                minCropBoxWidth: 100,
+                minCropBoxHeight: 100,
+            });
+        }, 100);
       };
       reader.readAsDataURL(file);
+    }
+
+    function closeCropModal(cancel = false) {
+      const modal = document.getElementById('crop-modal');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+      
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+      
+      if (cancel) {
+         document.getElementById('imageUploadForm').value = ''; 
+      }
+    }
+
+    function applyCrop() {
+      if (!cropper) return;
+      
+      cropper.getCroppedCanvas({
+          width: 300,
+          height: 300,
+          imageSmoothingQuality: 'high'
+      }).toBlob((blob) => {
+          if (blob) {
+              profileImageBlob = blob;
+              const url = URL.createObjectURL(blob);
+              document.getElementById('avatarLg').src = url;
+              closeCropModal(false);
+          }
+      }, 'image/jpeg', 0.9);
     }
 
     // Close modal on outside click
     window.onclick = function(event) {
       const modal = document.getElementById('otpModal');
+      const cropModal = document.getElementById('crop-modal');
       if (event.target === modal) {
         closeOTPModal();
+      }
+      if (event.target === cropModal) {
+        closeCropModal(true);
       }
     }
   </script>

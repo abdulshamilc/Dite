@@ -171,6 +171,44 @@
         margin: 0;
         opacity: 0.9;
       }
+      .target-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .target-card {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+        background-color: #2d3748; /* Slight contrast from card background */
+        transition: all 0.2s;
+        text-decoration: none;
+      }
+      .target-card:hover {
+        background-color: #4a5568;
+        border-color: #c5a987;
+        transform: translateY(-2px);
+      }
+      .target-card-image-container {
+        width: 50px;
+        height: 50px;
+        flex-shrink: 0;
+        border-radius: 0.25rem;
+        overflow: hidden;
+        border: 1px solid #4b5563;
+      }
+      .target-card-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      /* Ensure Lucide icons align nicely */
+      .target-card i {
+        vertical-align: middle;
+      }
     </style>
   </head>
   <body class="min-h-screen bg-black text-white">
@@ -184,21 +222,30 @@
         <div class="max-w-6xl mx-auto w-full">
           <!-- Header -->
           <div class="mb-8">
-            <a href="/admin/offers" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+            <a
+              href="/admin/offers"
+              class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2"
+            >
               <i data-lucide="arrow-left" class="w-4 h-4"></i>
               Back to Offers
             </a>
             <div class="flex items-start justify-between">
               <div class="flex-1">
                 <h1 class="text-3xl font-bold mb-2">Offer Details</h1>
-                <p class="text-gray-400">Offer ID: <span class="text-brand font-semibold">#<%= offer._id %></span></p>
+                <p class="text-gray-400">
+                  Offer ID:
+                  <span class="text-brand font-semibold"
+                    >#<%= offer._id %></span
+                  >
+                </p>
               </div>
-              <%
-              let statusClass = offer.isActive ? 'status-active-badge' : 'status-inactive-badge';
-              let statusText = offer.isActive ? 'Active' : 'Inactive';
-              %>
+              <% let statusClass = offer.isActive ? 'status-active-badge' :
+              'status-inactive-badge'; let statusText = offer.isActive ?
+              'Active' : 'Inactive'; %>
               <div class="flex items-center gap-4 ml-4">
-                <span class="status-badge <%= statusClass %>"><%= statusText %></span>
+                <span class="status-badge <%= statusClass %>"
+                  ><%= statusText %></span
+                >
               </div>
             </div>
           </div>
@@ -211,13 +258,20 @@
                 <!-- Discount Info -->
                 <div class="discount-info">
                   <h3>
-                    <%= offer.discountType === 'percentage' ? offer.discountValue + '%' : 'Rs ' + offer.discountValue %> Off
+                    <%= offer.discountType === 'percentage' ?
+                    offer.discountValue + '%' : 'Rs ' + offer.discountValue %>
+                    Off
                   </h3>
-                  <p><%= offer.discountType.charAt(0).toUpperCase() + offer.discountType.slice(1) %> Discount</p>
+                  <p>
+                    <%= offer.discountType.charAt(0).toUpperCase() +
+                    offer.discountType.slice(1) %> Discount
+                  </p>
                 </div>
                 <!-- Basic Details -->
                 <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
-                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Basic Information</h3>
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">
+                    Basic Information
+                  </h3>
                   <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                     <div>
                       <p class="text-gray-400 mb-1">Name:</p>
@@ -225,47 +279,88 @@
                     </div>
                     <div>
                       <p class="text-gray-400 mb-1">Applies To:</p>
-                      <p class="font-semibold"><%= offer.appliesTo.charAt(0).toUpperCase() + offer.appliesTo.slice(1) %></p>
+                      <p class="font-semibold">
+                        <%= offer.appliesTo.charAt(0).toUpperCase() +
+                        offer.appliesTo.slice(1) %>
+                      </p>
                     </div>
                     <div>
                       <p class="text-gray-400 mb-1">Start Date:</p>
-                      <p class="font-semibold"><%= new Date(offer.startDate).toLocaleDateString() %></p>
+                      <p class="font-semibold">
+                        <%= new Date(offer.startDate).toLocaleDateString() %>
+                      </p>
                     </div>
                     <div>
                       <p class="text-gray-400 mb-1">End Date:</p>
-                      <p class="font-semibold"><%= new Date(offer.endDate).toLocaleDateString() %></p>
+                      <p class="font-semibold">
+                        <%= new Date(offer.endDate).toLocaleDateString() %>
+                      </p>
                     </div>
                     <div class="md:col-span-2">
                       <p class="text-gray-400 mb-1">Description:</p>
-                      <p class="text-gray-300"><%= offer.description || 'No description' %></p>
+                      <p class="text-gray-300">
+                        <%= offer.description || 'No description' %>
+                      </p>
                     </div>
                   </div>
                 </div>
                 <!-- Targets -->
                 <div class="space-y-4">
-                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Targets</h3>
-                  <div class="target-details">
-                    <% if (offer.targetId && offer.targetId.length > 0) { %>
-                      <% offer.targetId.forEach(target => { %>
-                        <div class="target-item">
-                          <div class="target-image-container">
-                            <% if (offer.appliesTo === 'product' && target && target.images && target.images.length > 0) { %>
-                              <img src="<%= target.images[0] %>" alt="<%= target.name %>" class="target-image" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                              <div class="placeholder">Icon</div>
-                            <% } else { %>
-                              <div class="target-image bg-gray-700 flex items-center justify-center text-xs">Icon</div>
-                            <% } %>
-                          </div>
-                          <div class="flex-1">
-                            <div class="font-semibold"><%= target.name || 'Unknown' %></div>
-                            <div class="text-sm text-gray-400">
-                              <%= (target.description || 'No description').substring(0, 50) + (target.description && target.description.length > 50 ? '...' : '') %>
-                            </div>
-                          </div>
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3 ml-1">
+                    Targets
+                  </h3>
+                  <div class="target-grid">
+                    <% if (offer.targets && offer.targets.length > 0) { %> 
+                      <% offer.targets.forEach(target => { %> 
+                        <% 
+                          let detailLink = '#';
+                          if (offer.appliesTo === 'product') {
+                            detailLink = `/admin/products/${target._id}`;
+                          } else if (offer.appliesTo === 'category') {
+                             detailLink = `/admin/categories`; // No specific detail page for category usually
+                          }
+                        %>
+                    <a href="<%= detailLink %>" class="target-card group">
+                      <div class="target-card-image-container">
+                        <% if (offer.appliesTo === 'product' && target &&
+                        target.images && target.images.length > 0) { %>
+                        <img
+                          src="<%= target.images[0] %>"
+                          alt="<%= target.name %>"
+                          class="target-card-image"
+                        />
+                        <% } else { %>
+                        <div
+                          class="target-card-image bg-gray-700 flex items-center justify-center text-xs text-brand"
+                        >
+                          <% if(offer.appliesTo === 'category') { %>
+                          <i data-lucide="tag" class="w-5 h-5"></i>
+                          <% } else { %>
+                          <i data-lucide="package" class="w-5 h-5"></i>
+                          <% } %>
                         </div>
-                      <% }); %>
-                    <% } else { %>
-                      <p class="text-gray-400 text-center py-4">No targets specified.</p>
+                        <% } %>
+                      </div>
+
+                      <div class="flex-1 min-w-0">
+                        <div
+                          class="font-bold text-gray-200 group-hover:text-brand truncate"
+                        >
+                          <%= target.name || 'Unknown' %>
+                        </div>
+                        <div class="text-sm text-gray-400 truncate">
+                          <%= target.description || '' %>
+                        </div>
+                      </div>
+
+                      <div class="text-gray-500">
+                        <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                      </div>
+                    </a>
+                    <% }); %> <% } else { %>
+                    <p class="text-gray-400 text-center py-4">
+                      No targets specified.
+                    </p>
                     <% } %>
                   </div>
                 </div>
@@ -276,34 +371,68 @@
               <!-- Status Update -->
               <div class="card p-6">
                 <h3 class="font-bold mb-4 text-brand">Update Status</h3>
-                <button id="toggleActiveBtn" class="btn btn-primary w-full flex items-center justify-center gap-2" data-id="<%= offer._id %>">
-                  <i data-lucide="<%= offer.isActive ? 'x' : 'check' %>" class="w-4 h-4"></i>
+                <button
+                  id="toggleActiveBtn"
+                  class="btn btn-primary w-full flex items-center justify-center gap-2"
+                  data-id="<%= offer._id %>"
+                >
+                  <i
+                    data-lucide="<%= offer.isActive ? 'x' : 'check' %>"
+                    class="w-4 h-4"
+                  ></i>
                   <%= offer.isActive ? 'Deactivate Offer' : 'Activate Offer' %>
                 </button>
               </div>
               <!-- Change End Date -->
               <div class="card p-6">
                 <h3 class="font-bold mb-4 text-brand">Change End Date</h3>
-                <form id="changeEndDateForm" method="POST" action="/admin/offers/update-end-date/<%= offer._id %>" class="space-y-4">
+                <form
+                  id="changeEndDateForm"
+                  method="POST"
+                  action="/admin/offers/update-end-date/<%= offer._id %>"
+                  class="space-y-4"
+                >
                   <div>
-                    <label for="newEndDate" class="block text-sm font-medium text-gray-300 mb-2">New End Date</label>
-                    <input type="date" id="newEndDate" name="endDate" value="<%= new Date(offer.endDate).toISOString().split('T')[0] %>" required
-                           min="<%= new Date(offer.startDate).toISOString().split('T')[0] %>" 
-                           class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-brand focus:outline-none">
+                    <label
+                      for="newEndDate"
+                      class="block text-sm font-medium text-gray-300 mb-2"
+                      >New End Date</label
+                    >
+                    <input
+                      type="date"
+                      id="newEndDate"
+                      name="endDate"
+                      value="<%= new Date(offer.endDate).toISOString().split('T')[0] %>"
+                      required
+                      min="<%= new Date(offer.startDate).toISOString().split('T')[0] %>"
+                      class="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-md text-white focus:border-brand focus:outline-none"
+                    />
                   </div>
-                  <button type="submit" class="btn btn-primary w-full flex items-center justify-center gap-2">
-                    <i data-lucide="calendar" class="w-4 h-4"></i> Update End Date
+                  <button
+                    type="submit"
+                    class="btn btn-primary w-full flex items-center justify-center gap-2"
+                  >
+                    <i data-lucide="calendar" class="w-4 h-4"></i> Update End
+                    Date
                   </button>
                 </form>
               </div>
               <!-- Actions -->
               <div class="card p-6">
                 <h3 class="font-bold mb-4 text-brand">Actions</h3>
-                <a href="/admin/offers/edit/<%= offer._id %>" class="block w-full btn btn-secondary text-center flex items-center justify-center gap-2 mb-3">
+                <a
+                  href="/admin/offers/edit/<%= offer._id %>"
+                  class="block w-full btn btn-secondary text-center flex items-center justify-center gap-2 mb-3"
+                >
                   <i data-lucide="edit-3" class="w-4 h-4"></i>
                   Edit Offer
                 </a>
-                <button id="deleteOfferBtn" class="block w-full btn btn-danger flex items-center justify-center gap-2" data-id="<%= offer._id %>" data-name="<%= offer.name %>">
+                <button
+                  id="deleteOfferBtn"
+                  class="block w-full btn btn-danger flex items-center justify-center gap-2"
+                  data-id="<%= offer._id %>"
+                  data-name="<%= offer.name %>"
+                >
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                   Delete Offer
                 </button>
@@ -314,15 +443,23 @@
                 <div class="text-sm space-y-2 text-gray-300">
                   <div class="flex justify-between">
                     <span class="font-semibold">Created:</span>
-                    <span><%= new Date(offer.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                    <span
+                      ><%= new Date(offer.createdAt).toLocaleDateString('en-US',
+                      { year: 'numeric', month: 'long', day: 'numeric' })
+                      %></span
+                    >
                   </div>
                   <div class="flex justify-between">
                     <span class="font-semibold">Last Updated:</span>
-                    <span><%= new Date(offer.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                    <span
+                      ><%= new Date(offer.updatedAt).toLocaleDateString('en-US',
+                      { year: 'numeric', month: 'long', day: 'numeric' })
+                      %></span
+                    >
                   </div>
                   <div class="flex justify-between">
                     <span class="font-semibold">Targets Count:</span>
-                    <span><%= (offer.targetId || []).length %></span>
+                    <span><%= (offer.targets || []).length %></span>
                   </div>
                 </div>
               </div>
@@ -332,27 +469,53 @@
       </main>
     </div>
     <!-- Toggle Active/Inactive Modal -->
-    <div id="toggleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      id="toggleModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
       <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96 card">
         <h2 class="text-lg font-bold mb-4 text-brand">Confirm Action</h2>
         <p id="toggleMessage" class="mb-6 text-gray-300"></p>
         <div class="flex justify-end space-x-4">
-          <button id="cancelToggle" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700 btn-secondary">Cancel</button>
+          <button
+            id="cancelToggle"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700 btn-secondary"
+          >
+            Cancel
+          </button>
           <form id="toggleForm" method="POST" action="">
-            <button type="submit" class="px-4 py-2 bg-brand rounded hover:opacity-90 text-gray-800 font-semibold">Confirm</button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-brand rounded hover:opacity-90 text-gray-800 font-semibold"
+            >
+              Confirm
+            </button>
           </form>
         </div>
       </div>
     </div>
     <!-- Delete Modal -->
-    <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div
+      id="deleteModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
       <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96 card">
         <h2 class="text-lg font-bold mb-4 text-brand">Confirm Deletion</h2>
         <p id="deleteMessage" class="mb-6 text-gray-300"></p>
         <div class="flex justify-end space-x-4">
-          <button id="cancelDelete" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700 btn-secondary">Cancel</button>
+          <button
+            id="cancelDelete"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700 btn-secondary"
+          >
+            Cancel
+          </button>
           <form id="deleteForm" method="POST">
-            <button type="submit" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700 btn-danger">Delete</button>
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-600 rounded hover:bg-red-700 btn-danger"
+            >
+              Delete
+            </button>
           </form>
         </div>
       </div>
@@ -380,85 +543,85 @@
       </button>
     </div>
     <script>
-      lucide.createIcons();
-      const toggleBtn = document.getElementById('toggleActiveBtn');
-  const toggleModal = document.getElementById('toggleModal');
-  const toggleMessage = document.getElementById('toggleMessage');
-  const toggleForm = document.getElementById('toggleForm');
-  const cancelToggle = document.getElementById('cancelToggle');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', () => {
-      const id = toggleBtn.dataset.id;
-      const action = toggleBtn.textContent.trim().toLowerCase().includes('deactivate') ? 'deactivate' : 'activate';
-      toggleMessage.textContent = `Are you sure you want to ${action} this offer?`;
-      toggleForm.action = `/admin/offers/${id}/toggleStatus`;
-      toggleModal.classList.remove('hidden');
-    });
-  }
-  cancelToggle.addEventListener('click', () => toggleModal.classList.add('hidden'));
-      // Delete
-      const deleteBtn = document.getElementById('deleteOfferBtn');
-      const deleteModal = document.getElementById('deleteModal');
-      const deleteMessage = document.getElementById('deleteMessage');
-      const deleteForm = document.getElementById('deleteForm');
-      const cancelDelete = document.getElementById('cancelDelete');
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', () => {
-          const id = deleteBtn.dataset.id;
-          const name = deleteBtn.dataset.name;
-          deleteMessage.textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
-          deleteForm.action = `/admin/offers/delete/${id}`;
-          deleteModal.classList.remove('hidden');
+          lucide.createIcons();
+          const toggleBtn = document.getElementById('toggleActiveBtn');
+      const toggleModal = document.getElementById('toggleModal');
+      const toggleMessage = document.getElementById('toggleMessage');
+      const toggleForm = document.getElementById('toggleForm');
+      const cancelToggle = document.getElementById('cancelToggle');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          const id = toggleBtn.dataset.id;
+          const action = toggleBtn.textContent.trim().toLowerCase().includes('deactivate') ? 'deactivate' : 'activate';
+          toggleMessage.textContent = `Are you sure you want to ${action} this offer?`;
+          toggleForm.action = `/admin/offers/${id}/toggleStatus`;
+          toggleModal.classList.remove('hidden');
         });
       }
-      cancelDelete.addEventListener('click', () => deleteModal.classList.add('hidden'));
-      // End date validation
-      document.getElementById('newEndDate').addEventListener('change', function() {
-        const startDateStr = '<%= offer.startDate.toISOString().split("T")[0] %>';
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(this.value);
-        if (endDate <= startDate) {
-          alert('End date must be after start date.');
-          this.value = '';
-        }
-      });
-      // Function to show error popup
-      function showErrorPopup(message) {
-        const popup = document.getElementById("errorPopup");
-        const messageElement = document.getElementById("errorMessage");
-        messageElement.textContent = message || "An unexpected error occurred.";
-        popup.classList.remove("hidden");
-        popup.classList.add("opacity-100", "translate-y-0");
-        setTimeout(() => {
-          popup.classList.add("hidden");
-        }, 4000);
-      }
-      // Close manually
-      document.getElementById("closeErrorPopup").addEventListener("click", () => {
-        document.getElementById("errorPopup").classList.add("hidden");
-      });
-      // Function to show success popup
-      function showSuccessPopup(message) {
-        const popup = document.getElementById("successPopup");
-        const messageElement = document.getElementById("successMessage");
-        messageElement.textContent = message || "Success!";
-        popup.classList.remove("hidden");
-        popup.classList.add("opacity-100", "translate-y-0");
-        setTimeout(() => {
-          popup.classList.add("hidden");
-        }, 4000);
-      }
-      // Close success popup manually
-      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
-        document.getElementById("successPopup").classList.add("hidden");
-      });
-      // Display server-side session messages on load
-      <% if (typeof error !== 'undefined' && error) { %>
-        showErrorPopup("<%= error %>");
-      <% } %>
-      <% if (typeof success !== 'undefined' && success) { %>
-        showSuccessPopup("<%= success %>");
-      <% } %>
+      cancelToggle.addEventListener('click', () => toggleModal.classList.add('hidden'));
+          // Delete
+          const deleteBtn = document.getElementById('deleteOfferBtn');
+          const deleteModal = document.getElementById('deleteModal');
+          const deleteMessage = document.getElementById('deleteMessage');
+          const deleteForm = document.getElementById('deleteForm');
+          const cancelDelete = document.getElementById('cancelDelete');
+          if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+              const id = deleteBtn.dataset.id;
+              const name = deleteBtn.dataset.name;
+              deleteMessage.textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+              deleteForm.action = `/admin/offers/delete/${id}`;
+              deleteModal.classList.remove('hidden');
+            });
+          }
+          cancelDelete.addEventListener('click', () => deleteModal.classList.add('hidden'));
+          // End date validation
+          document.getElementById('newEndDate').addEventListener('change', function() {
+            const startDateStr = '<%= offer.startDate.toISOString().split("T")[0] %>';
+            const startDate = new Date(startDateStr);
+            const endDate = new Date(this.value);
+            if (endDate <= startDate) {
+              alert('End date must be after start date.');
+              this.value = '';
+            }
+          });
+          // Function to show error popup
+          function showErrorPopup(message) {
+            const popup = document.getElementById("errorPopup");
+            const messageElement = document.getElementById("errorMessage");
+            messageElement.textContent = message || "An unexpected error occurred.";
+            popup.classList.remove("hidden");
+            popup.classList.add("opacity-100", "translate-y-0");
+            setTimeout(() => {
+              popup.classList.add("hidden");
+            }, 4000);
+          }
+          // Close manually
+          document.getElementById("closeErrorPopup").addEventListener("click", () => {
+            document.getElementById("errorPopup").classList.add("hidden");
+          });
+          // Function to show success popup
+          function showSuccessPopup(message) {
+            const popup = document.getElementById("successPopup");
+            const messageElement = document.getElementById("successMessage");
+            messageElement.textContent = message || "Success!";
+            popup.classList.remove("hidden");
+            popup.classList.add("opacity-100", "translate-y-0");
+            setTimeout(() => {
+              popup.classList.add("hidden");
+            }, 4000);
+          }
+          // Close success popup manually
+          document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+            document.getElementById("successPopup").classList.add("hidden");
+          });
+          // Display server-side session messages on load
+          <% if (typeof error !== 'undefined' && error) { %>
+            showErrorPopup("<%= error %>");
+          <% } %>
+          <% if (typeof success !== 'undefined' && success) { %>
+            showSuccessPopup("<%= success %>");
+          <% } %>
     </script>
   </body>
 </html>

@@ -13,6 +13,10 @@ import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import { limiter } from "./security/rateLimiter.js";
 import helmetConfig from "./security/helmet.js";
 import { sanitizeInputs } from "./security/sanitizer.js";
+import { User } from "./models/userModels.js";
+import bcrypt from "bcryptjs";
+import offerCronJob from "./cron/offerCron.js";
+import couponCronJob from "./cron/coupenCron.js";
 const app = express();
 
 //Setting limit for the requst
@@ -69,14 +73,32 @@ passport.use(new GoogleStrategy({
     clientSecret:process.env.googleClientSecret ,
     callbackURL: 'http://localhost:3007/auth/google/callback'
   },
-  (accessToken, refreshToken, profile, done) => {
-    // Here you can save user to DB if you want
-    // console.log('Google Profile:', profile);
-    return done(null, profile);
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails[0].value;
+      let user = await User.findOne({ email });
+
+      if (!user) {
+        const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+        user = new User({
+          name: profile.displayName,
+          email: email,
+          password: hashedPassword,
+        });
+        await user.save();
+      }
+      return done(null, profile);
+    } catch (error) {
+      return done(error, null);
+    }
   }
 ));
 
-
+//Crone Job Starting 
+offerCronJob() ;
+couponCronJob() ;
 
 // Setting viewEngine
 app.set("view engine", "ejs");

@@ -4,11 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <title>Dité - Shop</title>
+    <title>Dité - <%= name %></title>
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
     <style>
-      /* Your existing styles remain unchanged */
       * {
         margin: 0;
         padding: 0;
@@ -128,6 +127,7 @@
         transform: translateY(-50%);
         color: #d4af37;
         font-size: 18px;
+        cursor: pointer;
       }
 
       /* Filter Section */
@@ -618,6 +618,7 @@
         font-size: 14px;
         font-weight: 600;
         text-transform: uppercase;
+        /* margin-left: auto; */
       }
 
       .modal-footer button:hover {
@@ -703,9 +704,9 @@
     <!-- Shop Section -->
     <section class="shop-section">
       <div class="container">
-        <h1 class="shop-title">Shop</h1>
+        <h1 class="shop-title"><%= name %></h1>
         <p class="shop-subtitle">
-          Discover our handpicked collection of premium products, crafted for style and quality.
+          Explore our exclusive collection of <%= name.toLowerCase() %> perfumes, crafted to leave a lasting impression.
         </p>
       </div>
     </section>
@@ -718,31 +719,21 @@
 
       <!-- Search Section -->
       <div class="search-section">
-        <form id="searchForm" style="width: 100%; max-width: 500px; margin: 0 auto;">
-          <div class="search-bar">
-            <input
-              type="text"
-              class="search-input"
-              id="searchInput"
-              name="search"
-              placeholder="Search products..."
-              value="<%= search %>"
-            />
-            <i class="fas fa-search search-icon" onclick="performSearch();"></i>
-          </div>
-        </form>
+        <div class="search-bar">
+          <input
+            type="text"
+            class="search-input"
+            id="searchInput"
+            placeholder="Search products..."
+            value="<%= search %>"
+          />
+          <i class="fas fa-search search-icon" onclick="performSearch()"></i>
+        </div>
       </div>
 
       <!-- Filter Section -->
       <div class="filter-section">
         <form id="filterForm" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%;">
-          <!-- Gender Filter -->
-          <select class="filter-dropdown" id="genderFilter" name="gender">
-            <option value="ALL" <%= gender === 'ALL' ? 'selected' : '' %>>ALL</option>
-            <option value="MEN" <%= gender === 'MEN' ? 'selected' : '' %>>MEN</option>
-            <option value="WOMEN" <%= gender === 'WOMEN' ? 'selected' : '' %>>WOMEN</option>
-            <option value="UNISEX" <%= gender === 'UNISEX' ? 'selected' : '' %>>UNISEX</option>
-          </select>
           <!-- Sort Filter -->
           <select class="filter-dropdown" id="sortFilter" name="sort">
             <option value="" <%= sort === '' ? 'selected' : '' %>>SORT BY</option>
@@ -751,8 +742,8 @@
             <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest</option>
             <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>Most Popular</option>
           </select>
-          <!-- Filter Button to Open Modal -->
-          <button type="button" class="filter-btn" id="filterButton">FILTER</button>
+           <!-- Filter Button to Open Modal -->
+           <button type="button" class="filter-btn" id="filterButton">FILTER</button>
         </form>
       </div>
 
@@ -814,88 +805,85 @@
         </div>
       <% } %>
     </main>
-
-    <!-- Filter Modal -->
-    <div id="filterModal" class="modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Filters</h2>
-          <span class="close" onclick="closeFilterModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-          <!-- Price Range -->
-          <div class="filter-group">
-            <h3>Price Range</h3>
-            <div class="price-selects">
-              <div class="price-select-group">
-                <label>From:</label>
-                <select id="minPriceSelect" class="price-select">
-                  <option value="" <%= (!queryMinPrice || queryMinPrice === '') ? 'selected' : '' %>>Lowest</option>
-                  <% minPriceOptions.slice(1).forEach(option => { %>
-                    <option value="<%= option %>" <%= (queryMinPrice == option) ? 'selected' : '' %>><%= option %> Rs</option>
-                  <% }); %>
-                </select>
+         <!-- Filter Modal -->
+         <div id="filterModal" class="modal">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h2>Filters</h2>
+                <span class="close" onclick="closeFilterModal()">&times;</span>
               </div>
-              <div class="price-select-group">
-                <label>To:</label>
-                <select id="maxPriceSelect" class="price-select">
-                  <% maxPriceOptions.slice(0, -1).forEach(option => { %>
-                    <option value="<%= option %>" <%= (queryMaxPrice == option) ? 'selected' : '' %>><%= option %> Rs</option>
+              <div class="modal-body">
+                <!-- Price Range -->
+                <div class="filter-group">
+                  <h3>Price Range</h3>
+                  <div class="price-selects">
+                    <div class="price-select-group">
+                      <label>From:</label>
+                      <select id="minPriceSelect" class="price-select">
+                        <option value="" <%= (!queryMinPrice || queryMinPrice === '') ? 'selected' : '' %>>Lowest</option>
+                        <% minPriceOptions.slice(1).forEach(option => { %>
+                          <option value="<%= option %>" <%= (queryMinPrice == option) ? 'selected' : '' %>><%= option %> Rs</option>
+                        <% }); %>
+                      </select>
+                    </div>
+                    <div class="price-select-group">
+                      <label>To:</label>
+                      <select id="maxPriceSelect" class="price-select">
+                        <% maxPriceOptions.slice(0, -1).forEach(option => { %>
+                          <option value="<%= option %>" <%= (queryMaxPrice == option) ? 'selected' : '' %>><%= option %> Rs</option>
+                        <% }); %>
+                        <option value="" <%= (!queryMaxPrice || queryMaxPrice === '') ? 'selected' : '' %>>Highest</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <!-- Brands -->
+                <div class="filter-group">
+                  <h3>Brands</h3>
+                  <% topBrands.forEach(brand => { %>
+                    <label class="checkbox-label">
+                      <input type="checkbox" value="<%= brand.toLowerCase() %>" <%= selectedBrands.map(b => b.toLowerCase()).includes(brand.toLowerCase()) ? 'checked' : '' %>>
+                      <%= brand %>
+                    </label>
                   <% }); %>
-                  <option value="" <%= (!queryMaxPrice || queryMaxPrice === '') ? 'selected' : '' %>>Highest</option>
-                </select>
+                  <div id="moreBrands" class="brands-hidden">
+                    <% otherBrands.forEach(brand => { %>
+                      <label class="checkbox-label">
+                        <input type="checkbox" value="<%= brand.toLowerCase() %>" <%= selectedBrands.map(b => b.toLowerCase()).includes(brand.toLowerCase()) ? 'checked' : '' %>>
+                        <%= brand %>
+                      </label>
+                    <% }); %>
+                  </div>
+                  <% if (otherBrands.length > 0) { %>
+                    <button type="button" class="show-more-btn" onclick="toggleMoreBrands(event)">Show More</button>
+                  <% } %>
+                </div>
+                <!-- Concentrations -->
+                <div class="filter-group">
+                  <h3>Concentration</h3>
+                  <% concentrations.forEach(conc => { %>
+                    <label class="checkbox-label">
+                      <input type="checkbox" value="<%= conc.toLowerCase() %>" <%= selectedConcentrations.map(c => c.toLowerCase()).includes(conc.toLowerCase()) ? 'checked' : '' %>>
+                      <%= conc %>
+                    </label>
+                  <% }); %>
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button onclick="clearFilters()">Clear</button>
+                <button onclick="applyFilters()">Apply</button>
               </div>
             </div>
           </div>
-          <!-- Brands -->
-          <div class="filter-group">
-            <h3>Brands</h3>
-            <% topBrands.forEach(brand => { %>
-              <label class="checkbox-label">
-                <input type="checkbox" value="<%= brand.toLowerCase() %>" <%= selectedBrands.map(b => b.toLowerCase()).includes(brand.toLowerCase()) ? 'checked' : '' %>>
-                <%= brand %>
-              </label>
-            <% }); %>
-            <div id="moreBrands" class="brands-hidden">
-              <% otherBrands.forEach(brand => { %>
-                <label class="checkbox-label">
-                  <input type="checkbox" value="<%= brand.toLowerCase() %>" <%= selectedBrands.map(b => b.toLowerCase()).includes(brand.toLowerCase()) ? 'checked' : '' %>>
-                  <%= brand %>
-                </label>
-              <% }); %>
-            </div>
-            <% if (otherBrands.length > 0) { %>
-              <button type="button" class="show-more-btn" onclick="toggleMoreBrands(event)">Show More</button>
-            <% } %>
-          </div>
-          <!-- Concentrations -->
-          <div class="filter-group">
-            <h3>Concentration</h3>
-            <% concentrations.forEach(conc => { %>
-              <label class="checkbox-label">
-                <input type="checkbox" value="<%= conc.toLowerCase() %>" <%= selectedConcentrations.map(c => c.toLowerCase()).includes(conc.toLowerCase()) ? 'checked' : '' %>>
-                <%= conc %>
-              </label>
-            <% }); %>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button onclick="clearFilters()">Clear</button>
-          <button onclick="applyFilters()">Apply</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
-
+    
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
     <script>
       // Preserve current params for updates
       const currentParams = new URLSearchParams(window.location.search);
-      const currentPage = '<%= page %>';
       let searchTimer;
 
       function buildQuery(newParams = {}) {
@@ -928,7 +916,7 @@
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
           performSearch();
-        }, 500); // 500ms delay
+        }, 500); 
       }
 
       function updatePage(newPage) {
@@ -944,12 +932,6 @@
         if (e.key === 'Enter') {
           performSearch();
         }
-      });
-
-      // Filter changes
-      document.getElementById('genderFilter').addEventListener('change', function() {
-        const newParams = { gender: this.value };
-        window.location.search = buildQuery(newParams);
       });
 
       document.getElementById('sortFilter').addEventListener('change', function() {
@@ -978,9 +960,9 @@
 
       // Call on load
       updateFilterButton();
-
-      // Modal functions
-      function openFilterModal() {
+      
+       // Modal functions
+       function openFilterModal() {
         document.getElementById('filterModal').style.display = 'block';
       }
 
@@ -1054,7 +1036,7 @@
         window.location.search = buildQuery(clearParams);
         closeFilterModal();
       }
-
+      
       function showToast(message, type = 'info') {
         const container = document.getElementById('toast-container');
         const toast = document.createElement('div');
