@@ -6,6 +6,8 @@ import {
   notLogginedHome,
   getSignup,
   signup,
+  getSetPassword,
+  postSetPassword,
   getSignupOtpVerify,
   resendSignupOtp,
   postSignupOtpVerify,
@@ -49,6 +51,7 @@ import {
   getSecurity,
   getDeleteAcount,
   userlogOut,
+  getReferrals,
 } from "../controller/user/profileController.js";
 
 import {
@@ -93,6 +96,8 @@ import {
   createRazorpayOrder,
   verifyRazorpayPayment,
   addFundsToWallet,
+  retryPaymentOrder,
+  verifyRetryPayment
 } from "../controller/user/paymentController.js"; 
 
 import { isAuthenticatedUser } from "../middlewares/authMiddleware.js";
@@ -123,6 +128,9 @@ router.get("/", notLogginedHome);
 router.get("/signup", getSignup);
 
 router.post("/signup", signup);
+
+router.get("/set-password", getSetPassword);
+router.post("/set-password", postSetPassword);
 
 router.get("/signup/verify-otp", getSignupOtpVerify);
 router.get("/signup/resend-otp", resendSignupOtp);
@@ -184,6 +192,8 @@ router.post(
   upload.single("image"),
   postProfile
 );
+
+router.get("/referrals", isAuthenticatedUser, isBlocked, getReferrals);
 
 router.post(
   "/profile/changeEmail",
@@ -315,12 +325,17 @@ router.post(
   isBlocked,
   createRazorpayOrder
 );
+
 router.post(
   "/verifyPayment",
   isAuthenticatedUser,
   isBlocked,
   verifyRazorpayPayment
 );
+
+router.post("/checkout/payment/retry/:id", isAuthenticatedUser, isBlocked, retryPaymentOrder);
+router.post("/checkout/payment/verify-retry", isAuthenticatedUser, isBlocked, verifyRetryPayment);
+
 
 router.get("/checkout/success", isAuthenticatedUser, isBlocked, getSuccessPage);
 router.get("/checkout/failed", isAuthenticatedUser, isBlocked, getFailedPage);

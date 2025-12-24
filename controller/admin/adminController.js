@@ -1159,59 +1159,7 @@ const getSalesReport = async (req, res) => {
 
     const orders = await Orders.find(dateFilter).populate("items.productId");
 
-    if (orders.length === 0) {
-      return res.render("admin/salesReport", {
-        totalRevenue: "₹0",
-        avgOrderValue: "₹0",
-        totalOrders: 0,
-        newCustomers: 0,
-        revenueData: JSON.stringify({ labels: [], datasets: [] }),
-        topProductsData: JSON.stringify({ labels: [], datasets: [] }),
-        categoryData: JSON.stringify({ labels: [], datasets: [] }),
-        genderData: JSON.stringify({
-          labels: ["Men", "Women", "Unisex"],
-          datasets: [
-            {
-              data: [0, 0, 0],
-              backgroundColor: ["#3b82f6", "#ec4899", "#10b981"],
-              borderColor: ["#1f2937", "#1f2937", "#1f2937"],
-              borderWidth: 1,
-            },
-          ],
-        }),
-        statusData: JSON.stringify({
-          labels: [
-            "Placed",
-            "Shipped",
-            "Out for Delivery",
-            "Delivered",
-            "Cancelled",
-            "Returned",
-          ],
-          datasets: [
-            {
-              data: [0, 0, 0, 0, 0, 0],
-              backgroundColor: [
-                "#f59e0b",
-                "#3b82f6",
-                "#10b981",
-                "#10b981",
-                "#ef4444",
-                "#8b5cf6",
-              ],
-              borderColor: "#1f2937",
-              borderWidth: 2,
-            },
-          ],
-        }),
-        menSales: 0,
-        womenSales: 0,
-        unisexSales: 0,
-        orderSalesData: [],
-        period: period || "all",
-        dateRange: { startDate, endDate },
-      });
-    }
+
 
     orders.forEach((order) => {
       totalOrders++;
@@ -1493,14 +1441,34 @@ const getSalesReport = async (req, res) => {
       }
     }
 
+    let backgroundColors = "#c5a987";
+    let borderColors = "#c5a987";
+
+    if (period === "today") {
+       // Re-generate days array to match color mapping (since days var is scoped above)
+       const endOfToday = moment().endOf("day").toDate();
+       const startOf7DaysAgo = moment().subtract(6, "days").startOf("day").toDate();
+       const days = [];
+       let current = moment(startOf7DaysAgo);
+       const endMoment = moment(endOfToday);
+       while (current <= endMoment) {
+         days.push(current.format("YYYY-MM-DD"));
+         current.add(1, "days");
+       }
+       const todayStr = moment().format("YYYY-MM-DD");
+       // Background: Today gets mild light gray, Others keep brand color
+       backgroundColors = days.map(d => d === todayStr ? "#e5e7eb" : "#c5a987");
+       borderColors = "#c5a987";
+    }
+
     const revenueData = {
       labels: chartLabels,
       datasets: [
         {
           label: "Revenue",
           data: chartValues,
-          backgroundColor: "#c5a987",
-          borderColor: "#c5a987",
+          backgroundColor: backgroundColors,
+          borderColor: borderColors,
           borderWidth: 1,
         },
       ],
@@ -1838,6 +1806,7 @@ const getSalesReport = async (req, res) => {
         deliveredAt: order.deliveredAt
           ? moment(order.deliveredAt).format("DD MMM YYYY")
           : "N/A",
+        isToday: moment(order.placedAt).isSame(moment(), "day"),
       };
     });
 

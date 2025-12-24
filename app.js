@@ -7,6 +7,7 @@ import path from "path";
 import nocache from "nocache";
 import { fileURLToPath } from "url";
 import session from "express-session";
+import MongoStore from "connect-mongo";
 import passport from "passport";
 import flash  from 'connect-flash';
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
@@ -41,14 +42,26 @@ connectDB();
 const port = process.env.PORT;
 
 //Setting Session
+
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 },
+
+    // MongoDB session store
+    store: MongoStore.create({
+      mongoUrl: process.env.CONNECTION_STRING,
+      collectionName: "sessions",
+      touchAfter: 24 * 60 * 60, 
+    }),
+
+    cookie: {
+       maxAge: 12 * 60 * 60 * 1000, // 12 hour
+    },
   })
 );
+
 //No Cashe
 app.use(nocache());
 

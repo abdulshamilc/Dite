@@ -191,14 +191,33 @@ const getPaymentpage = async (req, res) => {
     if (!userEmail) return res.redirect("/login");
 
     const user = await User.findOne({ email: userEmail });
-    const cart = await Cart.findOne({ userId: user._id });
+    const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
     const selectedAddress = await Address.findById(addressId);
 
     if (!selectedAddress) return res.status(404).send("Address not found");
 
+    if (!cart || cart.items.length === 0) {
+        return res.redirect("/cart");
+    }
+
+    // Validate Stock before proceeding
+    for (const item of cart.items) {
+        const product = item.productId;
+        if (!product || product.isDeleted || !product.isListed) {
+            req.session.error = `Item ${item.name} is currently unavailable.`;
+            return res.redirect("/cart");
+        }
+        const variant = product.variants.find(v => v.mlSize === Number(item.size));
+        if (!variant || variant.stock < item.quantity) {
+            req.session.error = `Item ${item.name} (Size: ${item.size}) is out of stock.`;
+            return res.redirect("/cart");
+        }
+    }
+
     res.render("user/checkout/finalChekout", { user, cart, selectedAddress });
   } catch (error) {
     console.log(error);
+    res.redirect("/cart");
   }
 };
 
@@ -563,6 +582,7 @@ const getFailedPage = async (req, res) => {
   const errorMessage = req.query.error ? decodeURIComponent(req.query.error) : null;
   const errorType = req.query.type ? decodeURIComponent(req.query.type) : null;
   const deleteCart = req.query.deleteCart === 'true';
+  const addressId = req.query.addressId || null;
 
   if (!errorMessage && !req.session.orderplaced) {  // Fallback: require one or the other
     return res.redirect("/cart");
@@ -579,7 +599,7 @@ const getFailedPage = async (req, res) => {
     if (err) console.error('Session regeneration error:', err);
   });
 
-  res.render("user/checkout/failed", { errorMessage, errorType });
+  res.render("user/checkout/failed", { errorMessage, errorType, addressId });
 };
 
 export {

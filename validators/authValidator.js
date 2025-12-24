@@ -1,8 +1,12 @@
 import Joi from "joi";
 
-const signupValidation = Joi.object({
+const signupStep1Validation = Joi.object({
   name: Joi.string().min(3).max(30).required(),
   email: Joi.string().email().required(),
+  referralCode: Joi.string().optional().allow(''),
+});
+
+const signupPasswordValidation = Joi.object({
   password: Joi.string()
     .pattern(
       new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$")
@@ -20,7 +24,7 @@ const signupValidation = Joi.object({
     }),
 });
 
-
 export { 
-    signupValidation 
+    signupStep1Validation,
+    signupPasswordValidation
 };

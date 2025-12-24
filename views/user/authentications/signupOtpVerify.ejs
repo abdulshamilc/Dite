@@ -11,7 +11,7 @@
     <!-- OTP Verification Form -->
     <div class="otp-form">
       <div class="logo">
-        <img src="/images/logo/Dite White Logo.png" alt="Dité Logo">
+        <img src="/images/logo/DiteLogo.png" alt="Dité Logo">
       </div>
       <form action="/signup/verify-otp" method="POST">
         <h2 class="otp-title">Confirm with OTP</h2>
@@ -89,15 +89,31 @@
     });
 
     // Timer functionality for resend OTP
-    let timeLeft = 60; // 1 minute in seconds
     const timer = document.getElementById('timer');
     const resendLink = document.getElementById('resendLink');
+    const TIMER_KEY = 'signupOtpTimerStart';
+    const DURATION = 60;
+
+    // Check for existing timer or start new
+    let startTime = sessionStorage.getItem(TIMER_KEY);
+    if (!startTime) {
+      startTime = Date.now();
+      sessionStorage.setItem(TIMER_KEY, startTime);
+    }
+
+    // Clear timer on Resend click so next load starts fresh
+    resendLink.addEventListener('click', () => {
+      sessionStorage.removeItem(TIMER_KEY);
+    });
 
     // Initially disable resend link
     resendLink.style.pointerEvents = 'none';
     resendLink.style.opacity = '0.5';
 
     function updateTimer() {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      let timeLeft = DURATION - elapsed;
+
       if (timeLeft <= 0) {
         clearInterval(countdown);
         timer.innerHTML = '00:00';
@@ -109,7 +125,6 @@
       const minutes = Math.floor(timeLeft / 60);
       const seconds = timeLeft % 60;
       timer.innerHTML = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-      timeLeft--;
     }
 
     // Initial update

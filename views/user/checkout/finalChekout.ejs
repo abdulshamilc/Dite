@@ -855,7 +855,8 @@
     const params = new URLSearchParams({
       error: encodedError,
       type: encodedType,
-      deleteCart: deleteCart ? 'true' : 'false'
+      deleteCart: deleteCart ? 'true' : 'false',
+      addressId: selectedAddressId
     });
     window.location.href = `/checkout/failed?${params}`;
   }

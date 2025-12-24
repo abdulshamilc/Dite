@@ -1,6 +1,6 @@
 import { User, UserOtpVerification } from "../../models/userModels.js";
 import bcrypt from "bcryptjs";
-import { signupValidation } from "../../validators/authValidator.js";
+import { signupStep1Validation, signupPasswordValidation } from "../../validators/authValidator.js";
 import UserLog from "../../models/userLogModel.js";
 import geoip from "geoip-lite";
 import * as UAParser from "ua-parser-js";
@@ -8,6 +8,7 @@ import passwordSchema from "../../validators/resetPasswordValidator.js";
 import { generateOTP } from "../../utils/genarateOtp.js";
 import jwt from "jsonwebtoken";
 import Cart from '../../models/cartModel.js' ;
+import Wallet from '../../models/walletModel.js';
 const notLogginedHome = (req, res) => {
   const cartLength = 0 ;
   
@@ -16,60 +17,104 @@ const notLogginedHome = (req, res) => {
 };
 const getSignup = (req, res) => {
   if (req.session.user) return res.redirect("/");
-  31;
-  res.render("user/authentications/signup", { errors: {}, oldData: {} });
+  const referralCode = req.query.ref || "";
+  res.render("user/authentications/signup", { errors: {}, oldData: { referralCode } });
 };
 
+// STEP 1: Basic Details
 const signup = async (req, res) => {
   try {
-    //Validation Using Joi
-    const { error } = signupValidation.validate(req.body);
+    const { error } = signupStep1Validation.validate(req.body, { abortEarly: false });
     if (error) {
       const errors = {};
       error.details.forEach((detail) => {
         errors[detail.path[0]] = detail.message;
       });
-
       return res.status(400).render("user/authentications/signup", {
         errors,
         oldData: req.body,
       });
     }
 
-    const { name, email, password } = req.body;
+    const { name, email, referralCode } = req.body;
 
-    //check if the user exist
+    // check if the user exist
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      const errors = {};
-      errors.userExist = "User Already Exists ";
-
+      if (existingUser.isBlocked) {
+        return res.status(400).render("user/authentications/signup", {
+          errors: { userExist: "This account is blocked" },
+          oldData: req.body,
+        });
+      }
       return res.status(400).render("user/authentications/signup", {
+        errors: { userExist: "User Already Exists" },
+        oldData: req.body,
+      });
+    }
+
+    // Store in session and move to Step 2
+    req.session.signupStep1 = { name, email, referralCode };
+    res.redirect("/set-password");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Server error");
+  }
+};
+
+// STEP 2: Password (GET)
+const getSetPassword = (req, res) => {
+  if (!req.session.signupStep1) return res.redirect("/signup");
+  res.render("user/authentications/signupPassword", { errors: {}, oldData: {} });
+};
+
+// STEP 2: Password (POST)
+const postSetPassword = async (req, res) => {
+  try {
+    if (!req.session.signupStep1) return res.redirect("/signup");
+
+    const { error } = signupPasswordValidation.validate(req.body, { abortEarly: false });
+    if (error) {
+      const errors = {};
+      error.details.forEach((detail) => {
+        errors[detail.path[0]] = detail.message;
+      });
+      return res.render("user/authentications/signupPassword", {
         errors,
         oldData: req.body,
       });
     }
+
+    const { password } = req.body;
+    const { name, email, referralCode } = req.session.signupStep1;
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Creating User
-    const newUser = new User({
+    // Prepare complete new user object (Verified: false by default until OTP)
+    const newUser = {
       name,
       email,
       password: hashedPassword,
-    });
+      referralCode, // Assuming schema handles this if passed to User constructor
+    };
 
+    // Generate OTP
     await generateOTP(
       email,
       "Your OTP Code For Creating New User",
       "Your OTP code For Creating Dite User Account is",
       "Create User"
     );
+
     req.session.tempData = newUser;
+    // Clear step 1 data to prevent going back easily without restarting? 
+    // Usually keep it until success, but standard flow puts it in tempData now.
+    delete req.session.signupStep1; 
 
     res.redirect("/signup/verify-otp");
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Server error");
   }
 };
@@ -150,6 +195,37 @@ const postSignupOtpVerify = async (req, res) => {
 
     // Delete OTP record
     await UserOtpVerification.deleteOne({ email: newUser.email });
+
+    // Generate Referral Code for the new user (8 digits)
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let myReferralCode = "";
+    for (let i = 0; i < 8; i++) {
+        myReferralCode += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    
+    // Check if they used a referral code
+    const usedReferralCode = newUser.referralCode; // This comes from the signup form input
+    let referredByEmail = null;
+
+    if (usedReferralCode) {
+      const referrer = await User.findOne({ referralCode: usedReferralCode });
+      if (referrer) {
+        referredByEmail = referrer.email;
+        referrer.redeemedUsers.push(newUser.email);
+        await referrer.save();
+
+        // Credit 100 Rs to Referrer Wallet
+        try {
+            await Wallet.creditReferral(referrer._id, 100, `Referral Bonus: ${newUser.name}`);
+        } catch (err) {
+            console.error("Referral Wallet Credit Error:", err);
+        }
+      }
+    }
+
+    // Update newUser object
+    newUser.referralCode = myReferralCode;
+    newUser.referredBy = referredByEmail;
 
     // Save user
     const user = new User(newUser);
@@ -512,6 +588,8 @@ export {
   notLogginedHome,
   getSignup,
   signup,
+  getSetPassword,
+  postSetPassword,
   getSignupOtpVerify,
   resendSignupOtp,
   postSignupOtpVerify,

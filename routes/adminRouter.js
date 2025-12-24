@@ -126,7 +126,7 @@ router.post('/offers/:id/toggleStatus',isAuthenticatedAdmin,toggleOfferStatus)
 router.post('/offers/update-end-date/:id',isAuthenticatedAdmin,updateOfferEndDate)  
 router.post('/offers/delete/:id',isAuthenticatedAdmin,deleteOffer)  
 
-router.get('/referrals',isAuthenticatedAdmin,pageNotFound)  
+router.get('/theme',isAuthenticatedAdmin,pageNotFound)  
 
 router.get('/logout',logOut)
 export default router

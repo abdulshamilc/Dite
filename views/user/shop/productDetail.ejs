@@ -438,6 +438,24 @@
         });
       });
 
+      function showLoginPrompt() {
+          Swal.fire({
+              title: 'Login Required',
+              text: 'Please login to continue',
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#eab308',
+              cancelButtonColor: '#d33',
+              confirmButtonText: 'Login',
+              background: '#1a1a1a',
+              color: '#ffffff'
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  window.location.href = '/login';
+              }
+          });
+      }
+
       function addToCart(productId) {
         const quantity = document.getElementById('quantityInput').value;
         const variantSize = document.getElementById('selectedVariantSize').value;
@@ -454,7 +472,18 @@
             variantSize: variantSize
           })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.redirected && response.url.includes('/login')) {
+                showLoginPrompt();
+                throw new Error('Login required');
+            }
+            // If server returns JSON even on 401
+            if (response.status === 401) {
+                showLoginPrompt();
+                throw new Error('Login required');
+            }
+            return response.json();
+        })
         .then(data => {
           if (data.success) {
             Swal.fire({
@@ -465,35 +494,48 @@
               timer: 1500,
               background: '#1a1a1a', 
               color: '#ffffff'
-            }).then(() => {
-                // Update cart count if available in DOM, or reload if preferred, 
-                // but usually user stays on page to shop more.
-                // If the header has a cart count badge, we might want to update it here.
-                // For now, we just let them stay on the page.
             });
           } else {
              if (data.redirect) {
-               window.location.href = data.redirect;
+                if (data.redirect.includes('login')) {
+                    showLoginPrompt();
+                } else {
+                    window.location.href = data.redirect;
+                }
              } else {
-               Swal.fire({
-                 icon: 'error',
-                 title: 'Oops...',
-                 text: data.message || 'Could not add to cart',
-                 background: '#1a1a1a', 
-                 color: '#ffffff'
-               });
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Oops...',
+                  text: data.message || 'Could not add to cart',
+                  background: '#1a1a1a', 
+                  color: '#ffffff',
+                  // Handle specific case where backend sends success: false but message is login required
+                  didClose: () => {
+                     if (data.message && (data.message.toLowerCase().includes('login') || data.message.toLowerCase().includes('authenticated'))) {
+                         showLoginPrompt();
+                     }
+                  }
+                });
              }
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Something went wrong. Please try again.',
-            background: '#1a1a1a', 
-            color: '#ffffff'
-          });
+          if (error.message !== 'Login required') {
+             // Handle actual parsing error (e.g. if HTML returned but not detected as redirect)
+             if (error.name === 'SyntaxError') {
+                 // Likely HTML returned instead of JSON -> login page?
+                 showLoginPrompt();
+             } else {
+                 Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: 'Something went wrong. Please try again.',
+                    background: '#1a1a1a', 
+                    color: '#ffffff'
+                 });
+             }
+          }
         });
       }
 
@@ -506,7 +548,17 @@
           },
           body: JSON.stringify({ productId: productId })
         })
-        .then(response => response.json())
+        .then(response => {
+             if (response.redirected && response.url.includes('/login')) {
+                showLoginPrompt();
+                throw new Error('Login required');
+            }
+            if (response.status === 401) {
+                showLoginPrompt();
+                throw new Error('Login required');
+            }
+            return response.json();
+        })
         .then(data => {
           if (data.success) {
             Swal.fire({
@@ -520,27 +572,42 @@
             });
           } else {
             if (data.redirect) {
-              window.location.href = data.redirect;
+               if (data.redirect.includes('login')) {
+                    showLoginPrompt();
+                } else {
+                    window.location.href = data.redirect;
+                }
             } else {
               Swal.fire({
                 icon: 'info',
                 title: 'Note',
                 text: data.message,
                 background: '#1a1a1a',
-                color: '#ffffff'
+                color: '#ffffff',
+                didClose: () => {
+                     if (data.message && (data.message.toLowerCase().includes('login') || data.message.toLowerCase().includes('authenticated'))) {
+                         showLoginPrompt();
+                     }
+                  }
               });
             }
           }
         })
         .catch(error => {
           console.error('Error:', error);
-          Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: 'Something went wrong!',
-            background: '#1a1a1a',
-            color: '#ffffff'
-          });
+          if (error.message !== 'Login required') {
+              if (error.name === 'SyntaxError') {
+                 showLoginPrompt();
+             } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Something went wrong!',
+                    background: '#1a1a1a',
+                    color: '#ffffff'
+                });
+             }
+          }
         });
       }
 

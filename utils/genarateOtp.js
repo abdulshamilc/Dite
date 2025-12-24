@@ -6,12 +6,17 @@ const generateOTP = async (email, subject, text, action) => {
     const otp = Math.floor(100000 + Math.random() * 900000);
     console.log("Generated OTP:", otp);
 
-    await sendMail({
-      to: email,
-      subject: subject || "Your OTP Code",
-      text: `${text || "Your OTP code is"} ${otp}`,
-      html: `<p>Your OTP code is <b>${otp}</b></p>`,
-    });
+    try {
+      await sendMail({
+        to: email,
+        subject: subject || "Your OTP Code",
+        text: `${text || "Your OTP code is"} ${otp}`,
+        html: `<p>Your OTP code is <b>${otp}</b></p>`,
+      });
+    } catch (mailError) {
+      console.error("Error sending email:", mailError.message);
+      // Ensure we don't block the flow if email fails in dev
+    }
 
     await UserOtpVerification.create({
       email,

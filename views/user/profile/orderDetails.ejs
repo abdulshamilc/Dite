@@ -890,6 +890,9 @@
                     </div>
                     <% } %>
                     <!-- Actions -->
+                    <% if (order.paymentMethod === 'online' && order.paymentInfo && (order.paymentInfo.paymentStatus === 'Failed' || order.paymentInfo.paymentStatus === 'Pending') && order.orderStatus !== 'Cancelled' && order.orderStatus !== 'Returned' && order.orderStatus !== 'Delivered') { %>
+                        <button id="retryPaymentBtn" class="block w-full bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-semibold transition text-center mb-3" aria-label="Retry Payment">Retry Payment</button>
+                    <% } %>
                     <% if (order.orderStatus === 'Placed' && hasActiveItems) { %>
                     <button id="cancelOrderBtn" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition text-center" aria-label="Cancel order items">Cancel Order</button>
                     <% } %>
@@ -1007,6 +1010,9 @@
             </form>
         </div>
     </div>
+    <script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const orderId = '<%= order._id %>';
         const cancelItems = <%- JSON.stringify(effectiveItems || []) %>;
@@ -1189,6 +1195,124 @@
                 returnForm.submit();
             };
         }
+        // Retry Payment Logic
+        const retryPaymentBtn = document.getElementById('retryPaymentBtn');
+        if (retryPaymentBtn) {
+            retryPaymentBtn.addEventListener('click', async () => {
+                try {
+                    retryPaymentBtn.disabled = true;
+                    retryPaymentBtn.textContent = 'Processing...';
+
+                    const response = await fetch(`/checkout/payment/retry/${orderId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (!data.success) {
+                        Swal.fire({
+                             icon: 'error',
+                             title: 'Retry Failed',
+                             text: data.message || 'Failed to initiate retry',
+                             background: '#1a1a1a', color: '#ffffff'
+                        });
+                        retryPaymentBtn.disabled = false;
+                        retryPaymentBtn.textContent = 'Retry Payment';
+                        return;
+                    }
+
+                    const options = {
+                        "key": data.key,
+                        "amount": data.order.amount,
+                        "currency": "INR",
+                        "name": "Dité",
+                        "description": "Retry Payment",
+                        "image": "/img/logo.png",
+                        "order_id": data.order.id, 
+                        "handler": async function (response){
+                             try {
+                                const verifyRes = await fetch('/checkout/payment/verify-retry', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        razorpay_payment_id: response.razorpay_payment_id,
+                                        razorpay_order_id: response.razorpay_order_id,
+                                        razorpay_signature: response.razorpay_signature,
+                                        orderId: orderId
+                                    })
+                                });
+                                const verifyData = await verifyRes.json();
+                                if (verifyData.success) {
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Payment Successful',
+                                        text: 'Your payment has been requested successfully.',
+                                        showConfirmButton: false,
+                                        timer: 1500,
+                                        background: '#1a1a1a', color: '#ffffff'
+                                    }).then(() => {
+                                        window.location.reload();
+                                    });
+                                } else {
+                                     Swal.fire({
+                                        icon: 'error',
+                                        title: 'Verification Failed',
+                                        text: verifyData.message || 'Payment verification failed',
+                                        background: '#1a1a1a', color: '#ffffff'
+                                    });
+                                }
+                             } catch(err) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error',
+                                    text: 'Verification error: ' + err.message,
+                                    background: '#1a1a1a', color: '#ffffff'
+                                });
+                             }
+                        },
+                        "prefill": {
+                            "name": data.user.name,
+                            "email": data.user.email,
+                            "contact": data.user.phone
+                        },
+                        "theme": {
+                            "color": "#d4c5a9"
+                        },
+                        "modal": {
+                            "ondismiss": function(){
+                                retryPaymentBtn.disabled = false;
+                                retryPaymentBtn.textContent = 'Retry Payment';
+                            }
+                        }
+                    };
+                    const rzp1 = new Razorpay(options);
+                    rzp1.on('payment.failed', function (response){
+                         Swal.fire({
+                            icon: 'error',
+                            title: 'Payment Failed',
+                            text: response.error.description,
+                            background: '#1a1a1a', color: '#ffffff'
+                        });
+                        retryPaymentBtn.disabled = false;
+                        retryPaymentBtn.textContent = 'Retry Payment';
+                    });
+                    rzp1.open();
+
+                } catch (err) {
+                    console.error(err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Error: ' + err.message,
+                        background: '#1a1a1a', color: '#ffffff'
+                    });
+                    retryPaymentBtn.disabled = false;
+                    retryPaymentBtn.textContent = 'Retry Payment';
+                }
+            });
+        }
+
         // Download Invoice
         const downloadInvoiceBtn = document.getElementById('downloadInvoiceBtn');
         if (downloadInvoiceBtn) {

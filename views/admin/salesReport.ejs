@@ -305,6 +305,16 @@
           <div class="chart-container">
             <div class="chart-title">Revenue Overview</div>
             <canvas id="revenueChart"></canvas>
+            <div class="flex justify-center mt-4 gap-6 text-sm">
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-[#e5e7eb] rounded"></div>
+                <span class="text-gray-400">Today's Revenue</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-[#c5a987] rounded"></div>
+                <span class="text-gray-400">Past Revenue</span>
+              </div>
+            </div>
           </div>
         </div>
         <!-- Last 2 Charts in a Single Row (Small Size) -->
@@ -336,7 +346,19 @@
         </div>
         <!-- Sales Report Table - Order Based -->
         <div class="sales-table-container">
-          <h2 class="text-2xl font-bold text-white mb-4">Sales Report - Orders & Transactions</h2>
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-white">Sales Report - Orders & Transactions</h2>
+            <div class="flex gap-4 text-sm">
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-[#c5a987]/20 border-l-2 border-white rounded-sm"></div>
+                <span class="text-gray-400">Today's Orders</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-gray-900 border border-gray-700 rounded-sm"></div>
+                <span class="text-gray-400">Past Orders</span>
+              </div>
+            </div>
+          </div>
           <% if (orderSalesData && orderSalesData.length > 0) { %>
           <div class="overflow-x-auto">
             <table class="min-w-full table-auto border-collapse">
@@ -352,7 +374,7 @@
               </thead>
               <tbody>
                 <% orderSalesData.forEach(function(order) { %>
-                <tr class="border-b border-gray-700 hover:bg-gray-900">
+                <tr class="border-b border-gray-700 hover:bg-gray-900 <%= order.isToday ? 'bg-[#c5a987]/20 border-l-4 border-l-white' : '' %>">
                   <td class="px-4 py-2 font-mono text-sm"><%= order.orderId %></td>
                   <td class="px-4 py-2"><%= order.date %></td>
                   <td class="px-4 py-2">

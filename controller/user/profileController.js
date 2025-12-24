@@ -1318,6 +1318,45 @@ const getDeleteAcount = async (req, res) => {
   }
 };
 
+const getReferrals = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) return res.redirect("/login");
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) return res.redirect("/login");
+
+    // Generate referral code if missing (for existing users)
+    if (!user.referralCode) {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let newCode = "";
+      for (let i = 0; i < 8; i++) {
+        newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      user.referralCode = newCode;
+      await user.save();
+    }
+
+    // Fetch details of referred users
+    const referredUsers = await User.find({ email: { $in: user.redeemedUsers || [] } })
+      .select("name email createdAt")
+      .lean();
+    
+    // Sort by date desc
+    referredUsers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    res.render("user/profile/reffer", {
+      user,
+      referredUsers,
+      referredCount: referredUsers.length,
+      currentPath: req.path,
+    });
+  } catch (error) {
+    console.error("Error fetching referrals:", error);
+    res.status(500).redirect("/profile");
+  }
+};
+
 const userlogOut = (req, res) => {
   try {
     delete req.session.user;
@@ -1353,6 +1392,7 @@ export {
   postReturnSelect,
   getWallet,
   getWalletHistory,
+  getReferrals,
   getSecurity,
   getDeleteAcount,
   userlogOut,

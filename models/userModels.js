@@ -39,6 +39,17 @@ const userSchema = new mongoose.Schema(
       default:false,
       required:true
     },
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true, 
+    },
+    referredBy: {
+      type: String,
+    },
+    redeemedUsers: [{
+      type: String,
+    }],
     isBlocked: {
       type: Boolean,
       default: false,

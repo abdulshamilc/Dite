@@ -28,7 +28,7 @@ const transactionSchema = new mongoose.Schema({
   },
   source: {
     type: String,
-    enum: ['add_funds', 'purchase', 'withdrawal', 'transfer', 'refund'],
+    enum: ['add_funds', 'purchase', 'withdrawal', 'transfer', 'refund', 'referral'],
     default: 'add_funds'
   }
 });
@@ -72,6 +72,28 @@ walletSchema.statics.refundToWallet = async function(userId, amount, description
     type: 'credit',
     source: 'refund',
     referenceId: referenceId || undefined,
+  });
+  if (wallet.transactions.length > 100) {
+    wallet.transactions = wallet.transactions.slice(0, 100);
+  }
+  await wallet.save();
+  return wallet.balance;
+};
+
+// Add a static referral utility
+walletSchema.statics.creditReferral = async function(userId, amount, description) {
+  if (!userId || !amount || amount <= 0) throw new Error("Invalid referral credit arguments");
+  let wallet = await this.findOne({ user: userId });
+  if (!wallet) {
+    wallet = new this({ user: userId });
+  }
+  wallet.balance += amount;
+  wallet.transactions.unshift({
+    description: description || "Referral Reward",
+    amount: amount,
+    date: new Date(),
+    type: 'credit',
+    source: 'referral'
   });
   if (wallet.transactions.length > 100) {
     wallet.transactions = wallet.transactions.slice(0, 100);
