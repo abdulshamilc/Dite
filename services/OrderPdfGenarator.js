@@ -1,161 +1,295 @@
 import PDFDocument from "pdfkit";
 import moment from "moment";
+import path from "path";
 
 const generateInvoice = async (order, user) => {
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ margin: 50 });
+      const doc = new PDFDocument({ margin: 50, size: "A4" });
       const buffers = [];
 
-      // Collect PDF chunks in memory
       doc.on("data", buffers.push.bind(buffers));
       doc.on("end", () => resolve(Buffer.concat(buffers)));
 
-      // ---------- Brand Header ----------
-      doc
-        .fontSize(22)
-        .font("Helvetica-Bold")
-        .text(" Dité", { align: "center" })
-        .moveDown(0.5);
+      // Colors & Styling
+      const primaryColor = "#333333";
+      const secondaryColor = "#555555";
+      const tableHeaderBg = "#f4f4f4";
+      const lineColor = "#e0e0e0";
 
-      doc
-        .fontSize(11)
-        .font("Helvetica-Oblique")
-        .text(
-          "Where timeless elegance meets modern masculinity. Explore our exclusive range of perfumes including Sauvage, Homme Parfum, and Fahrenheit.",
-          { align: "center" }
-        )
-        .moveDown(1);
+      // Helper to draw horizontal line
+      const drawLine = (y) => {
+        doc.moveTo(50, y).lineTo(545, y).strokeColor(lineColor).stroke();
+      };
 
-      // ---------- Company Info ----------
-      doc
-        .font("Helvetica")
-        .fontSize(12)
-        .text("MyShop Pvt Ltd", 50, doc.y)
-        .text("123 Main Street, Kochi, Kerala")
-        .text("Email: support@myshop.com")
-        .moveDown(1.2);  // Slightly more space for consistency
-
-      // ---------- Invoice & Customer Info ----------
-      const address = order.address || {};
-      const shippingAddressLines = [];  // Split address to avoid run-on lines
-      if (address.fullName) shippingAddressLines.push(address.fullName);
-      if (address.hoNo) shippingAddressLines.push(address.hoNo);
-      if (address.street) shippingAddressLines.push(address.street);
-      if (address.city) shippingAddressLines.push(address.city);
-      if (address.state) shippingAddressLines.push(address.state);
-      if (address.pin) shippingAddressLines.push(address.pin);
-      if (address.country) shippingAddressLines.push(address.country);
-      shippingAddressLines.push(`Ph: ${address.phone || "N/A"}`);
-      const shippingAddress = shippingAddressLines.join(", ") || "No address available";
-
-      doc
-        .font("Helvetica-Bold")
-        .text(`Invoice No: INV-${order._id}`)
-        .font("Helvetica")
-        .text(`Order ID: ${order.orderID}`)
-        .text(`Order Date: ${moment(order.createdAt).format("DD-MM-YYYY")}`)
-        .text(`Payment Method: ${order.paymentMethod.toUpperCase()}`)
-        .text(`Order Status: ${order.orderStatus}`)
-        .text(`Cancel Status: ${order.cancelStatus}`)
-        .moveDown(0.5)
-        .font("Helvetica-Bold")
-        .text("Billed To:")
-        .font("Helvetica")
-        .text(shippingAddress)
-        .moveDown(0.8);  // Added breathing room before table
-
-      // ---------- Product Table Header ----------
-      const headerY = doc.y;
-      doc
-        .font("Helvetica-Bold")
-        .fontSize(10)
-        .text("Product", 50, headerY, { width: 190, align: "left" })
-        .text("Qty", 250, headerY, { width: 40, align: "center" })
-        .text("Base Price", 300, headerY, { width: 80, align: "center" })
-        .text("Discounted", 390, headerY, { width: 80, align: "center" })
-        .text("Total", 480, headerY, { width: 70, align: "right" });
-
-      // Draw table borders for better alignment
-      doc
-        .moveTo(50, headerY - 5).lineTo(550, headerY - 5).stroke()  // Top line
-        .moveTo(50, headerY + 15).lineTo(550, headerY + 15).stroke();  // Bottom line under header
-      [50, 250, 300, 390, 480, 550].forEach(x => {
-        doc.moveTo(x, headerY - 5).lineTo(x, headerY + 15).stroke();  // Vertical lines
-      });
-
-      doc.moveDown(1.2);  // Space after header
-
-      // ---------- Product Rows ----------
-      doc.font("Helvetica").fontSize(9);
-      order.items.forEach((item) => {
-        const productName = `${item.name} (${item.mlSize}ml)`;
-        // Reverted to match data schema: discoundedPrice (as in original code)
-        const discountedPrice = item.discoundedPrice || 0;
-        const itemTotal = discountedPrice * item.quantity;
-        const basePrice = item.basePrice || 0;
-        const rowY = doc.y;  // Track starting Y for this row
-
-        // Product name with wrapping and fixed width
-        doc.text(productName, 50, rowY, { width: 190, align: "left" });
-
-        // Calculate height of wrapped product name to align other columns
-        const productHeight = doc.heightOfString(productName, { width: 190 });
-
-        // Align other columns to the baseline (end) of the product text
-        const baselineY = rowY + productHeight;
-
+      // --- 1. Header Section ---
+      
+      // Logo
+      const logoPath = path.join(process.cwd(), "public", "images", "logo", "DiteLogo.png");
+      try {
+        doc.image(logoPath, 50, 45, { width: 60 });
+      } catch (e) {
         doc
-          .text(item.quantity?.toString() || '0', 250, baselineY - productHeight + 2, { width: 40, align: "center" })
-          .text(`Rs. ${basePrice.toLocaleString()}`, 300, baselineY - productHeight + 2, { width: 80, align: "right" })
-          .text(`Rs. ${discountedPrice.toLocaleString()}`, 390, baselineY - productHeight + 2, { width: 80, align: "right" })
-          .text(`Rs. ${itemTotal.toLocaleString()}`, 480, baselineY - productHeight + 2, { width: 70, align: "right" });
+          .fillColor("#000000")
+          .fontSize(24)
+          .font("Helvetica-Bold")
+          .text("Dité", 50, 50);
+      }
 
-        // Draw row separator line
-        doc.moveTo(50, baselineY + 2).lineTo(550, baselineY + 2).stroke();
+      // Company Info (Top Right)
+      doc
+        .fillColor(primaryColor)
+        .fontSize(10)
+        .font("Helvetica-Bold")
+        .text("Dité Pvt Ltd", 400, 50, { align: "right" })
+        .font("Helvetica")
+        .text("123 Main Street", 400, 65, { align: "right" })
+        .text("Kochi, Kerala, 682001", 400, 80, { align: "right" })
+        .text("support@dite.com", 400, 95, { align: "right" });
 
-        doc.y = baselineY + 8;  // Advance Y based on content height + consistent padding
+      const invoiceTopY = 140;
+      drawLine(invoiceTopY - 20);
+
+      // --- 2. Invoice Details & Bill To ---
+      
+      doc
+        .fillColor(primaryColor)
+        .fontSize(20)
+        .font("Helvetica-Bold")
+        .text("INVOICE", 50, invoiceTopY);
+
+      // Left Column: Invoice Info
+      doc.fontSize(10);
+      
+      const labelX = 50;
+      const valueX = 120;
+      let infoY = invoiceTopY + 35;
+      const spacing = 18;
+
+      doc.font("Helvetica-Bold").text("Invoice No:", labelX, infoY);
+      doc.font("Helvetica").text(`INV-${order.orderID || order._id.toString().slice(-6).toUpperCase()}`, valueX, infoY);
+      
+      infoY += spacing;
+      doc.font("Helvetica-Bold").text("Date:", labelX, infoY);
+      doc.font("Helvetica").text(moment(order.createdAt).format("DD MMMM YYYY"), valueX, infoY);
+      
+      infoY += spacing;
+      doc.font("Helvetica-Bold").text("Status:", labelX, infoY);
+      doc.font("Helvetica").text(order.orderStatus, valueX, infoY);
+
+      // Right Column: Bill To
+      const billToX = 350;
+      let billY = invoiceTopY + 35;
+
+      doc.font("Helvetica-Bold").text("Bill To:", billToX, billY);
+      billY += spacing;
+      
+      doc.font("Helvetica");
+      const address = order.address || {};
+      
+      doc.text(address.fullName || "Valued Customer", billToX, billY);
+      billY += 15; // Tighter line height for address
+      
+      if(address.hoNo || address.street) {
+        doc.text(`${address.hoNo || ""} ${address.street || ""}`.trim(), billToX, billY);
+        billY += 15;
+      }
+      
+      if(address.city || address.state) {
+        doc.text(`${address.city || ""}, ${address.state || ""}`, billToX, billY);
+        billY += 15;
+      }
+      
+      if(address.country || address.pin) {
+        doc.text(`${address.country || ""} - ${address.pin || ""}`, billToX, billY);
+        billY += 15;
+      }
+      
+      if(address.phone) {
+        doc.text(`Ph: ${address.phone}`, billToX, billY);
+      }
+
+      // --- 3. Build Product List (Merger) ---
+      let allItems = [];
+
+      // A. Active Items
+      if (order.items && order.items.length > 0) {
+        order.items.forEach(item => {
+           // check if returned
+           const isReturned = order.returndProduct && order.returndProduct.some(
+             rp => rp.productId.toString() === item.productId.toString() && rp.mlSize === item.mlSize && rp.adminApproved === 'Approved'
+           );
+           
+           allItems.push({
+             name: item.name,
+             mlSize: item.mlSize,
+             quantity: item.quantity,
+             price: item.discoundedPrice || item.discountedPrice || item.basePrice || 0,
+             status: isReturned ? 'Returned' : 'Active', 
+           });
+        });
+      }
+
+      // B. Cancelled Items
+      if (order.cancelProducts && order.cancelProducts.length > 0) {
+        order.cancelProducts.forEach(cp => {
+          allItems.push({
+             name: cp.name,
+             mlSize: cp.mlSize,
+             quantity: cp.canceledQuantity,
+             price: cp.discountedPrice || cp.basePrice || 0,
+             status: 'Cancelled'
+          });
+        });
+      }
+
+      // Sort: Active first, then Returned, then Cancelled
+      allItems.sort((a, b) => {
+         const order = { 'Active': 1, 'Returned': 2, 'Cancelled': 3 };
+         return (order[a.status] || 99) - (order[b.status] || 99);
       });
 
-      doc.moveDown(1);  // Space before summary
+      // --- 4. Product Table ---
+      const tableTop = Math.max(billY, infoY) + 30;
+      
+      const col1 = 50;  // #
+      const col2 = 80;  // Item
+      const col3 = 300; // Qty
+      const col4 = 360; // Status
+      const col5 = 430; // Price
+      const col6 = 500; // Total
 
-      // ---------- Summary (Right-aligned with fixed positions) ----------
-      const summaryStartY = doc.y;
-      const summaryX = 350;  // Right section start
-      const summaryWidth = 200;
+      // Header Background
+      doc.rect(50, tableTop, 495, 25).fill(tableHeaderBg);
 
-      const subTotal = order.items.reduce(
-        (acc, ele) => acc + (ele.basePrice || 0) * (ele.quantity || 0),
-        0
-      );
-      const totalDiscount =
-        subTotal -
-        order.items.reduce(
-          (acc, ele) => acc + (ele.discoundedPrice || 0) * (ele.quantity || 0),
-          0
-        );
-      const totalAmount = order.items.reduce(
-        (acc, ele) => acc + (ele.discoundedPrice || 0) * (ele.quantity || 0),
-        0
-      );
+      // Header Text
+      doc.fillColor(primaryColor).fontSize(9).font("Helvetica-Bold");
+      doc.text("#", col1 + 5, tableTop + 8);
+      doc.text("Item Description", col2, tableTop + 8);
+      doc.text("Qty", col3, tableTop + 8, { align: "center", width: 40 });
+      doc.text("Status", col4, tableTop + 8, { align: "center", width: 60 });
+      doc.text("Price", col5, tableTop + 8, { align: "right", width: 60 });
+      doc.text("Total", col6, tableTop + 8, { align: "right", width: 45 });
 
+      let y = tableTop + 35;
+      let calculatedSubTotal = 0;
+
+      doc.font("Helvetica").fontSize(9);
+
+      allItems.forEach((item, i) => {
+         const price = item.price;
+         const qty = item.quantity;
+         const lineTotal = price * qty;
+         
+         // Calculate Subtotal (Active and Returned usually count towards initial invoice value)
+         if (item.status === 'Active' || item.status === 'Returned') {
+            calculatedSubTotal += lineTotal;
+         }
+
+         const name = item.name || "Product";
+         const variant = item.mlSize ? `${item.mlSize}ml` : "";
+         const fullName = `${name} (${variant})`;
+
+         // Calculate Dynamic Height
+         const textWidth = 210;
+         const textHeight = doc.heightOfString(fullName, { width: textWidth });
+         const rowHeight = Math.max(textHeight, 15) + 10;
+
+         // Check Page Break
+         if (y + rowHeight > 700) {
+            doc.addPage();
+            y = 50;
+         }
+
+         // Status Color
+         if (item.status === 'Cancelled') doc.fillColor("red");
+         else if (item.status === 'Returned') doc.fillColor("orange");
+         else doc.fillColor(primaryColor);
+
+         doc.text(((i + 1).toString()), col1 + 5, y);
+         
+         doc.text(fullName, col2, y, { width: textWidth });
+         doc.text(qty.toString(), col3, y, { align: "center", width: 40 });
+         doc.text(item.status, col4, y, { align: "center", width: 60 });
+         
+         doc.fillColor(primaryColor); // Reset for numbers
+         
+         doc.text(`Rs.${price.toLocaleString()}`, col5, y, { align: "right", width: 60 });
+         
+         const displayTotal = item.status === 'Cancelled' ? '0' : `Rs.${lineTotal.toLocaleString()}`;
+         doc.text(displayTotal, col6, y, { align: "right", width: 45 });
+
+         y += rowHeight;
+         
+         // Row Divider
+         doc.moveTo(50, y - 5).lineTo(545, y - 5).strokeColor("#f9f9f9").stroke();
+      });
+      
+      if (allItems.length === 0) {
+         doc.text("No items found.", 50, y);
+         y += 20;
+      }
+
+      y += 20;
+
+      // --- 5. Summary ---
+      if (y > 650) {
+        doc.addPage();
+        y = 50;
+      }
+
+      const summaryLabelX = 350;
+      const summaryValueX = 460;
+      const summaryWidth = 85;
+      const lineHeight = 18;
+
+      doc.fontSize(10).font("Helvetica");
+
+      // Grand Total logic
+      const safeTotal = order.totalAmount || 0;
+      
+      // Attempt to deduce shipping/discount
+      // If we assume calculatedSubTotal is the pure product cost
+      const diff = safeTotal - calculatedSubTotal;
+
+      doc.text("Subtotal:", summaryLabelX, y, { align: "right" });
+      doc.text(`Rs. ${calculatedSubTotal.toLocaleString()}`, summaryValueX, y, { align: "right", width: summaryWidth });
+      y += lineHeight;
+
+      if (Math.abs(diff) > 1) { // Ignore tiny float errors
+         const label = diff > 0 ? "Shipping / Logic:" : "Discount:";
+         doc.text(label, summaryLabelX, y, { align: "right" });
+         doc.text(`Rs. ${diff.toLocaleString()}`, summaryValueX, y, { align: "right", width: summaryWidth });
+         y += lineHeight;
+      }
+
+      drawLine(y); 
+      y += 10;
+
+      doc.fontSize(12).font("Helvetica-Bold");
+      doc.text("Grand Total:", summaryLabelX, y, { align: "right" });
+      doc.text(`Rs. ${safeTotal.toLocaleString()}`, summaryValueX, y, { align: "right", width: summaryWidth });
+
+
+      // --- 6. Footer ---
+      const pageHeight = doc.page.height;
+      if (y > pageHeight - 100) doc.addPage();
+      
+      const bottomY = doc.page.height - 60;
+      
+      doc.moveTo(50, bottomY).lineTo(545, bottomY).strokeColor(lineColor).stroke();
+      
       doc
+        .fontSize(10)
         .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(`Subtotal: Rs. ${subTotal.toLocaleString()}`, summaryX, summaryStartY, { align: "right", width: summaryWidth })
-        .text(`Discount: Rs. ${totalDiscount.toLocaleString()}`, summaryX, summaryStartY + 15, { align: "right", width: summaryWidth })
-        .text(`Grand Total: Rs. ${totalAmount.toLocaleString()}`, summaryX, summaryStartY + 30, { align: "right", width: summaryWidth })
-        .moveDown(1.5);  // Tighter spacing to footer
-
-      // ---------- Footer ----------
+        .fillColor(primaryColor)
+        .text("Thank you for choosing Dité!", 50, bottomY + 15, { align: "center", width: 495 });
+      
       doc
-        .font("Helvetica-Oblique")
-        .fontSize(11)
-        .text("Thank you for shopping with Dior Fragrance Store!", { align: "center" })
-        .moveDown(0.3)
-        .text("Follow us on Instagram @diorbeauty for exclusive offers.", {
-          align: "center",
-        });
+        .fontSize(9)
+        .font("Helvetica")
+        .fillColor(secondaryColor)
+        .text("For support, please contact us at support@dite.com", 50, bottomY + 30, { align: "center", width: 495 });
 
       doc.end();
     } catch (err) {

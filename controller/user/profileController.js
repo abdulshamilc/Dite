@@ -16,7 +16,7 @@ const getProfile = async (req, res) => {
       return res.redirect("/profile/login");
     }
     const user = await User.findOne({ email: email });
-    res.render("user/profile/profile", {
+    res.render("user/profile/profile/profile", {
       user,
       currentPath: req.path,
       success: req.session.success || null,
@@ -203,7 +203,7 @@ const getAddress = async (req, res) => {
     delete req.session.success;
     delete req.session.error;
 
-    res.render("user/profile/address", {
+    res.render("user/profile/address/address", {
       address,
       messages: messages,
       currentPath: req.path,
@@ -425,7 +425,7 @@ const getOrders = async (req, res) => {
       .limit(limit)
       .lean();
 
-    res.render("user/profile/orders", {
+    res.render("user/profile/orders/orders", {
       orders: orders || [],
       totalPages,
       currentPage: page,
@@ -464,7 +464,7 @@ const getOrderDetails = async (req, res) => {
 
   const hasActiveItems = order.items.some((item) => item.quantity > 0);
 
-  res.render("user/profile/orderDetails", {
+  res.render("user/profile/orders/orderDetails", {
     order,
     subTotal,
     discount,
@@ -495,7 +495,7 @@ const getCancelOrder = async (req, res) => {
       cancelSubtotal += itemTotal;
     });
 
-    res.render("user/profile/cancelOrder", {
+    res.render("user/profile/orders/cancelOrder", {
       order,
       cancelledItems,
       cancelSubtotal,
@@ -754,7 +754,7 @@ const getCancelSelect = async (req, res) => {
       cancelledItems = req.session.cancelledItems || [];
     }
 
-    res.render("user/profile/selectCancelProdcurs", {
+    res.render("user/profile/orders/selectCancelProdcurs", {
       order,
       isEdit,
       cancelledItems,
@@ -887,7 +887,7 @@ const getReturn = async (req, res) => {
       returnSubtotal += itemTotal;
     });
 
-    res.render("user/profile/returnOrder", {
+    res.render("user/profile/orders/returnOrder", {
       order,
       returnItems,
       returnSubtotal,
@@ -965,7 +965,7 @@ const getReturnSelect = async (req, res) => {
       returnItems = req.session.returnItems || [];
     }
 
-    res.render("user/profile/selectReturnProduct", {
+    res.render("user/profile/orders/selectReturnProduct", {
       order,
       isEdit,
       returnItems,
@@ -1209,7 +1209,7 @@ const getWallet = async (req, res) => {
     delete req.session.success;
     delete req.session.error;
 
-    res.render('user/profile/wallet', { 
+    res.render('user/profile/wallet/wallet', { 
       wallet: {
         balance: wallet.balance,
         transactions: recentTransactions
@@ -1258,7 +1258,7 @@ const getWalletHistory = async (req, res) => {
       transactions = [];
     }
 
-    res.render('user/profile/walletHistory', {
+    res.render('user/profile/wallet/walletHistory', {
         user,
         wallet: wallet || { balance: 0 },
         transactions,
@@ -1285,7 +1285,7 @@ const getSecurity = async (req, res) => {
 
   const is2FAEnabled = !!user.twoFactorSecret;
 
-  res.render("user/profile/security", {
+  res.render("user/profile/security/security", {
     user,
     logHistory,
     is2FAEnabled,
@@ -1300,7 +1300,7 @@ const getDeleteAcount = async (req, res) => {
     const user = await User.findOne({ email: userEmail });
     if (!user) res.redirect("/login");
 
-    res.render("user/profile/deleteAcount", {
+    res.render("user/profile/security/deleteAcount", {
       user,
       currentPath: req.originalUrl,
     });
@@ -1345,7 +1345,7 @@ const getReferrals = async (req, res) => {
     // Sort by date desc
     referredUsers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    res.render("user/profile/reffer", {
+    res.render("user/profile/referandearn/reffer", {
       user,
       referredUsers,
       referredCount: referredUsers.length,

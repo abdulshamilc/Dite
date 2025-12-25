@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sales Report</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .stat-card {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        transition: transform 0.3s ease;
+      }
+      .stat-card:hover {
+        transform: translateY(-2px);
+      }
+      .stat-value {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #c5a987;
+        margin-bottom: 0.25rem;
+      }
+      .stat-label {
+        color: #9ca3af;
+        font-size: 0.875rem;
+      }
+      .chart-container {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        height: 400px; /* Adjusted to match top products height */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .top-products-container {
+        background: linear-gradient(135deg, #1f2937, #111827);
+        border: 1px solid #374151;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        height: 400px; /* Adjusted height to fit 7 products comfortably */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .small-chart-container {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        height: 250px; /* Consistent height for small charts */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .chart-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #c5a987;
+        margin-bottom: 1rem;
+        text-align: center;
+      }
+      .small-chart-title {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #c5a987;
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      .gender-legend {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 1rem;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #9ca3af;
+      }
+      .legend-bar {
+        width: 20px;
+        height: 4px;
+        border-radius: 2px;
+      }
+      .men-bar {
+        background-color: #3b82f6;
+      }
+      .women-bar {
+        background-color: #ec4899;
+      }
+      .unisex-bar {
+        background-color: #10b981;
+      }
+      .export-btn {
+        background: #c5a987;
+        color: #1f2937;
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+      }
+      .export-btn:hover {
+        background: #b7947a;
+      }
+      .period-btn {
+        background: #374151;
+        color: #9ca3af;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        border: 1px solid #4b5563;
+      }
+      .period-btn:hover {
+        background: #4b5563;
+        color: #ffffff;
+      }
+      .period-btn.active {
+        background: #c5a987;
+        color: #1f2937;
+      }
+      .period-btn.active:hover {
+        background: #b7947a;
+      }
+      .revenue {
+        color: #c5a987;
+        font-weight: bold;
+      }
+      /* Ensure canvas fills container properly */
+      canvas {
+        max-height: 100%;
+        max-width: 100%;
+      }
+      /* Styles for top products list - no scroll, full height */
+      .products-list {
+        width: 100%;
+        height: auto; /* Allow natural height */
+      }
+      .products-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .products-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0; /* Slightly more padding for better spacing */
+        border-bottom: 1px solid #374151;
+        color: #9ca3af;
+      }
+      .products-list li:last-child {
+        border-bottom: none;
+      }
+      .product-name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .product-units {
+        font-weight: bold;
+        color: #c5a987;
+      }
+      .pagination-ellipsis {
+        color: #9ca3af;
+        padding: 0.5rem;
+      }
+      .pagination-page {
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+      }
+      .pagination-page:hover {
+        background-color: #4b5563 !important;
+      }
+      .pagination-page.active {
+        background-color: #c5a987 !important;
+        color: #1f2937 !important;
+      }
+      .pagination-prev, .pagination-next {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        text-decoration: none;
+        transition: background-color 0.3s ease;
+        background-color: #374151;
+        color: #9ca3af;
+        border: 1px solid #4b5563;
+      }
+      .pagination-prev:hover:not(:disabled), .pagination-next:hover:not(:disabled) {
+        background-color: #4b5563;
+        color: #ffffff;
+      }
+      .pagination-prev:disabled, .pagination-next:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+      /* Global SweetAlert2 customizations */
+      .swal2-popup {
+        background: #060412 !important;
+      }
+      .swal2-title {
+        color: #c5a987 !important;
+      }
+      .swal2-content {
+        color: #9ca3af !important;
+      }
+      .swal2-confirm {
+        background-color: #c5a987 !important;
+        color: #1f2937 !important;
+        border-color: #c5a987 !important;
+      }
+      .swal2-confirm:hover {
+        background-color: #b7947a !important;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../../partials/admin/admin-header") %>
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <!-- Heading + Export Button -->
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold">Sales Report</h1>
+          <button class="export-btn" id="exportBtn">
+            <i data-lucide="download" class="w-4 h-4 inline mr-2"></i>
+            Export Report
+          </button>
+        </div>
+        <!-- Period Selection Buttons -->
+        <div class="flex gap-2 mb-6 flex-wrap">
+          <button class="period-btn <%= period === 'today' ? 'active' : '' %>" data-period="today">Today</button>
+          <button class="period-btn <%= period === 'week' ? 'active' : '' %>" data-period="week">Week</button>
+          <button class="period-btn <%= period === 'month' ? 'active' : '' %>" data-period="month">Month</button>
+          <button class="period-btn <%= period === 'year' ? 'active' : '' %>" data-period="year">Year</button>
+          <button class="period-btn <%= period === 'custom' ? 'active' : '' %>" id="customBtn" data-period="custom">Custom</button>
+        </div>
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="stat-card">
+            <div class="stat-value"><%= totalRevenue %></div>
+            <div class="stat-label">Total Revenue</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= avgOrderValue %></div>
+            <div class="stat-label">Avg Order Value</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= totalOrders %></div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value"><%= newCustomers %></div>
+            <div class="stat-label">Total Customers</div>
+          </div>
+        </div>
+        <!-- Revenue Overview Chart - Full Width -->
+        <div class="mb-8">
+          <div class="chart-container">
+            <div class="chart-title">Revenue Overview</div>
+            <canvas id="revenueChart"></canvas>
+            <div class="flex justify-center mt-4 gap-6 text-sm">
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-[#e5e7eb] rounded"></div>
+                <span class="text-gray-400">Today's Revenue</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-[#c5a987] rounded"></div>
+                <span class="text-gray-400">Past Revenue</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Last 2 Charts in a Single Row (Small Size) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+          <!-- Sales by Category -->
+          <div class="small-chart-container">
+            <div class="small-chart-title">Sales by Category</div>
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <!-- Sales by Gender -->
+          <div class="small-chart-container">
+            <div class="small-chart-title">Sales by Gender</div>
+            <canvas id="genderChart"></canvas>
+            <div class="gender-legend">
+              <div class="legend-item">
+                <div class="legend-bar men-bar"></div>
+                <span>MEN: ₹<%= menSales || 0 %></span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-bar women-bar"></div>
+                <span>WOMEN: ₹<%= womenSales || 0 %></span>
+              </div>
+              <div class="legend-item">
+                <div class="legend-bar unisex-bar"></div>
+                <span>UNISEX: ₹<%= unisexSales || 0 %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Sales Report Table - Order Based -->
+        <div class="sales-table-container">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-2xl font-bold text-white">Sales Report - Orders & Transactions</h2>
+            <div class="flex gap-4 text-sm">
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-[#c5a987]/20 border-l-2 border-white rounded-sm"></div>
+                <span class="text-gray-400">Today's Orders</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-gray-900 border border-gray-700 rounded-sm"></div>
+                <span class="text-gray-400">Past Orders</span>
+              </div>
+            </div>
+          </div>
+          <% if (orderSalesData && orderSalesData.length > 0) { %>
+          <div class="overflow-x-auto">
+            <table class="min-w-full table-auto border-collapse">
+              <thead>
+                <tr class="bg-gray-800">
+                  <th class="px-4 py-2 text-left">Order ID</th>
+                  <th class="px-4 py-2 text-left">Date & Time</th>
+                  <th class="px-4 py-2 text-left">Customer</th>
+                  <th class="px-4 py-2 text-left">Total Amount</th>
+                  <th class="px-4 py-2 text-left">Payment Method</th>
+                  <th class="px-4 py-2 text-left">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% orderSalesData.forEach(function(order) { %>
+                <tr class="border-b border-gray-700 hover:bg-gray-900 <%= order.isToday ? 'bg-[#c5a987]/20 border-l-4 border-l-white' : '' %>">
+                  <td class="px-4 py-2 font-mono text-sm"><%= order.orderId %></td>
+                  <td class="px-4 py-2"><%= order.date %></td>
+                  <td class="px-4 py-2">
+                    <div class="font-medium"><%= order.customerName %></div>
+                    <div class="text-xs text-gray-500"><%= order.customerEmail %></div>
+                  </td>
+                  <td class="px-4 py-2 revenue">₹<%= order.totalAmount.toLocaleString() %></td>
+                  <td class="px-4 py-2"><%= order.paymentMethod %></td>
+                  <td class="px-4 py-2">
+                    <span class="px-2 py-1 text-xs rounded <%= order.orderStatus === 'Delivered' ? 'bg-green-600' : order.orderStatus === 'Cancelled' ? 'bg-red-600' : order.orderStatus === 'Returned' ? 'bg-purple-600' : 'bg-yellow-600' %>">
+                      <%= order.orderStatus %>
+                    </span>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <!-- Pagination Controls -->
+          <% if (totalPages > 1) { %>
+          <div class="flex items-center justify-center gap-1 mt-4">
+            <%
+              const queryParams = `limit=${limit}&startDate=${dateRange.startDate || ''}&endDate=${dateRange.endDate || ''}&period=${period}`;
+              const getPageUrl = (pageNum) => `?page=${pageNum}&${queryParams}`;
+            %>
+            <!-- Previous Button -->
+            <% if (currentPage > 1) { %>
+              <a href="<%= getPageUrl(currentPage - 1) %>" class="pagination-prev">‹ Previous</a>
+            <% } else { %>
+              <button class="pagination-prev" disabled>‹ Previous</button>
+            <% } %>
+            <!-- Page Numbers -->
+            <% if (totalPages <= 5) { %>
+              <% for(let i = 1; i <= totalPages; i++) { %>
+                <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+              <% } %>
+            <% } else { %>
+              <% if (currentPage <= 3) { %>
+                <% for(let i = 1; i <= 4; i++) { %>
+                  <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+                <span class="pagination-ellipsis">...</span>
+                <a href="<%= getPageUrl(totalPages) %>" class="pagination-page"> <%= totalPages %> </a>
+              <% } else if (currentPage >= totalPages - 2) { %>
+                <a href="<%= getPageUrl(1) %>" class="pagination-page">1</a>
+                <span class="pagination-ellipsis">...</span>
+                <% for(let i = totalPages - 3; i <= totalPages; i++) { %>
+                  <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+              <% } else { %>
+                <a href="<%= getPageUrl(1) %>" class="pagination-page">1</a>
+                <span class="pagination-ellipsis">...</span>
+                <% for(let i = currentPage - 1; i <= currentPage + 1; i++) { %>
+                  <a href="<%= getPageUrl(i) %>" class="pagination-page <%= i === currentPage ? 'active' : '' %>"><%= i %></a>
+                <% } %>
+                <span class="pagination-ellipsis">...</span>
+                <a href="<%= getPageUrl(totalPages) %>" class="pagination-page"><%= totalPages %></a>
+              <% } %>
+            <% } %>
+            <!-- Next Button -->
+            <% if (currentPage < totalPages) { %>
+              <a href="<%= getPageUrl(currentPage + 1) %>" class="pagination-next">Next ›</a>
+            <% } else { %>
+              <button class="pagination-next" disabled>Next ›</button>
+            <% } %>
+          </div>
+          <% } %>
+          <% } else { %>
+          <p class="text-center text-gray-500 py-8">No order data available</p>
+          <% } %>
+        </div>
+      </main>
+    </div>
+    <!-- Custom Date Modal -->
+    <div id="customModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
+        <h3 class="text-lg font-bold text-white mb-4">Custom Date Range</h3>
+      
+        <div class="mb-4">
+          <label class="block text-gray-400 text-sm mb-1">Start Date</label>
+          <input type="date" id="modalStartDate" value="<%= dateRange.startDate || '' %>" class="w-full bg-gray-700 text-white rounded px-3 py-2 border border-gray-600 focus:border-brand outline-none transition-colors">
+        </div>
+      
+        <div class="mb-4">
+          <label class="block text-gray-400 text-sm mb-1">End Date</label>
+          <input type="date" id="modalEndDate" value="<%= dateRange.endDate || '' %>" class="w-full bg-gray-700 text-white rounded px-3 py-2 border border-gray-600 focus:border-brand outline-none transition-colors">
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button id="resetDates" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Reset</button>
+          <button id="applyCustom" class="px-4 py-2 bg-brand text-gray-800 rounded hover:bg-[#b7947a]">Apply</button>
+        </div>
+      </div>
+    </div>
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden overflow-y-auto h-full w-full z-50">
+      <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-gray-800">
+        <h3 class="text-lg font-bold text-white mb-4">Export Sales Report</h3>
+      
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Select Format:</label>
+          <div class="flex space-x-4">
+            <label class="flex items-center">
+              <input type="radio" name="exportFormat" value="excel" checked class="mr-2">
+              <span class="text-gray-300">Excel</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="exportFormat" value="pdf" class="mr-2">
+              <span class="text-gray-300">PDF</span>
+            </label>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-300 mb-2">Select Period:</label>
+          <div class="space-y-2">
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="weekly" class="mr-2">
+              <span class="text-gray-300">Last Week</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="monthly" class="mr-2">
+              <span class="text-gray-300">Last Month</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="yearly" class="mr-2">
+              <span class="text-gray-300">Last Year</span>
+            </label>
+            <label class="flex items-center">
+              <input type="radio" name="periodType" value="custom" class="mr-2">
+              <span class="text-gray-300">Custom Date Range</span>
+            </label>
+          </div>
+        </div>
+        <div id="customDateRange" class="hidden mb-4 space-y-2">
+          <label class="block text-sm font-medium text-gray-300">Start Date:</label>
+          <input type="date" id="startDate" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white">
+          <label class="block text-sm font-medium text-gray-300">End Date:</label>
+          <input type="date" id="endDate" class="w-full p-2 border border-gray-600 rounded bg-gray-700 text-white">
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button id="cancelExport" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">Cancel</button>
+          <button id="confirmExport" class="px-4 py-2 bg-brand text-gray-800 rounded hover:bg-[#b7947a]">Download Excel</button>
+        </div>
+      </div>
+    </div>
+    <!-- JS for Charts and Actions -->
+    <script>
+     lucide.createIcons();
+      // Use raw injection + JSON.stringify in template to produce valid JS objects
+      const revenueData = <%- JSON.stringify(revenueData || { labels: [], datasets: [] }) %>;
+      const categoryData = <%- JSON.stringify(categoryData || { labels: [], datasets: [] }) %>;
+      const genderData = <%- JSON.stringify(genderData || { labels: ["Men", "Women", "Unisex"], datasets:[{ data:[0,0,0], backgroundColor:["#3b82f6","#ec4899","#10b981"] }] }) %>;
+      // Initialize Revenue Chart
+      if (revenueData && revenueData.labels && revenueData.labels.length > 0) {
+        new Chart(document.getElementById('revenueChart'), {
+          type: 'bar',
+          data: revenueData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: '#9ca3af',
+                  callback: function(value) {
+                    return '₹' + value.toLocaleString();
+                  }
+                },
+                grid: { color: '#374151' }
+              },
+              x: { ticks: { color: '#9ca3af' }, grid: { color: '#374151' } }
+            },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return 'Revenue: ₹' + context.parsed.y.toLocaleString();
+                  }
+                }
+              }
+            }
+          }
+        });
+      } else {
+        // Fallback: No Data chart
+        new Chart(document.getElementById('revenueChart'), {
+          type: 'bar',
+          data: { labels: ["No Data"], datasets: [{ label: "Revenue", data: [0], backgroundColor: "#374151" }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { display: false }, x: { display: false } },
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+      // Category Chart (with fallback)
+      if (categoryData && categoryData.labels && categoryData.labels.length > 0 && categoryData.datasets && categoryData.datasets[0].data.some(d => d > 0)) {
+        new Chart(document.getElementById('categoryChart'), {
+          type: 'doughnut',
+          data: categoryData,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: '#9ca3af', font: { size: 10 } }
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const label = context.label || '';
+                    const value = context.parsed || 0;
+                    return label + ': ₹' + value.toLocaleString();
+                  }
+                }
+              }
+            }
+          }
+        });
+      } else {
+        new Chart(document.getElementById('categoryChart'), {
+          type: 'doughnut',
+          data: { labels: ["No Data"], datasets: [{ data: [1], backgroundColor: ["#374151"] }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+          }
+        });
+      }
+      // Gender Chart (always render - data/labels always valid, even zeros)
+      new Chart(document.getElementById('genderChart'), {
+        type: 'bar',
+        data: genderData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                color: '#9ca3af',
+                callback: function(value) {
+                  return '₹' + value.toLocaleString();
+                }
+              },
+              grid: { color: '#374151' }
+            },
+            y: {
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#374151' }
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return '₹' + context.parsed.x.toLocaleString();
+                }
+              }
+            }
+          }
+        }
+      });
+      // Period Selection Logic
+      const periodButtons = document.querySelectorAll('[data-period]');
+      const currentPeriod = '<%= period || "today" %>'; // Assume default or from backend
+      periodButtons.forEach(btn => {
+        if (btn.dataset.period === currentPeriod) {
+          btn.classList.add('active');
+        }
+        btn.addEventListener('click', () => {
+          // Special handling for Custom: Open modal instead of redirect
+          if (btn.dataset.period === 'custom') {
+            document.getElementById('customModal').classList.remove('hidden');
+            return; // Don't redirect
+          }
+          let startDate, endDate;
+          const today = new Date().toISOString().split('T')[0];
+          if (btn.dataset.period === 'today') {
+            startDate = endDate = today;
+          } else if (btn.dataset.period === 'week') {
+            const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            startDate = oneWeekAgo;
+            endDate = today;
+          } else if (btn.dataset.period === 'month') {
+            const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            startDate = oneMonthAgo;
+            endDate = today;
+          } else if (btn.dataset.period === 'year') {
+            const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            startDate = oneYearAgo;
+            endDate = today;
+          }
+          // Update active class
+          periodButtons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          window.location.href = `/admin/sales?startDate=${startDate}&endDate=${endDate}&period=${btn.dataset.period}`;
+        });
+      });
+      // Custom Modal Logic
+      const customModal = document.getElementById('customModal');
+      const applyCustomBtn = document.getElementById('applyCustom');
+      const resetDatesBtn = document.getElementById('resetDates');
+      applyCustomBtn.addEventListener('click', () => {
+        const startDate = document.getElementById('modalStartDate').value;
+        const endDate = document.getElementById('modalEndDate').value;
+        const today = new Date().toISOString().split('T')[0];
+        if (!startDate || !endDate) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Please provide both start and end dates.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        if (startDate > today || endDate > today) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Dates cannot be in the future. Please select dates up to today.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        if (endDate < startDate) {
+          Swal.fire({
+            title: 'Error',
+            text: 'End date cannot be before the start date.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        window.location.href = `/admin/sales?startDate=${startDate}&endDate=${endDate}&period=custom`;
+        customModal.classList.add('hidden');
+      });
+      resetDatesBtn.addEventListener('click', () => {
+        window.location.href = `/admin/sales`;
+      });
+      // Close custom modal on outside click
+      customModal.addEventListener('click', (e) => {
+        if (e.target === customModal) {
+          customModal.classList.add('hidden');
+        }
+      });
+      // Export Modal Logic
+      const modal = document.getElementById('exportModal');
+      const exportBtn = document.getElementById('exportBtn');
+      const cancelBtn = document.getElementById('cancelExport');
+      const confirmBtn = document.getElementById('confirmExport');
+      const customRange = document.getElementById('customDateRange');
+      const periodRadios = document.querySelectorAll('input[name="periodType"]');
+      exportBtn.addEventListener('click', () => {
+        modal.classList.remove('hidden');
+      });
+      cancelBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        customRange.classList.add('hidden');
+      });
+      periodRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          if (e.target.value === 'custom') {
+            customRange.classList.remove('hidden');
+          } else {
+            customRange.classList.add('hidden');
+          }
+        });
+      });
+      confirmBtn.addEventListener('click', async () => {
+        const selectedType = document.querySelector('input[name="periodType"]:checked')?.value;
+        const selectedFormat = document.querySelector('input[name="exportFormat"]:checked')?.value || 'excel';
+        if (!selectedType) {
+          Swal.fire({
+            title: 'Error',
+            text: 'Please select a period type.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+          return;
+        }
+        let startDate, endDate;
+        const today = new Date().toISOString().split('T')[0];
+        const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const oneMonthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        if (selectedType === 'weekly') {
+          startDate = oneWeekAgo;
+          endDate = today;
+        } else if (selectedType === 'monthly') {
+          startDate = oneMonthAgo;
+          endDate = today;
+        } else if (selectedType === 'yearly') {
+          startDate = oneYearAgo;
+          endDate = today;
+        } else if (selectedType === 'custom') {
+          startDate = document.getElementById('startDate').value;
+          endDate = document.getElementById('endDate').value;
+          if (!startDate || !endDate) {
+            Swal.fire({
+              title: 'Error',
+              text: 'Please select both start and end dates.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
+          if (startDate > today || endDate > today) {
+            Swal.fire({
+              title: 'Error',
+              text: 'Dates cannot be in the future. Please select dates up to today.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
+          if (endDate < startDate) {
+            Swal.fire({
+              title: 'Error',
+              text: 'End date cannot be before the start date.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+            return;
+          }
+        }
+        try {
+          const endpoint = selectedFormat === 'pdf' ? '/admin/sales-report/export-pdf' : '/admin/sales-report/export';
+          const extension = selectedFormat === 'pdf' ? 'pdf' : 'xlsx';
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ startDate, endDate }),
+          });
+          if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sales-report-${startDate}-to-${endDate}.${extension}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            modal.classList.add('hidden');
+          } else {
+            Swal.fire({
+              title: 'Error',
+              text: 'Export failed. Please try again.',
+              icon: 'error',
+              confirmButtonText: 'OK'
+            });
+          }
+        } catch (error) {
+          console.error('Export error:', error);
+          Swal.fire({
+            title: 'Error',
+            text: 'Export failed. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

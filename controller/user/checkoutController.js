@@ -349,7 +349,10 @@ const placeOrder = async (req, res) => {
 
     // Pass 1: Validate Stock, Calculate Offer Prices, and Build Items Tuple
     for (const item of items) {
-       const productIdStr = (item.productId || item._id).toString();
+       // Robustly extract product ID: handle both string/ObjectId and populated object (e.g. from cart)
+       const productIdVal = item.productId && item.productId._id ? item.productId._id : (item.productId || item._id);
+       const productIdStr = productIdVal.toString();
+       
        const product = productMap.get(productIdStr);
        
        if (!product || product.isDeleted || !product.isListed) {

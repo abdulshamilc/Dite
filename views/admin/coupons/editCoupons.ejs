@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Coupon - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .card {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #c5a987;
+        font-weight: bold;
+      }
+      .required-asterisk {
+        color: #ef4444;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 0.75rem;
+        background: #2d3748;
+        border: 1px solid #4b5563;
+        border-radius: 0.5rem;
+        color: white;
+      }
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #c5a987;
+      }
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .btn-primary {
+        background-color: #c5a987;
+        color: #1f2937;
+      }
+      .btn-secondary {
+        background-color: #4b5563;
+        color: white;
+      }
+      .radio-group {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+      .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header -->
+    <%- include("../../partials/admin/admin-header") %>
+    
+    <div class="flex">
+      <!-- Sidebar -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+      
+      <!-- Content -->
+      <main class="flex-1 p-6">
+        <div class="max-w-4xl mx-auto">
+          <!-- Back Link -->
+          <a href="/admin/coupons" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Back to Coupons
+          </a>
+
+          <h1 class="text-3xl font-bold mb-8">Edit Coupon</h1>
+
+          <div class="card p-8">
+            <form id="editCouponForm" action="/admin/coupons/edit/<%= coupon._id %>" method="POST">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Name -->
+                <div class="form-group">
+                  <label for="couponName">Name <span class="required-asterisk">*</span></label>
+                  <input type="text" id="couponName" name="name" maxlength="255" value="<%= coupon.name %>">
+                  <div class="error-message" id="nameError">Name is required.</div>
+                </div>
+
+                <!-- Code (Read Only) -->
+                <div class="form-group">
+                  <label>Coupon Code (Cannot be changed)</label>
+                  <input type="text" value="<%= coupon.code %>" disabled class="bg-gray-700 cursor-not-allowed">
+                </div>
+              </div>
+
+              <!-- Description -->
+              <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" name="description" maxlength="1000" rows="3"><%= coupon.description || '' %></textarea>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Discount Type -->
+                <div class="form-group">
+                  <label for="discountType">Discount Type <span class="required-asterisk">*</span></label>
+                  <select id="discountType" name="discountType">
+                    <option value="percentage" <%= coupon.discountType === 'percentage' ? 'selected' : '' %>>Percentage (%)</option>
+                    <option value="flat" <%= coupon.discountType === 'flat' ? 'selected' : '' %>>Flat (Rs)</option>
+                  </select>
+                </div>
+
+                <!-- Discount Value -->
+                <div class="form-group">
+                  <label for="discountValue">Discount Value <span class="required-asterisk">*</span></label>
+                  <input type="number" id="discountValue" name="discountValue" min="0" step="0.01" value="<%= coupon.discountValue %>">
+                  <div class="error-message" id="discountValueError">Invalid discount value.</div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Min Cart Value -->
+                <div class="form-group">
+                  <label for="minCartValue">Min Cart Value <span class="required-asterisk">*</span></label>
+                  <input type="number" id="minCartValue" name="minCartValue" min="0" value="<%= coupon.minCartValue %>">
+                </div>
+
+                <!-- Max Discount Amount (Visible if percentage, else default 0 or hidden) -->
+                <div class="form-group" id="maxDiscountDiv">
+                  <label for="maxDiscountAmount">Max Discount (Amount) <span class="required-asterisk">*</span></label>
+                  <input type="number" id="maxDiscountAmount" name="maxDiscountAmount" min="0" value="<%= coupon.maxDiscountAmount || 0 %>">
+                </div>
+              </div>
+
+              <!-- Usage Limit -->
+              <div class="form-group">
+                  <label for="usageLimit">Usage Limit <span class="required-asterisk">*</span></label>
+                  <input type="number" id="usageLimit" name="usageLimit" min="1" value="<%= coupon.usageLimit %>">
+                  <div class="error-message" id="usageLimitError">Usage limit must be at least 1.</div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <!-- Start Date -->
+                <div class="form-group">
+                  <label for="startDate">Start Date <span class="required-asterisk">*</span></label>
+                  <input type="date" id="startDate" name="startDate" value="<%= new Date(coupon.startDate).toISOString().split('T')[0] %>">
+                  <div class="error-message" id="startDateError">Start date is required.</div>
+                </div>
+
+                <!-- End Date -->
+                <div class="form-group">
+                  <label for="endDate">End Date <span class="required-asterisk">*</span></label>
+                  <input type="date" id="endDate" name="endDate" value="<%= new Date(coupon.endDate).toISOString().split('T')[0] %>">
+                  <div class="error-message" id="endDateError">End date is required.</div>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div class="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-700">
+                <a href="/admin/coupons" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary hover:bg-[#b09476]">Update Coupon</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      lucide.createIcons();
+      
+      // Dynamic Max Discount Visibility
+      const typeSelect = document.getElementById('discountType');
+      const maxDiscountDiv = document.getElementById('maxDiscountDiv');
+      
+      function toggleMaxDiscount() {
+        if(typeSelect.value === 'flat') {
+          // For flat, max discount is irrelevant (or same as value), can hide or disable
+          document.getElementById('maxDiscountAmount').value = 0;
+          maxDiscountDiv.style.opacity = '0.5';
+          document.getElementById('maxDiscountAmount').readOnly = true;
+        } else {
+          maxDiscountDiv.style.opacity = '1';
+          document.getElementById('maxDiscountAmount').readOnly = false;
+        }
+      }
+      typeSelect.addEventListener('change', toggleMaxDiscount);
+      // Run once on load
+      toggleMaxDiscount();
+
+      // Form Validation
+      document.getElementById('editCouponForm').addEventListener('submit', function(e) {
+        let hasError = false;
+
+        if(!document.getElementById('couponName').value.trim()) {
+           document.getElementById('nameError').style.display = 'block';
+           hasError = true;
+        }
+        
+        const discountVal = parseFloat(document.getElementById('discountValue').value);
+        if(isNaN(discountVal) || discountVal <= 0) {
+           document.getElementById('discountValueError').style.display = 'block';
+           hasError = true;
+        }
+
+        const usage = parseInt(document.getElementById('usageLimit').value);
+        if(isNaN(usage) || usage < 1) {
+           document.getElementById('usageLimitError').style.display = 'block';
+           hasError = true;
+        }
+
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        if(!start) {
+            document.getElementById('startDateError').style.display = 'block';
+            hasError = true;
+        }
+        if(!end) {
+            document.getElementById('endDateError').style.display = 'block';
+            hasError = true;
+        }
+        if(start && end && new Date(end) <= new Date(start)) {
+            alert('End date must be after start date');
+            hasError = true;
+        }
+
+        if(hasError) e.preventDefault();
+      });
+    </script>
+  </body>
+</html>

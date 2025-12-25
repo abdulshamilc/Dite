@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Edit Offer - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .card {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #c5a987;
+        font-weight: bold;
+      }
+      .required-asterisk {
+        color: #ef4444;
+      }
+      input, select, textarea {
+        width: 100%;
+        padding: 0.75rem;
+        background: #2d3748;
+        border: 1px solid #4b5563;
+        border-radius: 0.5rem;
+        color: white;
+      }
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: #c5a987;
+      }
+      .btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .btn-primary {
+        background-color: #c5a987;
+        color: #1f2937;
+      }
+      .btn-secondary {
+        background-color: #4b5563;
+        color: white;
+      }
+      .radio-group {
+        display: flex;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+      }
+      .radio-option {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+      }
+      .target-select {
+        display: none;
+      }
+      .target-select.active {
+        display: block;
+      }
+      .product-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.5rem;
+        border: 1px solid #4b5563;
+        border-radius: 0.5rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      .product-option:hover {
+        background: #2d3748;
+      }
+      .product-option.selected {
+        background: #c5a987;
+        color: #1f2937;
+      }
+      .product-option.selected .text-gray-400 {
+        color: #374151;
+      }
+      .product-option img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 0.25rem;
+      }
+      .error-message {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        display: none;
+      }
+      .error {
+        border-color: #ef4444;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header -->
+    <%- include("../../partials/admin/admin-header") %>
+    
+    <div class="flex">
+      <!-- Sidebar -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+      
+      <!-- Content -->
+      <main class="flex-1 p-6">
+        <div class="max-w-4xl mx-auto">
+          <!-- Back Link -->
+          <a href="/admin/offers" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            Back to Offers
+          </a>
+
+          <h1 class="text-3xl font-bold mb-8">Edit Offer</h1>
+
+          <div class="card p-8">
+            <form id="editOfferForm" action="/admin/offers/edit/<%= offer._id %>" method="POST">
+              <!-- Name -->
+              <div class="form-group">
+                <label for="offerName">Name <span class="required-asterisk">*</span></label>
+                <input type="text" id="offerName" name="name" maxlength="255" value="<%= offer.name %>">
+                <div class="error-message" id="nameError">Name is required.</div>
+              </div>
+
+              <!-- Description -->
+              <div class="form-group">
+                <label for="offerDescription">Description</label>
+                <textarea id="offerDescription" name="description" maxlength="1000" rows="3"><%= offer.description || '' %></textarea>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Discount Type -->
+                <div class="form-group">
+                  <label for="discountType">Discount Type <span class="required-asterisk">*</span></label>
+                  <select id="discountType" name="discountType">
+                    <option value="percentage" <%= offer.discountType === 'percentage' ? 'selected' : '' %>>Percentage (%)</option>
+                    <option value="flat" <%= offer.discountType === 'flat' ? 'selected' : '' %>>Flat (Rs)</option>
+                  </select>
+                </div>
+
+                <!-- Discount Value -->
+                <div class="form-group">
+                  <label for="discountValue">Discount Value <span class="required-asterisk">*</span></label>
+                  <input type="number" id="discountValue" name="discountValue" min="0" step="0.01" value="<%= offer.discountValue %>">
+                  <div class="error-message" id="discountValueError">Invalid discount value.</div>
+                </div>
+              </div>
+
+              <!-- Applies To -->
+              <div class="form-group">
+                <label>Applies To <span class="required-asterisk">*</span></label>
+                <div class="radio-group">
+                  <label class="radio-option">
+                    <input type="radio" name="appliesTo" value="product" <%= offer.appliesTo === 'product' ? 'checked' : '' %>>
+                    Product
+                  </label>
+                  <label class="radio-option">
+                    <input type="radio" name="appliesTo" value="category" <%= offer.appliesTo === 'category' ? 'checked' : '' %>>
+                    Categories
+                  </label>
+                </div>
+              </div>
+
+              <!-- Product Select -->
+              <div id="productSelect" class="target-select <%= offer.appliesTo === 'product' ? 'active' : '' %>">
+                <label>Select Products (Multiple) <span class="required-asterisk">*</span></label>
+                <div class="max-h-60 overflow-y-auto mb-2 border border-gray-600 rounded p-2">
+                  <% if (products && products.length > 0) { %>
+                    <% products.forEach(product => { %>
+                      <% 
+                        const isSelected = offer.targetId.some(target => target._id.toString() === product._id.toString());
+                      %>
+                      <div class="product-option <%= isSelected ? 'selected' : '' %>" onclick="toggleProduct(this)">
+                        <input type="checkbox" name="targetId" value="<%= product._id %>" class="hidden" <%= isSelected ? 'checked' : '' %>>
+                        <img src="<%= product.images && product.images.length > 0 ? product.images[0] : '/placeholder.jpg' %>" alt="<%= product.name %>">
+                        <div>
+                          <div class="font-bold"><%= product.name %></div>
+                          <div class="text-sm text-gray-400">
+                            <%= product.price ? 'Rs ' + product.price : 'N/A' %>
+                          </div>
+                        </div>
+                      </div>
+                    <% }) %>
+                  <% } else { %>
+                    <p class="text-gray-400">No products available.</p>
+                  <% } %>
+                </div>
+                <div class="error-message" id="productError">Please select at least one product.</div>
+              </div>
+
+              <!-- Category Select -->
+              <div id="categorySelect" class="target-select <%= offer.appliesTo === 'category' ? 'active' : '' %>">
+                <label>Select Categories <span class="required-asterisk">*</span></label>
+                <select name="targetId" class="category-select">
+                  <option value="">Choose a category...</option>
+                  <% if (categories && categories.length > 0) { %>
+                    <% categories.forEach(category => { %>
+                      <% 
+                        // Assuming targetId for category is a single ID, but schema allows array. Handling single for now based on logic.
+                        const isSelected = offer.targetId.some(target => target._id.toString() === category._id.toString());
+                      %>
+                      <option value="<%= category._id %>" <%= isSelected ? 'selected' : '' %>>
+                        <%= category.name %>
+                      </option>
+                    <% }) %>
+                  <% } %>
+                </select>
+                <div class="error-message" id="categoryError">Please select a category.</div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <!-- Start Date -->
+                <div class="form-group">
+                  <label for="startDate">Start Date <span class="required-asterisk">*</span></label>
+                  <input type="date" id="startDate" name="startDate" value="<%= new Date(offer.startDate).toISOString().split('T')[0] %>">
+                  <div class="error-message" id="startDateError">Start date is required.</div>
+                </div>
+
+                <!-- End Date -->
+                <div class="form-group">
+                  <label for="endDate">End Date <span class="required-asterisk">*</span></label>
+                  <input type="date" id="endDate" name="endDate" value="<%= new Date(offer.endDate).toISOString().split('T')[0] %>">
+                  <div class="error-message" id="endDateError">End date is required.</div>
+                </div>
+              </div>
+
+              <!-- Buttons -->
+              <div class="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-700">
+                <a href="/admin/offers" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary hover:bg-[#b09476]">Update Offer</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Error/Success Popups (Same as parent) -->
+    
+    <script>
+      lucide.createIcons();
+
+      // Product Toggle Script
+      function toggleProduct(element) {
+        const checkbox = element.querySelector('input[type="checkbox"]');
+        checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+          element.classList.add('selected');
+        } else {
+          element.classList.remove('selected');
+        }
+      }
+
+      // Toggle Target Sections
+      document.querySelectorAll('input[name="appliesTo"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+          const val = this.value;
+          document.getElementById('productSelect').classList.toggle('active', val === 'product');
+          document.getElementById('categorySelect').classList.toggle('active', val === 'category');
+        });
+      });
+
+      // Validation logic similar to add offer
+      document.getElementById('editOfferForm').addEventListener('submit', function(e) {
+        let hasError = false;
+        
+        // Basic fields
+        if(!document.getElementById('offerName').value.trim()) {
+           document.getElementById('nameError').style.display = 'block';
+           hasError = true;
+        }
+
+        const discountVal = parseFloat(document.getElementById('discountValue').value);
+        if(isNaN(discountVal) || discountVal <= 0) {
+           document.getElementById('discountValueError').style.display = 'block';
+           hasError = true;
+        }
+
+        // Target validation
+        const appliesTo = document.querySelector('input[name="appliesTo"]:checked').value;
+        if(appliesTo === 'product') {
+           if(document.querySelectorAll('#productSelect input:checked').length === 0) {
+              document.getElementById('productError').style.display = 'block';
+              hasError = true;
+           }
+        } else {
+           if(!document.querySelector('#categorySelect select').value) {
+              document.getElementById('categoryError').style.display = 'block';
+              hasError = true;
+           }
+        }
+
+        // Date validation
+        const start = document.getElementById('startDate').value;
+        const end = document.getElementById('endDate').value;
+        if(!start) {
+           document.getElementById('startDateError').style.display = 'block';
+           hasError = true;
+        }
+        if(!end) {
+           document.getElementById('endDateError').style.display = 'block';
+           hasError = true;
+        }
+        if(start && end && new Date(end) <= new Date(start)) {
+           alert('End date must be after start date');
+           hasError = true;
+        }
+
+        if(hasError) e.preventDefault();
+      });
+    </script>
+  </body>
+</html>

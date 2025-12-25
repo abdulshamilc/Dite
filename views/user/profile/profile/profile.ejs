@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Profile - Dité</title>
+  <%- include("../../../partials/user/headerHead") %>
+  <%- include("../../../partials/user/footerHead") %>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+  <style>
+  :root {
+    --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+    --text:#f5f5f5;        
+    --surface:#ffffff;
+    --accent:#d3a35b;
+    --radius:14px;
+  }
+
+  *,*::before,*::after { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--accent); text-decoration: none; transition: color .25s; }
+  a:hover { color: #b5823d; }
+
+  .container {
+    max-width: 1500px;
+    margin-inline: auto;
+    padding: 10px 0px;
+  }
+  .page-title {
+    text-align: center;
+    font-size: 2rem;
+    margin: 20px 0;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: var(--accent);
+  }
+
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  @media (min-width: 960px) {
+    .layout { flex-direction: row; }
+  }
+
+  .card {
+    flex: 1;
+    background: var(--surface);
+    color: #1a1a1a;
+    border-radius: var(--radius);
+    padding: 28px;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+    text-align: center;
+  }
+
+  .edit-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s, transform .25s;
+  }
+  .edit-btn:hover {
+    background: #b5823d;
+    transform: scale(1.05);
+  }
+
+  .avatar-container {
+    position: relative;
+    display: inline-block;
+    margin: 8px auto 28px;
+  }
+  .avatar-lg {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 5px solid var(--accent);
+    box-shadow: 0 6px 18px rgba(0,0,0,.3);
+    display: block;
+  }
+
+  .image-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .25s, transform .25s;
+    font-size: 18px;
+    opacity: 0;
+    z-index: 1;
+  }
+  .avatar-container:hover .image-overlay,
+  .edit-mode .image-overlay {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  .image-overlay:hover {
+    background: #b5823d;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+
+  .form {
+    max-width: 720px;
+    margin-inline: auto;
+    display: grid;
+    gap: 24px;
+  }
+  .row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .row label {
+    min-width: 120px;
+    font-weight: 700;
+    color: #3a2e22;
+  }
+  .field {
+    flex: 1;
+    min-width: 280px;
+    background: #fafafa;
+    color: #111;
+    border: 1px solid #caa880;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 15px;
+    transition: border-color .25s, box-shadow .25s;
+  }
+  .field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(211,163,91,.25);
+    outline: none;
+  }
+  .field:disabled {
+    background: #f0f0f0;
+    color: #666;
+    cursor: not-allowed;
+  }
+
+  .gender { display: flex; align-items: center; gap: 20px; }
+  .divider { height: 1px; background: #caa880; opacity: .5; margin: 14px 0; }
+
+  .otp-section, .current-otp-section {
+    display: none;
+    margin-top: 12px;
+  }
+  .otp-section.active, .current-otp-section.active {
+    display: block;
+  }
+  .otp-row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .send-otp-btn, .verify-otp-btn, .send-current-otp-btn, .verify-current-otp-btn, .verify-to-edit-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s;
+    min-width: 120px;
+    flex-shrink: 0;
+  }
+  .send-otp-btn:hover, .verify-otp-btn:hover, .send-current-otp-btn:hover, .verify-current-otp-btn:hover, .verify-to-edit-btn:hover {
+    background: #b5823d;
+  }
+  .send-otp-btn:disabled, .send-current-otp-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .otp-field {
+    flex: 1;
+    min-width: 280px;
+  }
+
+  .view-mode .field-text {
+    flex: 1;
+    min-width: 280px;
+    padding: 14px 16px;
+    color: #111;
+    font-size: 15px;
+  }
+  .view-mode .row {
+    margin-bottom: 24px;
+  }
+  .view-mode .form { display: none; }
+  .edit-mode .view-mode { display: none; }
+  .edit-mode .form { display: grid; }
+
+  .form-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+  }
+  .form-buttons .edit-btn {
+    position: static; /* Override absolute positioning for form buttons */
+  }
+
+  /* Image Upload Styles */
+  .file-input {
+    display: none;
+  }
+
+  /* Modal Styles */
+  .modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+  }
+  .modal-content {
+    background-color: var(--surface);
+    color: #1a1a1a;
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: var(--radius);
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    box-shadow: 0 12px 30px rgba(0,0,0,.3);
+  }
+  .close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    position: absolute;
+    right: 15px;
+    top: 10px;
+  }
+  .close:hover {
+    color: var(--accent);
+  }
+  .modal-title {
+    text-align: center;
+    color: var(--accent);
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .modal-message {
+    text-align: center;
+    margin-bottom: 20px;
+    color: #666;
+    font-size: 14px;
+  }
+  .otp-input-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .otp-input {
+    width: 50px;
+    height: 50px;
+    text-align: center;
+    font-size: 18px;
+    margin: 0 5px;
+    border: 2px solid #caa880;
+    border-radius: 8px;
+    background: #fafafa;
+  }
+  .otp-input:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+  }
+  .modal-btn {
+    flex: 1;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .25s;
+    min-width: 100px;
+  }
+  .modal-btn:hover:not(:disabled) {
+    background: #b5823d;
+  }
+  .modal-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+  .resend-timer {
+    text-align: center;
+    margin-top: 10px;
+    color: #666;
+    font-size: 14px;
+  }
+
+  /* Message Styles */
+  .message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1001;
+    max-width: 350px;
+  }
+  .message {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    font-weight: 500;
+    animation: slideIn 0.3s ease-out;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  .message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+  }
+  .message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+  }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Crop Modal Custom Styles */
+  #crop-modal {
+    display: none; /* Hidden by default */
+    position: fixed;
+    z-index: 9999; /* Higher than everything else */
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Dark overlay */
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+  }
+  
+  .crop-container {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 500px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    border: 1px solid #333;
+    animation: modalPop 0.3s ease-out;
+  }
+
+  @keyframes modalPop {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .crop-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+  }
+
+  .crop-title {
+    color: var(--text);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .crop-close {
+    color: #9ca3af;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 5px;
+  }
+  .crop-close:hover { color: white; }
+
+  .crop-image-wrapper {
+    height: 400px;
+    background: #000;
+    overflow: hidden;
+    position: relative;
+    border-radius: 8px;
+    margin-bottom: 20px;
+  }
+
+  #crop-image {
+    max-width: 100%;
+    display: block;
+    /* max-height handled by cropper */
+  }
+
+  .crop-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #333;
+  }
+
+  .crop-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-cancel {
+    background: #374151;
+    color: #e5e7eb;
+  }
+  .btn-cancel:hover { background: #4b5563; }
+
+  .btn-apply {
+    background: var(--accent);
+    color: white;
+  }
+  .btn-apply:hover { background: #b5823d; }
+</style>
+</head>
+<body>
+  <%- include("../../../partials/user/header") %>
+  <div class="container">
+    <h1 class="page-title">PROFILE</h1>
+
+    <section class="layout" aria-label="Profile layout">
+      <%- include("../../../partials/user/profileSideBar") %>
+
+      <main class="card view-mode" aria-labelledby="profile-details-title">
+        <button class="edit-btn" onclick="toggleEditMode()">Edit</button>
+        
+        
+
+        <div class="avatar-container">
+          <img src="<%= user.image || '/images/default-avatar.jpg' %>" alt="Profile Picture" class="avatar-lg" id="avatarLg">
+          <button type="button" class="image-overlay" onclick="document.getElementById('imageUploadForm').click()" title="Change Photo">📷</button>
+        </div>
+
+        <div class="view-mode">
+          <div class="row">
+            <label>Name:</label>
+            <span class="field-text"><%= user.name || '' %></span>
+          </div>
+
+          <div class="row">
+            <label>Gender:</label>
+            <span class="field-text"><%= user.gender || '' %></span>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <label for="email">Email:</label>
+            <span class="field-text"><%= user.email %></span>
+          </div>
+
+          <div class="row">
+            <label for="phone">Phone:</label>
+            <span class="field-text"><%= user.phone || '' %></span>
+          </div>
+        </div>
+
+        <form class="form" action="/profile" method="post" onsubmit="return handleSubmit(event)" enctype="multipart/form-data">
+          <input type="file" id="imageUploadForm" name="image" class="file-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+
+          <div class="row">
+            <label>Name:</label>
+            <input class="field" name="name" type="text" value="<%= user.name || '' %>" />
+          </div>
+
+          <fieldset class="row">
+            <legend style="min-width:120px;font-weight:700;color:#3a2e22">Gender:</legend>
+            <div class="gender">
+              <label>
+                <input type="radio" name="gender" value="Male" <%= user.gender === "Male" ? "checked" : "" %> /> Male
+              </label>
+              <label>
+                <input type="radio" name="gender" value="Female" <%= user.gender === "Female" ? "checked" : "" %> /> Female
+              </label>
+              <label>
+                <input type="radio" name="gender" value="Others" <%= user.gender === "Others" ? "checked" : "" %> /> Others
+              </label>
+              <label>
+                <input type="radio" name="gender" value="Not" <%= user.gender === "Not" ? "checked" : "" %> /> Prefer Not To Say
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <label for="email">Email:</label>
+            <input class="field" id="email" name="email" type="email" value="<%= user.email %>" disabled />
+            <button type="button" class="verify-to-edit-btn" id="verifyToEditBtn" onclick="sendCurrentOTP()">Verify to Edit</button>
+          </div>
+
+          <div class="row">
+            <label for="phone">Phone:</label>
+            <input class="field" id="phone" name="phone" type="text" value="<%= user.phone || '' %>" />
+          </div>
+
+          <div class="row form-buttons">
+            <label></label> <!-- Empty label to align buttons with fields -->
+            <div class="form-buttons">
+              <button type="button" class="edit-btn" onclick="toggleEditMode()">Cancel</button>
+              <button type="submit" class="edit-btn" id="submitBtn">Save</button>
+            </div>
+          </div>
+        </form>
+      </main>
+    </section>
+  </div>
+
+  <!-- OTP Modal -->
+  <div id="otpModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeOTPModal()">&times;</span>
+      <h2 class="modal-title" id="modalTitle">Verify Email</h2>
+      <p class="modal-message" id="modalMessage">OTP sent to <span id="targetEmail"></span></p>
+      <div class="otp-input-container">
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit1" oninput="moveToNext(this, 'otpDigit2')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit2" oninput="moveToNext(this, 'otpDigit3')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit3" oninput="moveToNext(this, 'otpDigit4')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit4" oninput="moveToNext(this, 'otpDigit5')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit5" oninput="moveToNext(this, 'otpDigit6')" />
+        <input type="text" class="otp-input" maxlength="1" id="otpDigit6" oninput="verifyOTPFromModal()" />
+      </div>
+      <div class="modal-buttons">
+        <button class="modal-btn" id="resendBtn" onclick="resendOTP()" disabled>Resend OTP</button>
+        <button class="modal-btn" id="verifyBtn" onclick="verifyOTPFromModal()">Verify</button>
+      </div>
+      <div class="resend-timer" id="resendTimer"></div>
+    </div>
+  </div>
+
+  <!-- Crop Modal -->
+  <div id="crop-modal">
+    <div class="crop-container">
+      <div class="crop-header">
+        <h3 class="crop-title">Crop Image</h3>
+        <button id="close-crop-modal" class="crop-close" onclick="closeCropModal(true)">&times;</button>
+      </div>
+      <div class="crop-image-wrapper">
+        <img id="crop-image" />
+      </div>
+      <div class="crop-footer">
+        <button id="cancel-crop" class="crop-btn btn-cancel" onclick="closeCropModal(true)">Cancel</button>
+        <button id="apply-crop" class="crop-btn btn-apply" onclick="applyCrop()">Apply Crop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Message Container -->
+  <div class="message-container" id="messageContainer"></div>
+
+  <script>
+    let originalEmail = '<%= user.email %>';
+    let otpSent = false;
+    let currentVerified = false;
+    let newVerified = false;
+    let currentTimer = null;
+    let isCurrentOTP = true; // Flag to distinguish between current and new OTP
+    let currentEmailForOTP = ''; // Track email for resend
+    const RESEND_TIME = 60; // 60 seconds
+
+    // Display server-side success/error messages on page load
+    <% if (typeof success !== 'undefined' && success) { %>
+      showMessage('<%= success %>', 'success');
+    <% } %>
+    <% if (typeof error !== 'undefined' && error) { %>
+      showMessage('<%= error %>', 'error');
+    <% } %>
+
+    function showMessage(message, type = 'success') {
+      const container = document.getElementById('messageContainer');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.textContent = message;
+      container.appendChild(msgDiv);
+
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        msgDiv.remove();
+      }, 5000);
+    }
+
+    function toggleEditMode() {
+      const card = document.querySelector('.card');
+      const editButton = document.querySelector('.edit-btn[onclick="toggleEditMode()"]');
+      if (card.classList.contains('view-mode')) {
+        card.classList.remove('view-mode');
+        card.classList.add('edit-mode');
+        editButton.textContent = 'Edit';
+        // Reset states on entering edit mode
+        resetAllStates();
+      } else {
+        card.classList.remove('edit-mode');
+        card.classList.add('view-mode');
+        editButton.textContent = 'Edit';
+      }
+    }
+
+    function resetAllStates() {
+      resetOTPModal();
+      document.getElementById('email').disabled = true;
+      document.getElementById('verifyToEditBtn').style.display = 'inline-block';
+      currentVerified = false;
+      newVerified = false;
+      document.getElementById('submitBtn').disabled = false;
+      // Reset image state
+      document.getElementById('avatarLg').src = '<%= user.image || '/images/default-avatar.jpg' %>';
+      document.getElementById('imageUploadForm').value = '';
+    }
+
+    function resetOTPModal() {
+      closeOTPModal();
+      if (currentTimer) {
+        clearInterval(currentTimer);
+        currentTimer = null;
+      }
+      // Clear OTP inputs
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById(`otpDigit${i}`).value = '';
+      }
+      document.getElementById('resendBtn').disabled = true;
+      document.getElementById('resendTimer').textContent = '';
+    }
+
+    function openOTPModal(email, isCurrent) {
+      currentEmailForOTP = email;
+      isCurrentOTP = isCurrent;
+      document.getElementById('targetEmail').textContent = email;
+      document.getElementById('modalTitle').textContent = isCurrent ? 'Verify Current Email' : 'Verify New Email';
+      document.getElementById('otpModal').style.display = 'block';
+      document.getElementById('otpDigit1').focus();
+      startResendTimer();
+    }
+
+    function closeOTPModal() {
+      document.getElementById('otpModal').style.display = 'none';
+      resetOTPModal();
+    }
+
+    // OTP input navigation
+    function moveToNext(current, nextId) {
+      if (current.value.length === 1 && nextId) {
+        document.getElementById(nextId).focus();
+      }
+    }
+
+    function startResendTimer() {
+      let timeLeft = RESEND_TIME;
+      document.getElementById('resendBtn').disabled = true;
+      document.getElementById('resendTimer').textContent = `Resend in ${timeLeft}s`;
+      currentTimer = setInterval(() => {
+        timeLeft--;
+        if (timeLeft > 0) {
+          document.getElementById('resendTimer').textContent = `Resend in ${timeLeft}s`;
+        } else {
+          document.getElementById('resendBtn').disabled = false;
+          document.getElementById('resendTimer').textContent = 'You can resend now';
+          clearInterval(currentTimer);
+          currentTimer = null;
+        }
+      }, 1000);
+    }
+
+    async function sendOTPToBackend(email, type) {
+      try {
+        const response = await fetch('/profile/changeEmail', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email, type })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return { success: true, message: data.message || 'OTP sent successfully!' };
+        } else {
+          const data = await response.json();
+          return { success: false, message: data.message || 'Failed to send OTP' };
+        }
+      } catch (error) {
+        console.error('Network error:', error);
+        return { success: false, message: 'Network error. Please try again.' };
+      }
+    }
+
+    async function resendOTP() {
+      const result = await sendOTPToBackend(currentEmailForOTP, isCurrentOTP ? 'current' : 'new');
+      if (result.success) {
+        showMessage(result.message, 'success');
+      } else {
+        showMessage(result.message, 'error');
+      }
+      startResendTimer();
+    }
+
+    async function verifyOTPFromModal() {
+      const otp = Array.from({length: 6}, (_, i) => document.getElementById(`otpDigit${i+1}`).value).join('');
+      if (otp.length !== 6) {
+        showMessage('Please enter a valid 6-digit OTP.', 'error');
+        return;
+      }
+
+      try {
+        // Send OTP verification to backend route /profile/verify-email
+        const response = await fetch('/profile/verify-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            otp: otp, 
+            email: currentEmailForOTP, 
+            type: isCurrentOTP ? 'current' : 'new' 
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          console.log(`Verifying OTP: ${otp} for ${isCurrentOTP ? 'current' : 'new'} email`);
+          showMessage(isCurrentOTP ? 'Current email verified successfully!' : 'New email verified successfully!', 'success');
+          
+          if (isCurrentOTP) {
+            currentVerified = true;
+            document.getElementById('email').disabled = false;
+            document.getElementById('verifyToEditBtn').style.display = 'none';
+          } else {
+            newVerified = true;
+          }
+          closeOTPModal();
+          if (!isCurrentOTP) {
+            document.getElementById('email').focus();
+          }
+        } else {
+          showMessage(data.message || 'Invalid OTP. Please try again.', 'error');
+          // Clear inputs on error
+          for (let i = 1; i <= 6; i++) {
+            document.getElementById(`otpDigit${i}`).value = '';
+          }
+          document.getElementById('otpDigit1').focus();
+        }
+      } catch (error) {
+        console.error('Verification network error:', error);
+        // showMessage('Network error during verification. Please try again.', 'error');
+        // Clear inputs on error
+        for (let i = 1; i <= 6; i++) {
+          document.getElementById(`otpDigit${i}`).value = '';
+        }
+        document.getElementById('otpDigit1').focus();
+      }
+    }
+
+    // Initial button click to start current verification
+    async function sendCurrentOTP() {
+      openOTPModal(originalEmail, true);
+      const result = await sendOTPToBackend(originalEmail, 'current');
+      if (result.success) {
+        showMessage(result.message, 'success');
+      } else {
+        showMessage(result.message, 'error');
+        closeOTPModal();
+      }
+    }
+
+    document.getElementById('email').addEventListener('input', function() {
+      const currentEmail = this.value.trim();
+      if (currentVerified && currentEmail && currentEmail !== originalEmail) {
+        if (!document.getElementById('sendNewOtpBtn')) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'verify-to-edit-btn';
+          btn.id = 'sendNewOtpBtn';
+          btn.textContent = 'Send New OTP';
+          btn.onclick = sendNewOTP;
+          this.parentNode.appendChild(btn);
+        }
+      }
+    });
+
+    async function sendNewOTP() {
+      const newEmail = document.getElementById('email').value.trim();
+      if (!newEmail || newEmail === originalEmail || !currentVerified) {
+        showMessage('Please verify your current email first and enter a new email address.', 'error');
+        return;
+      }
+      openOTPModal(newEmail, false);
+      const result = await sendOTPToBackend(newEmail, 'new');
+      if (result.success) {
+        showMessage(result.message, 'success');
+      } else {
+        showMessage(result.message, 'error');
+        closeOTPModal();
+      }
+    }
+
+    async function handleSubmit(event) {
+      event.preventDefault();
+      const newEmail = document.getElementById('email').value.trim();
+      if (newEmail !== originalEmail) {
+        if (!currentVerified) {
+          showMessage('Please verify your current email before changing it.', 'error');
+          return false;
+        }
+        if (!newVerified) {
+          showMessage('Please verify the new email with OTP.', 'error');
+          return false;
+        }
+      }
+
+      // Phone number validation: if provided, must be more than 5 digits
+      const phone = document.getElementById('phone').value.trim();
+      if (phone && phone.length <= 5) {
+        showMessage('Enter Valid Phone Number ...', 'error');
+        return false;
+      }
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerText;
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Saving...';
+
+      try {
+        const form = document.querySelector('.form');
+        const formData = new FormData(form);
+        
+        // Remove file input to avoid sending original file if we have a crop or nothing
+        formData.delete('image');
+
+        if (profileImageBlob) {
+          formData.append('image', profileImageBlob, 'profile.jpg');
+        }
+
+        const response = await fetch('/profile', {
+            method: 'POST',
+            body: formData
+        });
+
+        // Depending on how backend responds (HTML or JSON? Usually existing express apps redirect. Fetch follows redirects automatically but we might want to reload).
+        if (response.redirected) {
+             window.location.href = response.url;
+             return;
+        }
+        
+        // If it returns HTML (common in old express apps), we might replace document or assume success.
+        // Assuming your controller redirects on success or renders profile.
+        // If it renders, we can reload.
+        // Let's reload to be safe if successful status.
+        if (response.ok) {
+           showMessage('Profile updated successfully!', 'success');
+           setTimeout(() => {
+             window.location.reload();
+           }, 1000);
+        } else {
+           showMessage('Failed to update profile.', 'error');
+           submitBtn.disabled = false;
+           submitBtn.innerText = originalText;
+        }
+      } catch (err) {
+        console.error(err);
+        showMessage('An error occurred. Please try again.', 'error');
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      }
+
+      return false;
+    }
+
+    // Image Upload & Cropping Logic
+    let cropper = null;
+    let profileImageBlob = null;
+
+    function handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const cropImg = document.getElementById('crop-image');
+        cropImg.src = e.target.result;
+        
+        const modal = document.getElementById('crop-modal');
+        modal.classList.remove('hidden'); // Tailwind hidden
+        modal.style.display = 'flex'; // Ensure flex override if needed for non-tailwind
+        
+        if (cropper) {
+          cropper.destroy();
+        }
+        
+        // Wait for image load
+        setTimeout(() => {
+            cropper = new Cropper(cropImg, {
+                aspectRatio: 1, // Profile usually square
+                viewMode: 1,
+                autoCropArea: 0.8,
+                scalable: true,
+                zoomable: true,
+                dragMode: 'crop',
+                cropBoxMovable: true,
+                cropBoxResizable: true,
+                minCropBoxWidth: 100,
+                minCropBoxHeight: 100,
+            });
+        }, 100);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function closeCropModal(cancel = false) {
+      const modal = document.getElementById('crop-modal');
+      modal.classList.add('hidden');
+      modal.style.display = 'none';
+      
+      if (cropper) {
+        cropper.destroy();
+        cropper = null;
+      }
+      
+      if (cancel) {
+         document.getElementById('imageUploadForm').value = ''; 
+      }
+    }
+
+    function applyCrop() {
+      if (!cropper) return;
+      
+      cropper.getCroppedCanvas({
+          width: 300,
+          height: 300,
+          imageSmoothingQuality: 'high'
+      }).toBlob((blob) => {
+          if (blob) {
+              profileImageBlob = blob;
+              const url = URL.createObjectURL(blob);
+              document.getElementById('avatarLg').src = url;
+              closeCropModal(false);
+          }
+      }, 'image/jpeg', 0.9);
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+      const modal = document.getElementById('otpModal');
+      const cropModal = document.getElementById('crop-modal');
+      if (event.target === modal) {
+        closeOTPModal();
+      }
+      if (event.target === cropModal) {
+        closeCropModal(true);
+      }
+    }
+  </script>
+  <%- include("../../../partials/user/footer") %>
+</body>
+</html>

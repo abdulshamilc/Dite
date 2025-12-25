@@ -1123,7 +1123,7 @@
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           },
-          body: JSON.stringify({})
+          body: JSON.stringify(body)
         })
         .then(response => {
             if (response.redirected && response.url.includes('/login')) {

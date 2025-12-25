@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Products Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .logout-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .logout-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .status-active {
+        color: #10b981;
+      }
+      .status-blocked {
+        color: #ef4444;
+      }
+      .product-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../../partials/admin/admin-header") %>
+
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <!-- Heading + Add Button -->
+        <div class="flex justify-between items-center mb-4">
+          <h1 class="text-2xl font-bold">Products Management</h1>
+          <a href="/admin/products/add-product">
+            <button class="bg-yellow-600 px-4 py-2 rounded">
+              + Add Product
+            </button>
+          </a>
+        </div>
+
+        <!-- Counts -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div class="count-box">
+            <p class="text-gray-400">Total Products</p>
+            <p class="text-xl font-bold"><%= totelProducts %></p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">New Products</p>
+            <p class="text-xl font-bold text-green-400">
+              <%= newProductsCount %>
+            </p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Active Products</p>
+            <p class="text-xl font-bold"><%= activeProductsCount %></p>
+          </div>
+          <div class="count-box">
+            <p class="text-gray-400">Out Of Stock</p>
+            <p class="text-xl font-bold"><%= outOfStockProducts.length %></p>
+          </div>
+        </div>
+
+        <!-- Filter + Search -->
+        <div class="flex justify-between mb-4">
+          <span>All Products</span>
+          <div class="flex space-x-4">
+            <select id="statusFilter" class="bg-gray-800 p-2 rounded">
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="blocked">Blocked</option>
+            </select>
+            <div class="flex space-x-2">
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Search Products"
+                class="bg-gray-800 p-2 rounded"
+              />
+              <button
+                id="clearSearch"
+                class="bg-gray-600 px-3 py-2 rounded hover:bg-gray-700"
+                title="Clear Search"
+              >
+                <i data-lucide="x" class="w-5 h-5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Products Table -->
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-800">
+                <th class="px-4 py-2 text-left">IMAGE</th>
+                <th class="px-4 py-2 text-left">NAME</th>
+                <th class="px-4 py-2 text-left">VARIANTS</th>
+                <th class="px-4 py-2 text-left">STOCK</th>
+                <th class="px-4 py-2 text-left">C
+                  ATEGORY</th>
+                <th class="px-4 py-2 text-left">STATUS</th>
+                <th class="px-4 py-2 text-left">LIST/UNLIST </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% products.forEach(product => { %>
+              <tr class="border-b border-gray-700 hover:bg-gray-900 cursor-pointer" onclick="window.location.href='/admin/products/<%= product._id %>'">
+                <td class="px-4 py-2">
+                  <% if (product.images && product.images.length) { %>
+                  <img
+                    src="<%= product.images[0] %>"
+                    alt="<%= product.name %>"
+                    class="product-image"
+                  />
+                  <% } else { %>
+                  <span>No Image</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2"><%= product.name %></td>
+                <td class="px-4 py-2 align-top">
+                  <% if (product.variants && product.variants.length > 0) { %>
+                  <% product.variants.forEach((v) => { %>
+                  <div><%= v.mlSize %>ml</div>
+                  <% }) %>
+                  <% } else { %>
+                  <span>No Variants</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 align-top">
+                  <% if (product.variants && product.variants.length > 0) { %>
+                  <% product.variants.forEach((v) => { %>
+                  <%= v.stock > 0 ? v.stock + " pcs" : "Out Of Stock" %>
+                  <br />
+                  <% }) %>
+                  <% } else { %>
+                  <span>No Stock</span>
+                  <% } %>
+                </td>
+                 <td class="px-4 py-2 align-top">
+  <% 
+    let category = product.category;
+    if (Array.isArray(category)) {
+      category = category[0];
+    }
+  %>
+  <% if (category) { %>
+    <%= category.name || category %>
+  <% } else { %>
+    N/A
+  <% } %>
+</td>
+
+                <td class="px-4 py-2">
+                  <% if (product.isListed) { %>
+                  <span class="status-active">Listed</span>
+                  <% } else { %>
+                  <span class="status-blocked">NotListed</span>
+                  <% } %>
+                </td>
+                <td class="px-4 py-2 flex space-x-2">
+                  <% if (product.isListed) { %>
+                  <button
+                    type="button"
+                    class="text-red-500 hover:text-red-600 open-block-modal"
+                    data-id="<%= product._id %>"
+                    data-name="<%= product.name %>"
+                    title="Deactivate"
+                  >
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                  </button>
+                  <% } else { %>
+                  <button
+                    type="button"
+                    class="text-green-500 hover:text-green-600 open-block-modal"
+                    data-id="<%= product._id %>"
+                    data-name="<%= product.name %>"
+                    title="Activate"
+                  >
+                    <i data-lucide="check" class="w-5 h-5"></i>
+                  </button>
+                  <% } %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination and Page Limit -->
+        <div class="flex justify-between items-center mt-4">
+          <!-- Pagination -->
+          <div class="flex-1 flex justify-center items-center space-x-4">
+            <% if (totalPages > 1) { %>
+              <% if (currentPage > 1) { %>
+                <a
+                  href="/admin/products?page=<%= currentPage - 1 %>&limit=<%= limit %>"
+                  class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                </a>
+              <% } %>
+              <span class="text-gray-400"><%= currentPage %> / <%= totalPages %></span>
+              <% if (currentPage < totalPages) { %>
+                <a
+                  href="/admin/products?page=<%= currentPage + 1 %>&limit=<%= limit %>"
+                  class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+                >
+                  <i data-lucide="chevron-right" class="w-5 h-5"></i>
+                </a>
+              <% } %>
+            <% } %>
+          </div>
+
+          <!-- Page Limit -->
+          <div class="flex items-center space-x-2">
+            <label for="pageLimit" class="text-gray-400">Show</label>
+            <select id="limitSelect" onchange="changePageLimit(this.value)">
+              <option value="5" <%= limit == 5 ? "selected" : "" %>>5</option>
+              <option value="10" <%= limit == 10 ? "selected" : "" %>>10</option>
+              <option value="20" <%= limit == 20 ? "selected" : "" %>>20</option>
+              <option value="50" <%= limit == 50 ? "selected" : "" %>>50</option>
+            </select>
+            <span class="text-gray-400">per page</span>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- BLOCK / ACTIVATE MODAL -->
+    <div
+      id="blockModal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    >
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96">
+        <h2 class="text-lg font-bold mb-4">Confirm Action</h2>
+        <p id="blockMessage" class="mb-6 text-gray-300"></p>
+        <div class="flex justify-end space-x-4">
+          <button
+            id="cancelBlock"
+            class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <form id="blockForm" method="POST">
+            <button
+              type="submit"
+              class="px-4 py-2 bg-red-600 rounded hover:bg-red-700"
+            >
+              Confirm
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Popup Modal -->
+    <div
+      id="errorPopup"
+      class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span id="errorMessage">Something went wrong!</span>
+      <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Success Popup Modal -->
+    <div
+      id="successPopup"
+      class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+      <span id="successMessage">Success!</span>
+      <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- JS for actions -->
+    <script>
+      lucide.createIcons();
+
+      // Handle page limit change
+      function changePageLimit(limit) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("limit", limit);
+        url.searchParams.set("page", 1);
+        window.location.href = url.toString();
+      }
+
+      // Function to filter table rows based on search and status
+      function filterTable() {
+        const searchQuery = document.getElementById("searchInput").value.trim().toLowerCase();
+        const statusFilter = document.getElementById("statusFilter").value;
+        const rows = document.querySelectorAll("tbody tr");
+
+        rows.forEach((row) => {
+          const productName = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+          const status = row
+            .querySelector("td:nth-child(6) span")
+            .textContent.toLowerCase();
+
+          const matchesSearch = searchQuery === "" || productName.includes(searchQuery);
+          const matchesStatus =
+            statusFilter === "all" ||
+            (statusFilter === "active" && status === "listed") ||
+            (statusFilter === "blocked" && status === "notlisted");
+
+          row.style.display = matchesSearch && matchesStatus ? "" : "none";
+        });
+      }
+
+      // Search functionality (triggered by Enter key)
+      document.getElementById("searchInput").addEventListener("keypress", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          filterTable();
+        }
+      });
+
+      // Clear search
+      document.getElementById("clearSearch").addEventListener("click", () => {
+        document.getElementById("searchInput").value = "";
+        filterTable();
+      });
+
+      // Status filter
+      document.getElementById("statusFilter").addEventListener("change", filterTable);
+
+      // BLOCK / ACTIVATE MODAL
+      const blockButtons = document.querySelectorAll(".open-block-modal");
+      const blockModal = document.getElementById("blockModal");
+      const blockMessage = document.getElementById("blockMessage");
+      const blockForm = document.getElementById("blockForm");
+      const cancelBlock = document.getElementById("cancelBlock");
+
+      blockButtons.forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const name = btn.dataset.name;
+          const action = btn.title;
+          blockMessage.textContent = `${action} product "${name}"?`;
+          blockForm.action = `/admin/products/unlist/${id}`;
+          blockModal.classList.remove("hidden");
+        });
+      });
+
+      cancelBlock.addEventListener("click", () =>
+        blockModal.classList.add("hidden")
+      );
+
+      // Function to show error popup
+      function showErrorPopup(message) {
+        const popup = document.getElementById("errorPopup");
+        const messageElement = document.getElementById("errorMessage");
+
+        messageElement.textContent = message || "An unexpected error occurred.";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close manually
+      document.getElementById("closeErrorPopup").addEventListener("click", () => {
+        document.getElementById("errorPopup").classList.add("hidden");
+      });
+
+      // Function to show success popup
+      function showSuccessPopup(message) {
+        const popup = document.getElementById("successPopup");
+        const messageElement = document.getElementById("successMessage");
+
+        messageElement.textContent = message || "Success!";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close success popup manually
+      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+        document.getElementById("successPopup").classList.add("hidden");
+      });
+
+      // Display server-side flash messages on load
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        showErrorPopup("<%= errorMessage %>");
+      <% } %>
+      <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+        showSuccessPopup("<%= successMessage %>");
+      <% } %>
+    </script>
+  </body>
+</html>

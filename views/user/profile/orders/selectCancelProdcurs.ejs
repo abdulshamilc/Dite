@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= isEdit ? 'Edit Items to Cancel' : 'Select Items to Cancel' %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <%- include("../../../partials/user/headerHead") %>
+    <%- include("../../../partials/user/footerHead") %>
+    <style>
+        :root {
+            --primary: #1a1a1a;
+            --secondary: #ffffff;
+            --accent: #d4af37;
+            --light-bg: #f5f5f5;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: var(--secondary);
+        }
+        
+        .accent-text {
+            color: var(--accent);
+        }
+        
+        .accent-border {
+            border-color: var(--accent);
+        }
+        
+        .accent-bg {
+            background-color: var(--accent);
+            color: var(--primary);
+        }
+        
+        .card {
+            background-color: #2a2a2a;
+            border: 1px solid #404040;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-cancel {
+            background-color: #ef4444;
+            color: white;
+        }
+        
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent);
+            color: var(--primary);
+            border: none;
+        }
+        
+        .btn-secondary {
+            background-color: transparent;
+            color: #aaa;
+            border: 1px solid #404040;
+        }
+        
+        .btn:hover {
+            opacity: 0.9;
+        }
+        
+        .product-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border: 1px solid #404040;
+            border-radius: 4px;
+            margin-bottom: 8px;
+        }
+        
+        .product-checkbox {
+            flex-shrink: 0;
+        }
+        
+        .qty-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+        
+        .qty-input {
+            width: 60px;
+            padding: 4px;
+            background-color: #404040;
+            color: var(--secondary);
+            border: 1px solid #6b7280;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .qty-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .qty-input.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <%- include("../../../partials/user/header") %>
+    <div class="min-h-screen pt-20 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-4xl mx-auto w-full">
+            <!-- Header -->
+            <div class="mb-8">
+                <a href="<%= isEdit ? `/cancel-order/${order._id}` : `/orders/${order._id}` %>" class="text-sm accent-text hover:underline mb-4 inline-block">← <%= isEdit ? 'Back to Confirmation' : 'Back to Order Details' %></a>
+                <div class="flex items-start">
+                    <div class="flex-1 text-center">
+                        <h1 class="text-4xl font-bold mb-2"><%= isEdit ? 'Edit Items to Cancel' : 'Select Items to Cancel' %></h1>
+                        <p class="text-gray-400">Order ID: <span class="accent-text font-semibold"><%= order.orderID %></span></p>
+                    </div>
+                    <div class="flex-none ml-4">
+                        <span class="status-badge status-cancel">Cancelling</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="space-y-6">
+                <form id="cancelForm" action="/cancelOrder/<%= order._id %>/cancel-select" method="POST">
+                    <div class="card p-6 rounded-lg">
+                        <h2 class="text-xl font-bold mb-4 accent-text"><%= isEdit ? 'Edit Items to Cancel' : 'Select Items to Cancel' %></h2>
+                        <p class="text-gray-300 mb-4">Select items to cancel and specify the quantity (starting from 1 up to available):</p>
+                        <div class="space-y-2">
+                            <% if (order.items && order.items.length > 0) { %>
+                                <% order.items.forEach((item, index) => { %>
+                                    <% 
+                                        let preCancelQty = 0;
+                                        let isPreSelected = false;
+                                        if (cancelledItems) {
+                                            const matchingItem = cancelledItems.find(ic => ic.item._id.toString() === item._id.toString());
+                                            if (matchingItem) {
+                                                preCancelQty = matchingItem.cancelQty;
+                                                isPreSelected = preCancelQty > 0;
+                                            }
+                                        }
+                                    %>
+                                    <div class="product-item">
+                                        <input type="checkbox" class="product-checkbox" id="item<%= index %>" <%= isPreSelected ? 'checked' : '' %>>
+                                        <label for="item<%= index %>" class="flex-1 cursor-pointer">
+                                            <div class="flex items-center gap-3">
+                                                <% if (item.image) { %>
+                                                    <img src="<%= item.image %>" alt="<%= item.name %>" class="w-12 h-12 object-cover rounded">
+                                                <% } else { %>
+                                                    <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center">
+                                                        <span class="text-gray-400 text-xs">No Image</span>
+                                                    </div>
+                                                <% } %>
+                                                <div>
+                                                    <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
+                                                    <p class="text-sm text-gray-500"><%= (item.mlSize || 0) + ' ml' %></p>
+                                                    <p class="text-sm text-gray-400">Available to cancel: <%= item.quantity || 1 %></p>
+                                                </div>
+                                            </div>
+                                        </label>
+                                        <div class="qty-section">
+                                            <label for="qty<%= index %>" class="text-sm text-gray-400">Qty:</label>
+                                            <input type="number" class="qty-input <%= isPreSelected ? '' : 'hidden' %>" id="qty<%= index %>" name="qty<%= index %>" min="1" max="<%= item.quantity || 1 %>" value="<%= isPreSelected ? preCancelQty : 1 %>" data-item-index="<%= index %>">
+                                        </div>
+                                    </div>
+                                <% }); %>
+                            <% } else { %>
+                                <p class="text-gray-400 text-center py-4">No items to cancel.</p>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex gap-4 pt-4">
+                        <a href="/cancelOrder/<%= order._id %>" class="flex-1 btn btn-secondary text-center py-3">Back</a>
+                        <button type="button" id="confirmCancel" class="flex-1 btn btn-primary py-3 font-semibold">Proceed to Confirmation</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const orderId = '<%= order._id %>';
+        const orderItems = <%- JSON.stringify(order.items || []) %>;
+        const cancelForm = document.getElementById('cancelForm');
+        const confirmCancelBtn = document.getElementById('confirmCancel');
+
+        // Handle checkbox toggle for quantity input
+        document.querySelectorAll('.product-checkbox').forEach((checkbox, index) => {
+            const qtyInput = document.getElementById(`qty${index}`);
+            checkbox.addEventListener('change', function() {
+                if (this.checked) {
+                    qtyInput.classList.remove('hidden');
+                    if (qtyInput.value < 1) {
+                        qtyInput.value = 1;
+                    }
+                } else {
+                    qtyInput.classList.add('hidden');
+                    qtyInput.value = 1; // Reset but hidden
+                }
+            });
+        });
+
+        // Handle confirm button click to validate and add hidden fields for selected items
+        confirmCancelBtn.onclick = function(e) {
+            e.preventDefault(); // Prevent default submit
+
+            const selectedItems = [];
+            let hasSelection = false;
+            document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
+                const index = parseInt(checkbox.id.replace('item', ''));
+                const qtyInput = document.getElementById(`qty${index}`);
+                const qty = parseInt(qtyInput.value);
+                if (qty >= 1 && qty <= parseInt(qtyInput.max)) {
+                    const item = orderItems[index];
+                    selectedItems.push({
+                        item: {
+                            _id: item._id,
+                            name: item.name,
+                            mlSize: item.mlSize || 0,
+                            basePrice: item.basePrice || 0,
+                            image: item.image
+                        },
+                        cancelQty: qty
+                    });
+                    hasSelection = true;
+                }
+            });
+
+            if (!hasSelection) {
+                alert('Please select at least one item and specify a valid quantity (1 to available) to cancel.');
+                return;
+            }
+
+            // Create hidden input for cancelledItems JSON
+            let hiddenInput = document.querySelector('input[name="cancelledItems"]');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'hidden';
+                hiddenInput.name = 'cancelledItems';
+                cancelForm.appendChild(hiddenInput);
+            }
+            hiddenInput.value = JSON.stringify(selectedItems);
+
+            // Submit the form to proceed to the cancel confirmation page
+            cancelForm.submit();
+        };
+    </script>
+    <%- include("../../../partials/user/footer") %>
+</body>
+</html>

@@ -1,41 +1,67 @@
+
 import express from 'express'
 import {isAuthenticatedAdmin} from '../middlewares/authMiddleware.js'
+import { pagination } from '../middlewares/paginationMiddleware.js';
+import upload from '../middlewares/uploadMulter.js';
+
 import {
     pageNotFound,
     login, 
-    getLogin ,
+    getLogin,
     getForgotPassword, 
-    forgetPassword ,
+    forgetPassword,
     getOtpVerification,
     PostOtpVerification,
     getResetPasword,
     postResetPassword,
     getDashboard,
+    logOut
+} from '../controller/admin/adminController.js';
+
+import {
     getOrders,
     getViewOrders, 
-    updateOrderStatus,
-    getProducts ,
+    updateOrderStatus
+} from '../controller/admin/ordersController.js';
+
+import {
+    getProducts,
     getProductDetails,
     getAddProducts,
     postAddProducts,
     getEditProducts,
     postEditProduct,
     unlistProduct,
-    deleteProduct,
+    deleteProduct
+} from '../controller/admin/productsContrller.js';
+
+import {
     getSalesReport,
     exportSalesReport,
-    exportSalesPdf,
+    exportSalesPdf
+} from '../controller/admin/salesController.js';
+
+import {
     getcustomers,
-    blockUser,
+    blockUser
+} from '../controller/admin/customerController.js';
+
+import {
     getCategories, 
     addCategorie,
     DeactivateCategory,
     deleteCategory,
-    editCategory,
+    editCategory
+} from '../controller/admin/categoriesController.js';
+
+import {
     getReturnDetails,
     getReturn,
     returnApprove,
-    returnReject,
+    returnReject
+} from '../controller/admin/returnController.js';
+
+import {
     getOffers,
     createOffer,
     getOfferDetails,
@@ -43,7 +69,10 @@ import {
     updateOfferEndDate,
     getEditOffer,
     postEditOffer,
-    deleteOffer,
+    deleteOffer
+} from '../controller/admin/offerController.js';
+
+import {
     getCoupons,
     createCoupon,
     getCouponDetails,
@@ -51,11 +80,8 @@ import {
     updateCouponEndDate,
     getEditCoupon,
     postEditCoupon,
-    deleteCoupon,
-    logOut,
-} from '../controller/admin/adminController.js'
-import { pagination } from '../middlewares/paginationMiddleware.js';
-import upload from '../middlewares/uploadMulter.js';
+    deleteCoupon
+} from '../controller/admin/couponsController.js';
 
 const router = express.Router() ;
 
@@ -100,8 +126,6 @@ router.post('/categories/addCategorie',isAuthenticatedAdmin,addCategorie)
 router.post('/categories/active/:id',isAuthenticatedAdmin,DeactivateCategory)
 router.post('/categories/delete/:id',isAuthenticatedAdmin,deleteCategory)
 router.post('/categories/edit/:id',isAuthenticatedAdmin,editCategory)
-
-
 
 router.get('/coupons',isAuthenticatedAdmin,getCoupons)  
 router.post('/coupons/add',isAuthenticatedAdmin,createCoupon)  

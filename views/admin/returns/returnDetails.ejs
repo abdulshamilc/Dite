@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Return Details - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .logout-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .logout-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .status-active {
+        color: #10b981;
+      }
+      .status-blocked {
+        color: #ef4444;
+      }
+      .status-pending {
+        color: #f59e0b;
+      }
+      .status-processing {
+        color: #3b82f6;
+      }
+      .status-completed {
+        color: #10b981;
+      }
+      .status-cancelled {
+        color: #ef4444;
+      }
+      .card {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .status-delivered {
+        background-color: #10b981;
+        color: white;
+      }
+      .status-shipped {
+        background-color: #c5a987;
+        color: #1f2937;
+      }
+      .status-pending {
+        background-color: #6b7280;
+        color: white;
+      }
+      .status-active {
+        background-color: #10b981;
+        color: white;
+      }
+      .status-partial {
+        background-color: #f59e0b;
+        color: white;
+      }
+      .status-cancelled {
+        background-color: #ef4444;
+        color: white;
+      }
+      .status-requested {
+        background-color: #f59e0b;
+        color: white;
+      }
+      .status-approved {
+        background-color: #10b981;
+        color: white;
+      }
+      .status-rejected {
+        background-color: #ef4444;
+        color: white;
+      }
+      .status-processing {
+        background-color: #3b82f6;
+        color: white;
+      }
+      .status-completed {
+        background-color: #10b981;
+        color: white;
+      }
+      .canceled-item {
+        opacity: 0.6;
+      }
+      .returned-item {
+        opacity: 0.7;
+        cursor: pointer;
+        transition: opacity 0.2s;
+        border-radius: 0.375rem;
+      }
+      .returned-item:hover {
+        opacity: 1;
+        background-color: rgba(249, 158, 11, 0.1);
+      }
+      .canceled-badge {
+        background-color: #ef4444;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+      }
+      .returned-badge {
+        background-color: #ef4444;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+      }
+      .approval-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: bold;
+        margin-left: 0.25rem;
+      }
+      .reject-reason {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+      }
+      .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background-color: #c5a987;
+        color: #1f2937;
+        border: none;
+      }
+      .btn-danger {
+        background-color: #ef4444;
+        color: white;
+        border: none;
+      }
+      .btn-secondary {
+        background-color: transparent;
+        color: #9ca3af;
+        border: 1px solid #374151;
+      }
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .reason-text {
+        color: #fca5a5;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+      }
+      .reason-text-return {
+        color: #fca5a5;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+      }
+      .reason-box {
+        background-color: #374151;
+        border-left: 4px solid #f59e0b;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+      }
+      .reject-reason-box {
+        background-color: #3f1f1f;
+        border-left: 4px solid #ef4444;
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+      }
+      .info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #374151;
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .image-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+      .image-gallery img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+        border: 2px solid #374151;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .image-gallery img:hover {
+        border-color: #c5a987;
+        transform: scale(1.05);
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.9);
+      }
+      .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content {
+        max-width: 90%;
+        max-height: 90%;
+      }
+      .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 40px;
+        color: #fff;
+        font-size: 40px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      textarea {
+        background-color: #374151;
+        border: 1px solid #4b5563;
+        color: white;
+        padding: 0.75rem;
+        border-radius: 0.375rem;
+        width: 100%;
+        min-height: 100px;
+        resize: vertical;
+      }
+      textarea:focus {
+        outline: none;
+        border-color: #c5a987;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../../partials/admin/admin-header") %>
+
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <div class="max-w-6xl mx-auto w-full">
+          <!-- Header -->
+          <div class="mb-8">
+            <a href="/admin/returns" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              Back to Returns
+            </a>
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h1 class="text-3xl font-bold mb-2">Return Details</h1>
+                <p class="text-gray-400">Return ID: <span class="text-brand font-semibold">#<%= returnItem.returnId || returnItem._id %></span></p>
+                <p class="text-gray-400">Order ID: <span class="text-brand font-semibold">#<%= order.orderID %></span></p>
+              </div>
+              <% 
+              let statusClass = 'status-requested';
+              let statusText = 'Requested';
+              if (returnItem.adminApproved) {
+                  const lowerStatus = returnItem.adminApproved.toLowerCase();
+                  if (lowerStatus === 'approved') {
+                      statusClass = 'status-approved';
+                      statusText = 'Approved';
+                  } else if (lowerStatus === 'rejected') {
+                      statusClass = 'status-rejected';
+                      statusText = 'Rejected';
+                  } else if (lowerStatus === 'processing') {
+                      statusClass = 'status-processing';
+                      statusText = 'Processing';
+                  } else if (lowerStatus === 'completed') {
+                      statusClass = 'status-completed';
+                      statusText = 'Completed';
+                  } else {
+                      statusText = returnItem.adminApproved.charAt(0).toUpperCase() + returnItem.adminApproved.slice(1);
+                  }
+              }
+              %>
+              <div class="flex items-center gap-4 ml-4">
+                <span class="status-badge <%= statusClass %>"><%= statusText %></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <!-- Return Summary -->
+            <div class="lg:col-span-2">
+              <div class="card p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 text-brand">Return Summary</h2>
+                
+                <!-- Returned Product Details -->
+                <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Returned Product</h3>
+                  <div class="flex items-center gap-4 returned-item">
+                    <% if (returnItem.image) { %>
+                      <img src="<%= returnItem.image %>" alt="<%= returnItem.name %>" class="w-16 h-16 object-cover rounded-lg flex-shrink-0">
+                    <% } else { %>
+                      <div class="w-16 h-16 bg-gray-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span class="text-gray-400 text-xs">No Image</span>
+                      </div>
+                    <% } %>
+                    <div class="flex-1 min-w-0">
+                      <p class="font-semibold">
+                        <%= returnItem.name || 'Unknown Product' %>
+                      </p>
+                      <p class="text-gray-500 text-sm">
+                        <%= (returnItem.mlSize || 0) + ' ml' %>
+                      </p>
+                      <% if (returnItem.reason && returnItem.reason.trim() !== "") { %>
+                        <p class="reason-text-return">Reason: <%= returnItem.reason %></p>
+                      <% } %>
+                      <% if (returnItem.rejectReason && returnItem.rejectReason.trim() !== "" && returnItem.adminApproved === 'Rejected') { %>
+                        <p class="reject-reason">Reject Reason: <%= returnItem.rejectReason %></p>
+                      <% } %>
+                      <p class="text-xs text-gray-400 mt-1">
+                        Requested on: <%= new Date(returnItem.returnedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                      </p>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                      <p class="font-semibold text-red-400">₹<%= ((returnItem.discountedPrice || returnItem.basePrice || 0) * (returnItem.returndQuantity || 1)).toFixed(2) %></p>
+                      <p class="text-sm text-gray-400">Returned Qty: <%= returnItem.returndQuantity || 1 %></p>
+                      <% if (order.couponCode && (returnItem.basePrice > returnItem.discountedPrice)) { %>
+                        <p class="text-xs text-green-400">Coupon applied</p>
+                      <% } %>
+                      <span class="approval-badge <%= returnItem.adminApproved === 'Requested' ? 'status-requested' : returnItem.adminApproved === 'Approved' ? 'status-approved' : 'status-rejected' %>">
+                        <%= returnItem.adminApproved %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Supporting Images Section -->
+                <% if (returnItem.images && returnItem.images.length > 0) { %>
+                <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Supporting Images</h3>
+                  <div class="image-gallery">
+                    <% returnItem.images.forEach((img, index) => { %>
+                      <img src="<%= img %>" alt="Supporting Image <%= index + 1 %>" onclick="openModal('<%= img %>')" class="cursor-pointer">
+                    <% }); %>
+                  </div>
+                </div>
+                <% } %>
+
+                <!-- Refund Details -->
+                <div class="space-y-2">
+                  <div class="flex justify-between text-gray-300">
+                    <span>Refund Amount</span>
+                    <span class="font-bold text-brand">₹<%= ((returnItem.discountedPrice || returnItem.basePrice || 0) * (returnItem.returndQuantity || 1)).toFixed(2) %></span>
+                  </div>
+                  <div class="flex justify-between text-gray-300">
+                    <span>Refund Method</span>
+                    <span class="font-semibold">
+                      <% if (order.paymentMethod && (order.paymentMethod.toLowerCase() === 'cod')) { %>
+                        Bank Transfer / Wallet
+                      <% } else { %>
+                        Original Payment Method
+                      <% } %>
+                    </span>
+                  </div>
+                  <% if (returnItem.adminApproved === 'Approved' || returnItem.adminApproved === 'Completed') { %>
+                  <div class="flex justify-between text-gray-300">
+                    <span>Processing Time</span>
+                    <span class="text-green-400">5-7 Business Days</span>
+                  </div>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Original Order Items -->
+              <div class="card p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 text-brand">Original Order Items</h2>
+                <% if (order.items && order.items.length > 0) { %>
+                  <% order.items.forEach(item => { %>
+                    <% if (item.quantity > 0) { %>
+                      <div class="flex items-center gap-4 mb-4 p-3 border border-gray-700 rounded">
+                        <% if (item.image) { %>
+                          <img src="<%= item.image %>" alt="<%= item.name %>" class="w-12 h-12 object-cover rounded flex-shrink-0">
+                        <% } else { %>
+                          <div class="w-12 h-12 bg-gray-600 rounded flex items-center justify-center flex-shrink-0">
+                            <span class="text-gray-400 text-xs">No Image</span>
+                          </div>
+                        <% } %>
+                        <div class="flex-1 min-w-0">
+                          <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
+                          <p class="text-gray-500 text-sm"><%= (item.mlSize || 0) + ' ml' %></p>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                          <p class="font-semibold">₹<%= ((item.discountedPrice || item.basePrice || 0) * (item.quantity || 1)).toFixed(2) %></p>
+                          <p class="text-sm text-gray-400">Qty: <%= item.quantity || 1 %></p>
+                        </div>
+                      </div>
+                    <% } %>
+                  <% }); %>
+                <% } else { %>
+                  <p class="text-gray-400 text-center py-4">No order items found.</p>
+                <% } %>
+              </div>
+
+              <!-- Actions -->
+              <div class="space-y-3 mb-6">
+                <% if (returnItem.adminApproved === 'Requested') { %>
+                <form method="POST" action="/admin/return/<%= order._id %>/approve?returnId=<%= returnItem._id %>" class="block" id="approveForm">
+                  <button type="submit" class="block w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold transition text-center">Approve Return</button>
+                </form>
+                <form method="POST" action="/admin/return/<%= order._id %>/reject?returnId=<%= returnItem._id %>" class="block" id="rejectForm">
+                  <input type="hidden" name="reason" id="rejectReasonInput">
+                  <button type="submit" class="block w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold transition text-center">Reject Return</button>
+                </form>
+                <% } %>
+                <a href="/admin/orders/view/<%= order._id %>" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-brand transition text-center">View Order</a>
+                <button onclick="window.print()" class="block w-full border border-gray-600 py-3 rounded-lg font-semibold hover:border-brand transition text-center">Print Return Details</button>
+              </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+              <!-- Customer Details -->
+              <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="font-bold text-brand">Customer Details</h3>
+                  <% if (user && user._id) { %>
+                    <a href="/admin/customers/<%= user._id %>" class="text-sm text-brand hover:underline flex items-center gap-1">
+                      <i data-lucide="user" class="w-4 h-4"></i>
+                      View Profile
+                    </a>
+                  <% } %>
+                </div>
+                <div class="text-sm space-y-1 text-gray-300">
+                  <% if (user) { %>
+                    <p class="font-semibold"><%= user.name || 'N/A' %></p>
+                    <p><%= user.email || 'N/A' %></p>
+                    <p class="mt-3 text-brand"><%= user.phone || 'N/A' %></p>
+                    <% if (typeof user.totalOrders !== 'undefined') { %>
+                      <p class="text-sm text-gray-400">Total Orders: <%= user.totalOrders %></p>
+                    <% } %>
+                  <% } else { %>
+                    <p class="text-gray-400">Customer details not available.</p>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Shipping Address -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Return Pickup Address</h3>
+                <div class="text-sm space-y-1 text-gray-300">
+                  <% if (order.address) { %>
+                    <p class="font-semibold"><%= order.address.fullName || '' %></p>
+                    <p><%= order.address.street || order.address.address || '' %></p>
+                    <p><%= order.address.hoNo || '' %></p>
+                    <p><%= (order.address.city || '') + ', ' + (order.address.state || '') + ' ' + (order.address.pin || order.address.zipCode || '') %></p>
+                    <p><%= order.address.country || '' %></p>
+                    <p class="mt-3 text-brand"><%= order.address.phone || '' %></p>
+                  <% } else { %>
+                    <p class="text-gray-400">Shipping address not available.</p>
+                  <% } %>
+                </div>
+              </div>
+
+              <!-- Payment Method -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Payment Method</h3>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <%
+                  let paymentDisplay = 'Payment details not available.';
+                  if (order.paymentMethod) {
+                      if (typeof order.paymentMethod === 'string' && order.paymentMethod.toLowerCase() === 'cod') {
+                          paymentDisplay = 'Cash On Delivery';
+                      } else if (typeof order.paymentMethod === 'object' && order.paymentMethod.last4) {
+                          paymentDisplay = `${order.paymentMethod.type || 'Card'} ending in ${order.paymentMethod.last4}`;
+                      } else {
+                          paymentDisplay = typeof order.paymentMethod === 'string' ? order.paymentMethod : 'Payment details not available.';
+                      }
+                  }
+                  %>
+                  <p><%= paymentDisplay %></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="modal">
+      <span class="modal-close" onclick="closeModal()">&times;</span>
+      <img class="modal-content" id="modalImage" style="max-width: 90%; max-height: 90%;">
+    </div>
+
+    <!-- Error Popup Modal -->
+    <div
+      id="errorPopup"
+      class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span id="errorMessage">Something went wrong!</span>
+      <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Success Popup Modal -->
+    <div
+      id="successPopup"
+      class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+      <span id="successMessage">Success!</span>
+      <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <script>
+      lucide.createIcons();
+
+      // Image Modal Functions
+      function openModal(imageSrc) {
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById('modalImage');
+        modal.classList.add('active');
+        modalImg.src = imageSrc;
+      }
+      function closeModal() {
+        const modal = document.getElementById('imageModal');
+        modal.classList.remove('active');
+      }
+      // Close modal when clicking outside the image
+      document.getElementById('imageModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+          closeModal();
+        }
+      });
+
+      // Approve Form Confirmation
+      document.getElementById('approveForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Are you sure?',
+          text: 'Approve this return request?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonColor: '#10b981',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Yes, approve it!',
+          background: '#1f2937',
+          color: '#ffffff',
+          customClass: {
+            popup: 'swal-dark-popup',
+            title: 'swal-dark-title',
+            content: 'swal-dark-content',
+            confirmButton: 'swal-dark-confirm',
+            cancelButton: 'swal-dark-cancel'
+          },
+          buttonsStyling: true
+        }).then((result) => {
+          if (result.isConfirmed) {
+            this.submit();
+          }
+        });
+      });
+
+      // Reject Form Confirmation
+      document.getElementById('rejectForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        Swal.fire({
+          title: 'Reject Return Request?',
+          text: 'Please provide a reason for rejection:',
+          icon: 'warning',
+          input: 'textarea',
+          inputPlaceholder: 'Enter rejection reason...',
+          inputAttributes: {
+            'aria-label': 'Reject reason'
+          },
+          showCancelButton: true,
+          confirmButtonColor: '#ef4444',
+          cancelButtonColor: '#6b7280',
+          confirmButtonText: 'Reject Return',
+          background: '#1f2937',
+          color: '#ffffff',
+          customClass: {
+            popup: 'swal-dark-popup',
+            title: 'swal-dark-title',
+            content: 'swal-dark-content',
+            confirmButton: 'swal-dark-confirm',
+            cancelButton: 'swal-dark-cancel',
+            input: 'bg-gray-700 text-white border-gray-600 rounded' 
+          },
+          buttonsStyling: true,
+          preConfirm: (reason) => {
+            if (!reason) {
+              Swal.showValidationMessage('Please enter a reason for rejection');
+            }
+            return reason;
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            document.getElementById('rejectReasonInput').value = result.value;
+            this.submit();
+          }
+        });
+      });
+
+      // Function to show error popup
+      function showErrorPopup(message) {
+        const popup = document.getElementById("errorPopup");
+        const messageElement = document.getElementById("errorMessage");
+
+        messageElement.textContent = message || "An unexpected error occurred.";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close manually
+      document.getElementById("closeErrorPopup").addEventListener("click", () => {
+        document.getElementById("errorPopup").classList.add("hidden");
+      });
+
+      // Function to show success popup
+      function showSuccessPopup(message) {
+        const popup = document.getElementById("successPopup");
+        const messageElement = document.getElementById("successMessage");
+
+        messageElement.textContent = message || "Success!";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+
+      // Close success popup manually
+      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+        document.getElementById("successPopup").classList.add("hidden");
+      });
+
+      // Display server-side flash messages on load
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        showErrorPopup("<%= errorMessage %>");
+      <% } %>
+      <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+        showSuccessPopup("<%= successMessage %>");
+      <% } %>
+    </script>
+  </body>
+</html>
