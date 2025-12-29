@@ -737,20 +737,39 @@
       <div class="filter-section">
         <form id="filterForm" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%;">
           <!-- Gender Filter -->
-          <select class="filter-dropdown" id="genderFilter" name="gender">
-            <option value="ALL" <%= gender === 'ALL' ? 'selected' : '' %>>ALL</option>
-            <option value="MEN" <%= gender === 'MEN' ? 'selected' : '' %>>MEN</option>
-            <option value="WOMEN" <%= gender === 'WOMEN' ? 'selected' : '' %>>WOMEN</option>
-            <option value="UNISEX" <%= gender === 'UNISEX' ? 'selected' : '' %>>UNISEX</option>
-          </select>
+          <% if (gender && gender !== 'ALL') { %>
+            <button type="button" class="filter-btn" onclick="clearGender()" style="display: flex; align-items: center; justify-content: space-between;">
+              <%= gender %> <i class="fas fa-times ml-2"></i>
+            </button>
+          <% } else { %>
+            <select class="filter-dropdown" id="genderFilter" name="gender">
+              <option value="ALL" <%= gender === 'ALL' ? 'selected' : '' %>>GENDER</option>
+              <option value="MEN" <%= gender === 'MEN' ? 'selected' : '' %>>MEN</option>
+              <option value="WOMEN" <%= gender === 'WOMEN' ? 'selected' : '' %>>WOMEN</option>
+              <option value="UNISEX" <%= gender === 'UNISEX' ? 'selected' : '' %>>UNISEX</option>
+            </select>
+          <% } %>
+
           <!-- Sort Filter -->
-          <select class="filter-dropdown" id="sortFilter" name="sort">
-            <option value="" <%= sort === '' ? 'selected' : '' %>>SORT BY</option>
-            <option value="price_asc" <%= sort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
-            <option value="price_desc" <%= sort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
-            <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest</option>
-            <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>Most Popular</option>
-          </select>
+          <% if (sort && sort !== '') { 
+               let sortLabel = 'SORT BY';
+               if(sort === 'price_asc') sortLabel = 'Price: Low to High';
+               else if(sort === 'price_desc') sortLabel = 'Price: High to Low';
+               else if(sort === 'newest') sortLabel = 'Newest';
+               else if(sort === 'popular') sortLabel = 'Most Popular';
+          %>
+            <button type="button" class="filter-btn" onclick="clearSort()" style="display: flex; align-items: center; justify-content: space-between;">
+              <%= sortLabel %> <i class="fas fa-times ml-2"></i>
+            </button>
+          <% } else { %>
+            <select class="filter-dropdown" id="sortFilter" name="sort">
+              <option value="" <%= sort === '' ? 'selected' : '' %>>SORT BY</option>
+              <option value="price_asc" <%= sort === 'price_asc' ? 'selected' : '' %>>Price: Low to High</option>
+              <option value="price_desc" <%= sort === 'price_desc' ? 'selected' : '' %>>Price: High to Low</option>
+              <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest</option>
+              <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>Most Popular</option>
+            </select>
+          <% } %>
           <!-- Filter Button to Open Modal -->
           <button type="button" class="filter-btn" id="filterButton">FILTER</button>
         </form>
@@ -1207,6 +1226,16 @@
             }
           }
         });
+      }
+
+      function clearGender() {
+        const newParams = { gender: '' }; // Will be removed by buildQuery logic
+        window.location.search = buildQuery(newParams);
+      }
+
+      function clearSort() {
+        const newParams = { sort: '' }; // Will be removed by buildQuery logic
+        window.location.search = buildQuery(newParams);
       }
     </script>
   </body>
