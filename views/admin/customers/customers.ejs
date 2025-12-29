@@ -52,17 +52,42 @@
           <div class="flex justify-between mb-4">
             <span>All Customers</span>
             <div class="flex space-x-4">
-              <select class="bg-gray-800 p-2 rounded">
-                <option>All Status</option>
-                <option>Active</option>
-                <option>Blocked</option>
+              <!-- Sort By -->
+              <div class="flex items-center space-x-2">
+                <select id="sortFilter" class="bg-gray-800 p-2 rounded text-white" onchange="applyFilters()">
+                  <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest First</option>
+                  <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest First</option>
+                  <option value="a_z" <%= sort === 'a_z' ? 'selected' : '' %>>Name A-Z</option>
+                  <option value="z_a" <%= sort === 'z_a' ? 'selected' : '' %>>Name Z-A</option>
+                </select>
+              </div>
+
+              <!-- Status Filter -->
+              <select id="statusFilter" class="bg-gray-800 p-2 rounded text-white" onchange="applyFilters()">
+                <option value="all" <%= status === 'all' ? 'selected' : '' %>>All Status</option>
+                <option value="active" <%= status === 'active' ? 'selected' : '' %>>Active</option>
+                <option value="blocked" <%= status === 'blocked' ? 'selected' : '' %>>Blocked</option>
               </select>
+
               <!-- Search bar -->
-              <input
-                type="text"
-                placeholder="Search Customer Names..."
-                class="bg-gray-800 p-2 rounded".
-              />
+              <div class="flex space-x-2">
+                 <input
+                  type="text"
+                  id="searchInput"
+                  value="<%= search %>"
+                  placeholder="Search Name/Email..."
+                  class="bg-gray-800 p-2 rounded text-white placeholder-gray-500"
+                  onkeypress="if(event.key === 'Enter') applyFilters()"
+                />
+                <button onclick="applyFilters()" class="bg-brand text-white px-3 rounded hover:bg-yellow-700 transition">
+                  <i data-lucide="search" class="w-4 h-4"></i>
+                </button>
+                 <% if(search || status !== 'all' || sort !== 'newest') { %>
+                  <a href="/admin/customers" class="flex items-center justify-center bg-gray-700 text-white px-3 rounded hover:bg-gray-600 transition" title="Clear Filters">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </a>
+                <% } %>
+              </div>
             </div>
           </div>
         </div>
@@ -133,7 +158,7 @@
         <% if (totalPages > 1) { %>
           <% if (currentPage > 1) { %>
             <a
-              href="/admin/customers?page=<%= currentPage - 1 %>&limit=<%= limit %>"
+              href="/admin/customers?page=<%= currentPage - 1 %>&limit=<%= limit %>&search=<%= search %>&status=<%= status %>&sort=<%= sort %>"
               class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
             >
               <i data-lucide="chevron-left" class="w-5 h-5"></i>
@@ -144,7 +169,7 @@
           </span>
           <% if (currentPage < totalPages) { %>
             <a
-              href="/admin/customers?page=<%= currentPage + 1 %>&limit=<%= limit %>"
+              href="/admin/customers?page=<%= currentPage + 1 %>&limit=<%= limit %>&search=<%= search %>&status=<%= status %>&sort=<%= sort %>"
               class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
             >
               <i data-lucide="chevron-right" class="w-5 h-5"></i>
@@ -178,6 +203,27 @@
         const url = new URL(window.location.href);
         url.searchParams.set('limit', limit);
         url.searchParams.set('page', 1); // Reset to page 1 when limit changes
+        window.location.href = url.toString();
+      }
+
+      // Apply Filters (Search, Sort, Status)
+      function applyFilters() {
+        const search = document.getElementById('searchInput').value.trim();
+        const sort = document.getElementById('sortFilter').value;
+        const status = document.getElementById('statusFilter').value;
+        
+        const url = new URL(window.location.href);
+        
+        if (search) url.searchParams.set('search', search);
+        else url.searchParams.delete('search');
+
+        if (sort && sort !== 'newest') url.searchParams.set('sort', sort);
+        else url.searchParams.delete('sort'); // Default
+
+        if (status && status !== 'all') url.searchParams.set('status', status);
+        else url.searchParams.delete('status'); // Default
+
+        url.searchParams.set('page', 1); // Reset to page 1
         window.location.href = url.toString();
       }
 

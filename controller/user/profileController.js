@@ -5,7 +5,7 @@ import UserLog from "../../models/userLogModel.js";
 import Product from '../../models/productsModels.js' ;
 import { generateOTP } from "../../utils/genarateOtp.js";
 import generateInvoice from "../../services/OrderPdfGenarator.js";
-// import Wallet from "../../models/walletModel.js"; (Removed)
+import Wallet from "../../models/walletModel.js";
 import mongoose from "mongoose";
 
 // Get profile
@@ -733,7 +733,7 @@ const confirmCancel = async (req, res) => {
 
       // Refund logic for wallet based on payment method:
       if (cancelSubtotal > 0) {
-        if (order.paymentMethod === 'online' || order.paymentMethod === 'Wallet') {
+        if (order.paymentMethod === 'online' || order.paymentMethod === 'Wallet' || order.paymentMethod === 'wallet') {
           // Refund to wallet for online or wallet payments
           await Wallet.refundToWallet(user._id, cancelSubtotal, `Refund for cancelled order ${order.orderID}`, order._id.toString());
         }

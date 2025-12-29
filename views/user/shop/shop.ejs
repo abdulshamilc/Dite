@@ -941,9 +941,10 @@
 
       // Search input events
       document.getElementById('searchInput').addEventListener('input', debounceSearch);
-
+      
       document.getElementById('searchInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
+          e.preventDefault(); // Prevent form submission
           performSearch();
         }
       });

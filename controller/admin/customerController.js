@@ -9,11 +9,38 @@ const getcustomers = async (req, res) => {
 
     //fetch customers accoding to pagination
 
-    const customers = await User.find()
-      .sort({ createdAt: -1 })
+    // Search, Filter & Sort
+    const search = req.query.search || "";
+    const status = req.query.status || "all";
+    const sort = req.query.sort || "newest";
+
+    const query = {};
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    if (status !== "all") {
+      if (status === "active") query.isBlocked = false;
+      if (status === "blocked") query.isBlocked = true;
+    }
+
+    let sortOptions = { createdAt: -1 };
+    if (sort === "oldest") sortOptions = { createdAt: 1 };
+    if (sort === "a_z") sortOptions = { name: 1 };
+    if (sort === "z_a") sortOptions = { name: -1 };
+
+    const customers = await User.find(query)
+      .sort(sortOptions)
       .skip(skip)
       .limit(limit);
 
+    const totalCustomersQuery = await User.countDocuments(query); // Count filtered documents for pagination
+    const totalPages = Math.ceil(totalCustomersQuery / limit);
+    
     // Finding Newely Registed Customers
     const today = new Date();
     const past15Days = new Date();
@@ -36,18 +63,21 @@ const getcustomers = async (req, res) => {
         $group: { _id: null, totelSpent: { $sum: "$totalSpent" } },
       },
     ]);
-    // Finding Totel customers
-    const totalCustomers = await User.countDocuments();
+    // Finding Totel customers (Absolute total for stats)
+    const totalCustomersStats = await User.countDocuments();
 
     res.render("admin/customers/customers", {
       customers,
       newCustomerCount,
       totelOrdersCount,
       totelSpentCount,
-      totalCustomers,
+      totalCustomers: totalCustomersStats,
       limit,
       currentPage: page,
-      totalPages: Math.ceil(totalCustomers / limit),
+      totalPages,
+      search,
+      status,
+      sort,
     });
   } catch (err) {
     console.error(err);

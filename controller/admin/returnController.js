@@ -286,6 +286,7 @@ const returnApprove = async (req, res) => {
     if (
       (order.paymentMethod === "online" ||
         order.paymentMethod === "Wallet" ||
+        order.paymentMethod === "wallet" ||
         order.paymentMethod === "cod") &&
       returnItem.returndQuantity > 0 &&
       returnItem.discountedPrice > 0

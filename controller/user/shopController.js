@@ -208,7 +208,8 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
        topBrands: [], otherBrands: [], brands: [],
        concentrations: [], selectedBrands: [], selectedConcentrations: [],
        totalPages: 0, page: 1, limit: 12, total: 0,
-       search: "", sort: ""
+       search: "", sort: "",
+       queryMinPrice: "", queryMaxPrice: ""
      });
   }
 };
@@ -264,10 +265,10 @@ const getShop = async (req, res) => {
     const queryMaxPrice = maxPriceQuery ? parseFloat(maxPriceQuery) : undefined;
     const selectedBrands = brands ? brands.split(",").map((b) => b.trim().toLowerCase()).filter(Boolean) : [];
     const selectedConcentrations = concentrationsQuery ? concentrationsQuery.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [];
+    const effectiveSort = sort || "newest";
 
 
-
-    const query = {
+    let query = {
       isDeleted: false,
       isListed: true,
     };
@@ -450,6 +451,16 @@ const getShop = async (req, res) => {
       concentrations: [],
       selectedBrands: [],
       selectedConcentrations: [],
+      search: "",
+      gender: "ALL",
+      sort: "",
+      filter: "ALL",
+      page: 1,
+      totalPages: 0,
+      limit: 12,
+      total: 0,
+      queryMinPrice: "",
+      queryMaxPrice: "",
     });
   }
 };
