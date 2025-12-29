@@ -46,8 +46,7 @@ import {
   confirmReturn,
   getReturnSelect,
   postReturnSelect,
-  getWallet,
-  getWalletHistory,
+
   getSecurity,
   getDeleteAcount,
   userlogOut,
@@ -88,17 +87,24 @@ import {
   placeOrder,
   getSuccessPage,
   getFailedPage,
-  getWalletBalanceAPI,
+// getWalletBalanceAPI, (Removed)
   applyCoupon,
 } from "../controller/user/checkoutController.js";
 
 import {
   createRazorpayOrder,
   verifyRazorpayPayment,
-  addFundsToWallet,
+// addFundsToWallet, (Removed)
   retryPaymentOrder,
   verifyRetryPayment
 } from "../controller/user/paymentController.js"; 
+
+import {
+  getWallet,
+  getWalletHistory,
+  addFundsToWallet,
+  getWalletBalanceAPI
+} from "../controller/user/walletController.js"; 
 
 import { isAuthenticatedUser } from "../middlewares/authMiddleware.js";
 
@@ -106,15 +112,13 @@ import isBlocked from "../middlewares/checkBlokedMiddleware.js";
 
 const router = express.Router();
 
-// Google Auth
-
-// Start Google Login
+// Google auth
 router.get(
   "/auth/google",
   passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// Google OAuth callback
+
 router.get(
   "/auth/google/callback",
   passport.authenticate("google", { failureRedirect: "/login" }),

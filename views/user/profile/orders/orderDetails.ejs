@@ -1119,7 +1119,12 @@
                     const qtyInput = document.getElementById(`qty${index}`);
                     const qty = parseInt(qtyInput.value);
                     if (isNaN(qty) || qty < 1 || qty > parseInt(qtyInput.max)) {
-                        alert(`Invalid quantity for ${cancelItems[index]?.name || 'item'}: Must be 1-${qtyInput.max}`);
+                        Swal.fire({
+                             icon: 'error',
+                             title: 'Invalid Quantity',
+                             text: `Invalid quantity for ${cancelItems[index]?.name || 'item'}: Must be 1-${qtyInput.max}`,
+                             background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                        });
                         return;
                     }
                     const item = cancelItems[index];
@@ -1131,7 +1136,12 @@
                     hasSelection = true;
                 });
                 if (!hasSelection) {
-                    alert('Please select at least one item and specify a valid quantity (1 to available) to cancel.');
+                    Swal.fire({
+                         icon: 'warning',
+                         title: 'Invalid Selection',
+                         text: 'Please select at least one item and specify a valid quantity (1 to available) to cancel.',
+                         background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                    });
                     return;
                 }
                 // Reset non-selected qty inputs
@@ -1164,7 +1174,12 @@
                     const qtyInput = document.getElementById(`returnQty${index}`);
                     const qty = parseInt(qtyInput.value);
                     if (isNaN(qty) || qty < 1 || qty > parseInt(qtyInput.max)) {
-                        alert(`Invalid quantity for ${returnItems[index]?.name || 'item'}: Must be 1-${qtyInput.max}`);
+                        Swal.fire({
+                             icon: 'error',
+                             title: 'Invalid Quantity',
+                             text: `Invalid quantity for ${returnItems[index]?.name || 'item'}: Must be 1-${qtyInput.max}`,
+                             background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                        });
                         return;
                     }
                     const item = returnItems[index];
@@ -1176,7 +1191,12 @@
                     hasSelection = true;
                 });
                 if (!hasSelection) {
-                    alert('Please select at least one item and specify a valid quantity (1 to available) to return.');
+                    Swal.fire({
+                         icon: 'warning',
+                         title: 'Invalid Selection',
+                         text: 'Please select at least one item and specify a valid quantity (1 to available) to return.',
+                         background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                    });
                     return;
                 }
                 // Reset non-selected qty inputs
@@ -1333,7 +1353,12 @@
                     document.body.removeChild(a);
                     window.URL.revokeObjectURL(url);
                 } catch (err) {
-                    alert('Error downloading invoice: ' + err.message);
+                     Swal.fire({
+                         icon: 'error',
+                         title: 'Download Failed',
+                         text: 'Error downloading invoice: ' + err.message,
+                         background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                    });
                 }
             });
         }

@@ -6,6 +6,7 @@
   <title>Referrals - Dité</title>
   <%- include("../../../partials/user/headerHead") %>
   <%- include("../../../partials/user/footerHead") %>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
   :root {
     --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
@@ -398,7 +399,13 @@
     function showMessage(message, type = 'success') {
       const container = document.getElementById('messageContainer');
       if (!container) {
-          alert(message);
+          Swal.fire({
+             text: message,
+             icon: type === 'success' ? 'success' : 'error',
+             background: '#fff',
+             color: '#000',
+             confirmButtonColor: '#d3a35b'
+          });
           return;
       }
       const msgDiv = document.createElement('div');
@@ -457,7 +464,13 @@
       } catch (err) {
         console.error('Fallback copy failed:', err);
         showMessage(`Failed to copy ${itemDescription}. Please copy manually.`, 'error');
-        prompt(`Copy this ${itemDescription}:`, text);
+        Swal.fire({
+            title: `Copy this ${itemDescription}`,
+            input: 'text',
+            inputValue: text,
+            background: '#fff',
+            confirmButtonColor: '#d3a35b'
+        });
       }
 
       document.body.removeChild(textArea);

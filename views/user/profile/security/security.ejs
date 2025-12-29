@@ -730,7 +730,7 @@
     function verifyTwoFA() {
       const code = document.getElementById('twoFACode').value;
       if (code.length !== 6) {
-        alert('Please enter a valid 6-digit code!');
+        showNotification('error', 'Please enter a valid 6-digit code!');
         return;
       }
       console.log('Verifying 2FA code...'); // Replace with actual API call
@@ -749,7 +749,7 @@
     function verifyDisable2FA() {
       const code = document.getElementById('disable2FACode').value;
       if (code.length !== 6) {
-        alert('Please enter a valid 6-digit code!');
+        showNotification('error', 'Please enter a valid 6-digit code!');
         return;
       }
       console.log('Verifying disable 2FA code...'); // Replace with actual API call

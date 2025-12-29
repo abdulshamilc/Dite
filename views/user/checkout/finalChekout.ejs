@@ -6,6 +6,7 @@
     <title>Final Checkout - Dité</title>
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
       .checkout-container,
       .checkout-container * {
@@ -864,11 +865,11 @@
   // Confirm Order (with validations)
   function confirmOrder() {
     if (cartItems.length === 0) {
-      alert("Your cart is empty. Add items to proceed.");
+      showErrorModal("Your cart is empty. Add items to proceed.", "Cart Empty");
       return;
     }
     if (!selectedAddressId) {
-      alert("Please select a delivery address.");
+      showErrorModal("Please select a delivery address.", "Address Missing");
       return;
     }
     const selectedPayment = document.querySelector(".payment-radio:checked");
@@ -912,7 +913,7 @@
       initiateRazorpay();
     } else if (paymentMethod === 'wallet') {
       if(userWalletBalance < subtotal){
-        alert('Insufficient wallet balance.');
+        showErrorModal('Insufficient wallet balance.', "Wallet Error");
         document.getElementById('confirmBtn').disabled = false;
         return;
       }
@@ -1044,7 +1045,7 @@
       console.error('Verification error:', err);
       const errorMsg = err.message || 'Payment verification failed. Please contact support.';
       showPaymentStatus(errorMsg, true);
-      setTimeout(() => redirectToFailed(errorMsg, 'verification_failed', true), 1500);
+      setTimeout(() => redirectToFailed(errorMsg, 'verification_failed', false), 1500);
     });
   }
 
@@ -1076,26 +1077,20 @@
       console.error('Order placement error:', err);
       const errorMsg = err.message || 'Order placement failed after payment. Your payment may be refunded.';
       showPaymentStatus(errorMsg, true);
-      setTimeout(() => redirectToFailed(errorMsg, 'order_placement_failed', true), 1500);
+      setTimeout(() => redirectToFailed(errorMsg, 'order_placement_failed', false), 1500);
     });
   }
 
   // Utility Functions
   function showErrorModal(message, title = "Action Required") {
-      const modal = document.getElementById('errorModal');
-      const msgEl = document.getElementById('errorMessage');
-      const titleEl = document.getElementById('errorTitle');
-      
-      if(msgEl) msgEl.textContent = message;
-      if(titleEl) titleEl.textContent = title;
-      
-      if(modal) {
-        modal.classList.add('show');
-        // Close on outside click
-        modal.onclick = function(e) {
-          if (e.target === modal) closeErrorModal();
-        }
-      }
+    Swal.fire({
+      icon: 'warning',
+      title: title,
+      text: message,
+      background: '#2a2a2a',
+      color: '#ffffff',
+      confirmButtonColor: '#d4c5a9'
+    });
   }
 
   function closeErrorModal() {

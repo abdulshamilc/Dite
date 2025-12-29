@@ -573,8 +573,6 @@
     async function applyCrop() {
       if (!croppers.modal) return;
       const canvas = croppers.modal.getCroppedCanvas({
-        width: 300,
-        height: 400,
         imageSmoothingEnabled: true,
         imageSmoothingQuality: 'high',
       });
@@ -597,7 +595,7 @@
           showToast('Failed to crop image. Please try again.', 'error');
           closeModal(true);
         }
-      }, 'image/jpeg', 0.8);
+      }, 'image/jpeg', 0.95);
     }
 
     // Event listeners for modal

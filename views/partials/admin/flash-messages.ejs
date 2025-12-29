@@ -1,0 +1,84 @@
+<% if ((typeof successMessage !== 'undefined' && successMessage) || (typeof errorMessage !== 'undefined' && errorMessage)) { %>
+  <!-- Success Popup Modal -->
+  <div
+    id="globalSuccessPopup"
+    class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+  >
+    <i data-lucide="check-circle" class="w-5 h-5"></i>
+    <span id="globalSuccessMessage">Success!</span>
+    <button id="closeGlobalSuccessPopup" class="ml-3 hover:text-gray-300">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <!-- Error Popup Modal -->
+  <div
+    id="globalErrorPopup"
+    class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+  >
+    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+    <span id="globalErrorMessage">Error!</span>
+    <button id="closeGlobalErrorPopup" class="ml-3 hover:text-gray-300">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Re-init lucide if needed, though usually done in layout
+      if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        lucide.createIcons();
+      }
+
+      function showGlobalSuccess(message) {
+        const popup = document.getElementById("globalSuccessPopup");
+        const msgEl = document.getElementById("globalSuccessMessage");
+        if (popup && msgEl) {
+          msgEl.textContent = message;
+          popup.classList.remove("hidden");
+          popup.classList.add("opacity-100", "translate-y-0");
+          setTimeout(() => {
+            popup.classList.add("hidden");
+          }, 4000);
+        }
+      }
+
+      function showGlobalError(message) {
+        const popup = document.getElementById("globalErrorPopup");
+        const msgEl = document.getElementById("globalErrorMessage");
+        if (popup && msgEl) {
+          msgEl.textContent = message;
+          popup.classList.remove("hidden");
+          popup.classList.add("opacity-100", "translate-y-0");
+          setTimeout(() => {
+            popup.classList.add("hidden");
+          }, 4000);
+        }
+      }
+
+      // Close handlers
+      const closeSuccess = document.getElementById("closeGlobalSuccessPopup");
+      if (closeSuccess) {
+        closeSuccess.addEventListener("click", () => {
+          document.getElementById("globalSuccessPopup").classList.add("hidden");
+        });
+      }
+
+      const closeError = document.getElementById("closeGlobalErrorPopup");
+      if (closeError) {
+        closeError.addEventListener("click", () => {
+          document.getElementById("globalErrorPopup").classList.add("hidden");
+        });
+      }
+
+      // Show messages if present
+      <% if (typeof successMessage !== 'undefined' && successMessage) { %>
+        showGlobalSuccess("<%= successMessage %>");
+      <% } %>
+      
+      <% if (typeof errorMessage !== 'undefined' && errorMessage) { %>
+        showGlobalError("<%= errorMessage %>");
+      <% } %>
+    });
+  </script>
+<% } %>

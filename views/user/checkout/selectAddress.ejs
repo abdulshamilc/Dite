@@ -610,6 +610,7 @@
     </style>
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
     <%- include("../../partials/user/header") %>
@@ -1022,21 +1023,52 @@
               headers: { 'Content-Type': 'application/json' }
             });
             if (response.ok) {
-              alert('Address added successfully!');
-              location.reload();
+              Swal.fire({
+                icon: 'success',
+                title: 'Success',
+                text: 'Address added successfully!',
+                background: '#2a2a2a',
+                color: '#ffffff',
+                confirmButtonColor: '#d4c5a9'
+              }).then(() => {
+                location.reload();
+              });
             } else {
               const errorText = await response.text();
-              alert('Error adding address: ' + errorText);
+              Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Error adding address: ' + errorText,
+                background: '#2a2a2a',
+                color: '#ffffff',
+                confirmButtonColor: '#d4c5a9'
+              });
             }
           } catch (err) {
-            alert('Network error: ' + err.message);
+            Swal.fire({
+              icon: 'error',
+              title: 'Network Error',
+              text: 'Network error: ' + err.message,
+              background: '#2a2a2a',
+              color: '#ffffff',
+              confirmButtonColor: '#d4c5a9'
+            });
           }
         });
 
       
       function proceedToPayment() {
         const selectedAddress = document.querySelector('input[name="address"]:checked');
-        if (!selectedAddress) return alert("Please select an address before proceeding to payment.")
+        if (!selectedAddress) {
+          return Swal.fire({
+            icon: 'warning',
+            title: 'No Address Selected',
+            text: 'Please select an address before proceeding to payment.',
+            background: '#2a2a2a',
+            color: '#ffffff',
+            confirmButtonColor: '#d4c5a9'
+          });
+        }
         
 
         const addressId = selectedAddress.value; // this is address._id from EJS
@@ -1124,7 +1156,14 @@
             maximumAge: 60000
           });
         } else {
-          alert("Geolocation is not supported by this browser.");
+          Swal.fire({
+            icon: 'error',
+            title: 'Not Supported',
+            text: 'Geolocation is not supported by this browser.',
+            background: '#2a2a2a',
+            color: '#ffffff',
+            confirmButtonColor: '#d4c5a9'
+          });
         }
       }
 
@@ -1154,7 +1193,14 @@
         // get selected addressId (for example from a checked radio)
         const selectedRadio = document.querySelector(".address-radio:checked");
         if (!selectedRadio) {
-          alert("Please select an address");
+          Swal.fire({
+            icon: 'warning',
+            title: 'No address selected',
+            text: 'Please select an address first to save the location.',
+            background: '#2a2a2a',
+            color: '#ffffff',
+            confirmButtonColor: '#d4c5a9'
+          });
           return;
         }
         const addressId = selectedRadio.value;
@@ -1192,7 +1238,14 @@
         // get selected addressId (for example from a checked radio)
         const selectedRadio = document.querySelector(".address-radio:checked");
         if (!selectedRadio) {
-          alert("Please select an address");
+          Swal.fire({
+            icon: 'warning',
+            title: 'No address selected',
+            text: 'Please select an address first to remove the location.',
+            background: '#2a2a2a',
+            color: '#ffffff',
+            confirmButtonColor: '#d4c5a9'
+          });
           return;
         }
         const addressId = selectedRadio.value;
@@ -1225,7 +1278,14 @@
             message += "An unknown error occurred.";
             break;
         }
-        alert(message);
+        Swal.fire({
+            icon: 'error',
+            title: 'Location Error',
+            text: message,
+            background: '#2a2a2a',
+            color: '#ffffff',
+            confirmButtonColor: '#d4c5a9'
+        });
       }
     </script>
   </body>

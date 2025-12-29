@@ -3,6 +3,7 @@ import Products from "../../models/productsModels.js";
 import Categories from "../../models/categories.js";
 import mongoose from "mongoose";
 
+// Get offers
 const getOffers = async (req, res) => {
   let successMessage = null;
   let errorMessage = null;
@@ -118,6 +119,7 @@ const getOffers = async (req, res) => {
   }
 };
 
+// Recalculate prices
 const recalculatePrices = async (targetIds, type) => {
   try {
     let products = [];
@@ -183,6 +185,7 @@ const recalculatePrices = async (targetIds, type) => {
   }
 };
 
+// Create offer
 const createOffer = async (req, res) => {
   try {
     const {
@@ -299,6 +302,7 @@ const createOffer = async (req, res) => {
     res.redirect("/admin/offers");
   }
 };
+// Get offer details
 const getOfferDetails = async (req, res) => {
   let successMessage = null;
   let errorMessage = null;
@@ -367,6 +371,7 @@ const getOfferDetails = async (req, res) => {
     res.redirect("/admin/offers");
   }
 };
+// Toggle offer status
 const toggleOfferStatus = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -397,6 +402,7 @@ const toggleOfferStatus = async (req, res) => {
   }
 };
 
+// Update offer end date
 const updateOfferEndDate = async (req, res) => {
   try {
     const { id } = req.params;
@@ -438,6 +444,7 @@ const updateOfferEndDate = async (req, res) => {
   }
 };
 
+// Get edit offer
 const getEditOffer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -473,6 +480,7 @@ const getEditOffer = async (req, res) => {
   }
 };
 
+// Post edit offer
 const postEditOffer = async (req, res) => {
   try {
     const { id } = req.params;
@@ -536,6 +544,7 @@ const postEditOffer = async (req, res) => {
     res.redirect("/admin/offers");
   }
 };
+// Delete offer
 const deleteOffer = async (req, res) => {
   try {
     const { id } = req.params;

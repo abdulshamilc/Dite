@@ -168,8 +168,8 @@
                     <td class="transaction-date">
                        <%= new Date(tx.date).toLocaleString('en-US', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: 'numeric' }) %>
                     </td>
-                    <td class="amount <%= tx.amount > 0 ? 'positive' : 'negative' %>">
-                      <%= tx.amount > 0 ? '+' : '' %>₹<%= Math.abs(tx.amount).toFixed(2) %>
+                    <td class="amount <%= (tx.type === 'debit' || tx.amount < 0) ? 'negative' : 'positive' %>">
+                      <%= (tx.type === 'debit' || tx.amount < 0) ? '-' : '+' %>₹<%= Math.abs(tx.amount).toFixed(2) %>
                     </td>
                     <td>
                       <span style="display:inline-block; padding: 4px 10px; border-radius: 12px; font-size: 0.8em; background: #e8f5e9; color: #2e7d32; font-weight: 600;">Success</span>

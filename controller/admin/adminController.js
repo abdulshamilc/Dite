@@ -4,18 +4,21 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import passwordSchema from "../../validators/resetPasswordValidator.js";
 
+// Page not found
 const pageNotFound = (req, res) => {
   try {
     res.render("admin/pageNotFound");
   } catch (error) {}
 };
 
+// Get login
 const getLogin = (req, res) => {
   if (req.session.admin) {
     res.redirect("admin/dashboard");
   } else res.render("admin/auth/login", { errors: {}, oldData: {} });
 };
 
+// Login
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -49,7 +52,7 @@ const login = async (req, res) => {
         console.error("Session save error:", err);
         return res.status(500).json({ message: "Session error" });
       }
-      //  If everything is correct → success response
+      //  success response
       return res.json({
         message: "Login successful",
         adminId: admin._id,
@@ -63,15 +66,17 @@ const login = async (req, res) => {
       .json({ message: "Server error, please try again later" });
   }
 };
+// Get forgot password
 const getForgotPassword = (req, res) => {
   res.render("admin/auth/forgetPassword");
 };
 
+// Generate OTP
 const genarateOTP = async (email) => {
   try {
-    // If everything is correct → success response
+    // success response
     const otp = Math.floor(1000 + Math.random() * 9000);
-    console.log(`OTP = ${otp}`);
+
 
     sendMail({
       to: email,
@@ -83,10 +88,11 @@ const genarateOTP = async (email) => {
 
     await AdmiResetPassword.create({ email, action, otp });
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Forget password
 const forgetPassword = async (req, res) => {
   try {
     const email = req.body.email;
@@ -119,14 +125,16 @@ const forgetPassword = async (req, res) => {
   }
 };
 
+// Get OTP verification
 const getOtpVerification = (req, res) => {
   try {
     if (!req.session.email) return res.redirect("/admin/forgot-password");
     res.render("admin/auth/otpForgetPassword");
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
+// Post OTP verification
 const PostOtpVerification = async (req, res) => {
   try {
     const EnterdOtp = req.body.otp;
@@ -152,7 +160,7 @@ const PostOtpVerification = async (req, res) => {
 
     await AdmiResetPassword.create({ email, action, resetToken });
 
-    console.log(`Reset Tocken = ${resetToken}`);
+
 
     await AdmiResetPassword.deleteOne({ _id: adminOtp._id });
 
@@ -162,11 +170,12 @@ const PostOtpVerification = async (req, res) => {
       redirectUrl: `/admin/reset-password/${resetToken}`,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
+// Get reset password
 const getResetPasword = async (req, res) => {
   const { token } = req.params;
   try {
@@ -199,9 +208,9 @@ const getResetPasword = async (req, res) => {
   }
 };
 
+// Post reset password
 const postResetPassword = async (req, res) => {
   try {
-    console.log("Working");
     const token = req.params.token;
     const { newPassword, confirmPassword } = req.body;
 
@@ -210,7 +219,7 @@ const postResetPassword = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    console.log("Tocken = " + token);
+
 
     let decoded;
     try {
@@ -252,14 +261,16 @@ const postResetPassword = async (req, res) => {
   }
 };
 
+// Get dashboard
 const getDashboard = (req, res) => {
   res.render("admin/pageNotFound");
 };
 
+// Logout
 const logOut = (req, res) => {
   req.session.destroy((err) => {
     if (err) {
-      console.log(err);
+      console.error(err);
       res.send("Error logging out");
     } else {
       res.redirect("/admin");

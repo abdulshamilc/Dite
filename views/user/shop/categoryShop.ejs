@@ -25,7 +25,7 @@
       .container {
         max-width: 1280px;
         margin: 0 auto;
-        padding: 0 24px;
+        padding: 0 50px;
       }
 
       /* Shop Section */
@@ -173,7 +173,7 @@
       /* Product Grid */
       .product-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(3, 1fr);
         gap: 40px;
         margin-bottom: 80px;
       }
@@ -634,7 +634,7 @@
         }
 
         .product-grid {
-          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          grid-template-columns: repeat(2, 1fr);
           gap: 30px;
         }
       }
@@ -649,7 +649,7 @@
         }
 
         .product-grid {
-          grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+          grid-template-columns: 1fr;
           gap: 20px;
         }
 
@@ -765,7 +765,9 @@
                 <div class="product-info">
                   <h3 class="product-name"><%= product.name %></h3>
                   <div class="product-price">
-                    <span class="base-price"><%= product.variants[0].basePrice %> Rs</span>
+                    <% if(product.variants[0].discountedPrice < product.variants[0].basePrice) { %>
+                      <span class="base-price"><%= product.variants[0].basePrice %> Rs</span>
+                    <% } %>
                     <span class="discounted-price"><%= product.variants[0].discountedPrice %> Rs</span>
                   </div>
                   <button class="shop-now-btn">Shop Now</button>

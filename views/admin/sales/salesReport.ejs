@@ -283,21 +283,45 @@
         </div>
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <!-- 1. Total Revenue -->
           <div class="stat-card">
             <div class="stat-value"><%= totalRevenue %></div>
             <div class="stat-label">Total Revenue</div>
           </div>
+          <!-- 2. Avg Order Value -->
           <div class="stat-card">
             <div class="stat-value"><%= avgOrderValue %></div>
             <div class="stat-label">Avg Order Value</div>
           </div>
+          <!-- 3. Total Orders -->
           <div class="stat-card">
             <div class="stat-value"><%= totalOrders %></div>
             <div class="stat-label">Total Orders</div>
           </div>
+          <!-- 4. Total Customers -->
           <div class="stat-card">
             <div class="stat-value"><%= newCustomers %></div>
             <div class="stat-label">Total Customers</div>
+          </div>
+          <!-- 5. Product Discounts -->
+          <div class="stat-card">
+            <div class="stat-value">₹<%= typeof totalProductDiscount !== 'undefined' ? totalProductDiscount.toLocaleString() : 0 %></div>
+            <div class="stat-label">Product Discounts</div>
+          </div>
+          <!-- 6. Coupon Deductions -->
+          <div class="stat-card">
+            <div class="stat-value">₹<%= typeof totalCouponDiscount !== 'undefined' ? totalCouponDiscount.toLocaleString() : 0 %></div>
+            <div class="stat-label">Coupon Deductions</div>
+          </div>
+          <!-- 7. Total Returned Orders -->
+          <div class="stat-card">
+             <div class="stat-value"><%= typeof totalReturns !== 'undefined' ? totalReturns : 0 %></div>
+             <div class="stat-label">Total Returned Orders</div>
+          </div>
+          <!-- 8. Returned Customers -->
+          <div class="stat-card">
+             <div class="stat-value"><%= typeof returnCustomers !== 'undefined' ? returnCustomers : 0 %></div>
+             <div class="stat-label">Returned Customers</div>
           </div>
         </div>
         <!-- Revenue Overview Chart - Full Width -->
@@ -368,6 +392,8 @@
                   <th class="px-4 py-2 text-left">Date & Time</th>
                   <th class="px-4 py-2 text-left">Customer</th>
                   <th class="px-4 py-2 text-left">Total Amount</th>
+                  <th class="px-4 py-2 text-left">Discount</th>
+                  <th class="px-4 py-2 text-left">Coupon</th>
                   <th class="px-4 py-2 text-left">Payment Method</th>
                   <th class="px-4 py-2 text-left">Status</th>
                 </tr>
@@ -382,6 +408,17 @@
                     <div class="text-xs text-gray-500"><%= order.customerEmail %></div>
                   </td>
                   <td class="px-4 py-2 revenue">₹<%= order.totalAmount.toLocaleString() %></td>
+                  <td class="px-4 py-2 text-red-400">
+                    <div>Prod: ₹<%= order.productDiscount.toLocaleString() %></div>
+                  </td>
+                  <td class="px-4 py-2 text-orange-400">
+                    <% if(order.discountAmount > 0) { %>
+                      <div>-₹<%= order.discountAmount.toLocaleString() %></div>
+                      <div class="text-xs text-gray-500"><%= order.couponCode %></div>
+                    <% } else { %>
+                      <span class="text-gray-600">-</span>
+                    <% } %>
+                  </td>
                   <td class="px-4 py-2"><%= order.paymentMethod %></td>
                   <td class="px-4 py-2">
                     <span class="px-2 py-1 text-xs rounded <%= order.orderStatus === 'Delivered' ? 'bg-green-600' : order.orderStatus === 'Cancelled' ? 'bg-red-600' : order.orderStatus === 'Returned' ? 'bg-purple-600' : 'bg-yellow-600' %>">

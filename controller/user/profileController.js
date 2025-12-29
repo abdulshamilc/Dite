@@ -5,9 +5,10 @@ import UserLog from "../../models/userLogModel.js";
 import Product from '../../models/productsModels.js' ;
 import { generateOTP } from "../../utils/genarateOtp.js";
 import generateInvoice from "../../services/OrderPdfGenarator.js";
-import Wallet from "../../models/walletModel.js";
+// import Wallet from "../../models/walletModel.js"; (Removed)
 import mongoose from "mongoose";
 
+// Get profile
 const getProfile = async (req, res) => {
   try {
     const email = req.session.user;
@@ -27,10 +28,11 @@ const getProfile = async (req, res) => {
     delete req.session.success;
     delete req.session.error;
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Post profile
 const postProfile = async (req, res) => {
   try {
     const { name, gender, email, phone } = req.body;
@@ -44,7 +46,7 @@ const postProfile = async (req, res) => {
     let imageUrl = user.image; // keep existing one
     if (req.file) {
       imageUrl = req.file.path || req.file.secure_url || req.file.url;
-      console.log('Profile Image Uploaded:', imageUrl);
+
     }
 
     // Phone Validation
@@ -74,12 +76,13 @@ const postProfile = async (req, res) => {
 
     res.redirect("/profile");
   } catch (error) {
-    console.log(error);
+    console.error(error);
     req.session.error = "Something went wrong while updating profile";
     res.status(500).send("Something went wrong");
   }
 };
 
+// Change email
 const changeEmail = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -116,6 +119,7 @@ const changeEmail = async (req, res) => {
   }
 };
 
+// Verify change email
 const verifyChangeEmail = async (req, res) => {
   try {
     if (!req.session.user) return res.redirect("/login");
@@ -184,6 +188,7 @@ const verifyChangeEmail = async (req, res) => {
   }
 };
 
+// Get address
 const getAddress = async (req, res) => {
   try {
     const email = req.session.user;
@@ -210,10 +215,11 @@ const getAddress = async (req, res) => {
       user,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Post add address
 const postAddAddress = async (req, res) => {
   try {
     const email = req.session.user;
@@ -272,12 +278,13 @@ const postAddAddress = async (req, res) => {
     req.session.success = "Address added successfully!";
     res.redirect("/address");
   } catch (error) {
-    console.log(error);
+    console.error(error);
     req.session.error = "Something Occure While Adding New Adress";
     res.redirect("/address");
   }
 };
 
+// Post edit address
 const postEditAddress = async (req, res) => {
   try {
     const addressId = req.params.id;
@@ -333,10 +340,11 @@ const postEditAddress = async (req, res) => {
 
     res.redirect("/address");
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Post set default address
 const postSetDefaultAddress = async (req, res) => {
   try {
     const addressId = req.body.addressId;
@@ -356,6 +364,7 @@ const postSetDefaultAddress = async (req, res) => {
     console.error(error);
   }
 };
+// Post delete address
 const postDeleteAddress = async (req, res) => {
   try {
     const addressId = req.params.id;
@@ -370,6 +379,7 @@ const postDeleteAddress = async (req, res) => {
     console.error(error);
   }
 };
+// Get orders
 const getOrders = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -438,6 +448,7 @@ const getOrders = async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 };
+// Get order details
 const getOrderDetails = async (req, res) => {
   const orderId = req.params.id;
   if (!orderId) return res.redirect("/login");
@@ -473,6 +484,7 @@ const getOrderDetails = async (req, res) => {
   });
 };
 
+// Get cancel order
 const getCancelOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -506,6 +518,7 @@ const getCancelOrder = async (req, res) => {
   }
 };
 
+// Post cancel order
 const postCancelOrder = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -550,6 +563,7 @@ const postCancelOrder = async (req, res) => {
     res.status(500).redirect(`/order/${req.params.id}`);
   }
 };
+// Confirm cancel
 const confirmCancel = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -737,6 +751,7 @@ const confirmCancel = async (req, res) => {
   }
 };
 
+// Get cancel select
 const getCancelSelect = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -765,6 +780,7 @@ const getCancelSelect = async (req, res) => {
   }
 };
 
+// Post cancel select
 const postCancelSelect = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -845,6 +861,7 @@ const postCancelSelect = async (req, res) => {
   }
 };
 
+// Get order invoice
 const getorderInvoce = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
@@ -864,6 +881,7 @@ const getorderInvoce = async (req, res) => {
   }
 };
 
+// Get return
 const getReturn = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -898,6 +916,7 @@ const getReturn = async (req, res) => {
   }
 };
 
+// Post return
 const postReturn = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -948,6 +967,7 @@ const postReturn = async (req, res) => {
   }
 };
 
+// Get return select
 const getReturnSelect = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -976,6 +996,7 @@ const getReturnSelect = async (req, res) => {
   }
 };
 
+// Post return select
 const postReturnSelect = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -1054,7 +1075,8 @@ const postReturnSelect = async (req, res) => {
     req.session.error = "An error occurred. Please try again.";
     res.status(500).redirect(`/orders/${req.params.id}`);
   }
-};const confirmReturn = async (req, res) => {
+};// Confirm return
+const confirmReturn = async (req, res) => {
   try {
     const userEmail = req.session.user;
     if (!userEmail) return res.redirect('/login');
@@ -1172,107 +1194,7 @@ const postReturnSelect = async (req, res) => {
     return res.redirect(`/orders?error=return`);
   }
 };
-const getWallet = async (req, res) => {
-  // User validation
-  if (!req.session.user) {
-    req.session.error = 'Please log in to access your wallet.';
-    return res.redirect('/login'); 
-  }
-
-  try {
-    const userEmail = req.session.user;
-    const user = await User.findOne({ email: userEmail });
-
-    if (!user) {
-      req.session.error = 'User not found. Please log in again.';
-      return res.redirect('/login');
-    }
-
-    const userId = user._id;
-
-    // Find or create wallet
-    let wallet = await Wallet.findOne({ user: userId });
-
-    if (!wallet) {
-      wallet = new Wallet({ user: userId });
-      await wallet.save();
-    }
-
-    // Limit transactions 
-    const recentTransactions = wallet.transactions ? wallet.transactions.slice(0,10) : [];
-
-   
-    const success = req.session.success;
-    const error = req.session.error;
-
-    
-    delete req.session.success;
-    delete req.session.error;
-
-    res.render('user/profile/wallet/wallet', { 
-      wallet: {
-        balance: wallet.balance,
-        transactions: recentTransactions
-      },
-      user: user, 
-      currentPath: req.path,
-      success,
-      error
-    });
-  } catch (err) {
-    console.error('Error fetching wallet:', err);
-    req.session.error = 'Failed to load wallet. Please try again.';
-    res.redirect('/profile'); 
-  }
-};
-
-const getWalletHistory = async (req, res) => {
-  if (!req.session.user) return res.redirect('/login');
-
-  try {
-    const user = await User.findOne({ email: req.session.user });
-    if (!user) return res.redirect('/login');
-
-    const wallet = await Wallet.findOne({ user: user._id });
-    
-    // Pagination
-    let page = parseInt(req.query.page) || 1;
-    const limit = 10;
-    if (page < 1) page = 1;
-
-    let transactions = [];
-    let totalPages = 0;
-
-    if (wallet && wallet.transactions) {
-        const totalTx = wallet.transactions.length;
-        totalPages = Math.ceil(totalTx / limit);
-        if (page > totalPages && totalPages > 0) page = totalPages;
-
-        const skip = (page - 1) * limit;
-        transactions = wallet.transactions.slice(skip, skip + limit);
-    } else if (wallet) {
-      // Wallet exists but no transactions
-       transactions = [];
-    } else {
-      // No wallet
-      transactions = [];
-    }
-
-    res.render('user/profile/wallet/walletHistory', {
-        user,
-        wallet: wallet || { balance: 0 },
-        transactions,
-        currentPage: page,
-        totalPages,
-        currentPath: '/wallet/history' 
-    });
-
-  } catch (error) {
-    console.error("Wallet History Error:", error);
-    res.status(500).send("Server Error");
-  }
-};
-
+// Get security
 const getSecurity = async (req, res) => {
   const userEmail = req.session.user;
   if (!userEmail) return res.redirect("/login");
@@ -1293,6 +1215,7 @@ const getSecurity = async (req, res) => {
   });
 };
 
+// Get delete account
 const getDeleteAcount = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -1318,6 +1241,7 @@ const getDeleteAcount = async (req, res) => {
   }
 };
 
+// Get referrals
 const getReferrals = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -1357,12 +1281,13 @@ const getReferrals = async (req, res) => {
   }
 };
 
+// User logout
 const userlogOut = (req, res) => {
   try {
     delete req.session.user;
     return res.redirect("/");
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Internal server error");
   }
 };
@@ -1390,8 +1315,8 @@ export {
   confirmReturn,
   getReturnSelect,
   postReturnSelect,
-  getWallet,
-  getWalletHistory,
+// getWallet, (Removed)
+// getWalletHistory, (Removed)
   getReferrals,
   getSecurity,
   getDeleteAcount,

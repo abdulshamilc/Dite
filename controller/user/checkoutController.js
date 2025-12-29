@@ -4,10 +4,12 @@ import { User } from "../../models/userModels.js";
 import Order from "../../models/ordersModel.js";
 import { nanoid } from "nanoid";
 import Products from "../../models/productsModels.js";
-import Wallet from '../../models/walletModel.js';
+// import Wallet from '../../models/walletModel.js'; (Removed)
+import { processWalletPayment } from './walletController.js';
 import Coupon from "../../models/couponModel.js";
 import Offer from "../../models/offerModel.js";
 
+// Get checkout
 const getCheckout = async (req, res) => {
   const userEmail = req.session.user;
   if (!userEmail) return res.redirect("/login");
@@ -102,6 +104,7 @@ const getCheckout = async (req, res) => {
   });
 };
 
+// Add geolocation
 const addGeolocation = async (req, res) => {
   try {
     const addressId = req.params.id;
@@ -112,10 +115,11 @@ const addGeolocation = async (req, res) => {
 
     await address.save();
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Clear geolocation
 const clearGeolocation = async (req, res) => {
   try {
     const addressId = req.params.id;
@@ -125,10 +129,11 @@ const clearGeolocation = async (req, res) => {
 
     await address.save();
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Add new address
 const addNewAddress = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -179,10 +184,11 @@ const addNewAddress = async (req, res) => {
 
     res.redirect("/checkout/address");
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Get payment page
 const getPaymentpage = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -216,23 +222,12 @@ const getPaymentpage = async (req, res) => {
 
     res.render("user/checkout/finalChekout", { user, cart, selectedAddress });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.redirect("/cart");
   }
 };
 
-const getWalletBalanceAPI = async (req, res) => {
-  try {
-    if (!req.session.user) return res.json({ balance: 0 });
-    const user = await User.findOne({ email: req.session.user });
-    if (!user) return res.json({ balance: 0 });
-    const wallet = await Wallet.findOne({ user: user._id });
-    return res.json({ balance: wallet ? wallet.balance : 0 });
-  } catch (error) {
-    return res.json({ balance: 0 });
-  }
-};
-
+// Apply coupon
 const applyCoupon = async (req, res) => {
   try {
     const { couponCode, subtotal } = req.body;
@@ -294,6 +289,7 @@ const applyCoupon = async (req, res) => {
   }
 };
 
+// Place order
 const placeOrder = async (req, res) => {
   try {
     // Fetch user from session (email-based auth)
@@ -481,24 +477,13 @@ const placeOrder = async (req, res) => {
     const orderID = `ORD-${nanoid(8)}`;
 
     // For Wallet: Deduction
-    if (normalizedPaymentMethod === 'wallet') {
-      // Check wallet balance
-      let wallet = await Wallet.findOne({ user: user._id });
-      if (!wallet || wallet.balance < totalAmount) {
-        return res.status(400).json({ success: false, message: "Insufficient wallet balance. Please top up or use another payment method." });
-      }
-      wallet.balance -= totalAmount;
-      wallet.transactions.unshift({
-        description: `Purchase from wallet. Order ID: ${orderID}`,
-        amount: totalAmount,
-        type: 'debit',
-        date: new Date(),
-        source: 'purchase',
-        referenceId: user._id.toString(), // We can update this later if we really need the order _id, but orderID is good enough for ref usually
-      }); 
-      if (wallet.transactions.length > 100) wallet.transactions = wallet.transactions.slice(0, 100);
-      await wallet.save();
-      paymentInfo.paymentStatus = 'Paid'; // Mark as paid
+    if (normalizedPaymentMethod === 'wallet' || normalizedPaymentMethod === 'Wallet') {
+        try {
+            await processWalletPayment(user._id, totalAmount, orderID);
+            paymentInfo.paymentStatus = 'Paid'; // Mark as paid
+        } catch (err) {
+             return res.status(400).json({ success: false, message: err.message || "Wallet payment failed" });
+        }
     }
 
     // Create order (use schema defaults; orderStatus always starts as "Placed")
@@ -524,6 +509,17 @@ const placeOrder = async (req, res) => {
     });
 
     await newOrder.save();
+
+    // Increment user stats
+    await User.updateOne(
+      { _id: user._id },
+      { 
+        $inc: { 
+          totalOrders: 1,
+          totalSpent: totalAmount
+        } 
+      }
+    );
 
     // Decrease stock immediately (for both COD and Online; assumes Products model with variants)
     // Decrease stock immediately using atomic update
@@ -560,6 +556,7 @@ const placeOrder = async (req, res) => {
   }
 };
 
+// Get success page
 const getSuccessPage = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.session.user });
@@ -575,9 +572,10 @@ const getSuccessPage = async (req, res) => {
     delete req.session.orderplaced;
     res.render("user/checkout/succuss");
   } catch (error) {
-    console.log(error)
+    console.error(error)
   }
 };
+// Get failed page
 const getFailedPage = async (req, res) => {
   const user = await User.findOne({ email: req.session.user });
   if (!user) return res.redirect("/login");
@@ -597,10 +595,8 @@ const getFailedPage = async (req, res) => {
   }
 
   // Clear any lingering session flags to avoid stale state
+  // Clear any lingering session flags to avoid stale state
   req.session.orderplaced = false;
-  req.session.regenerate((err) => {
-    if (err) console.error('Session regeneration error:', err);
-  });
 
   res.render("user/checkout/failed", { errorMessage, errorType, addressId });
 };
@@ -611,7 +607,7 @@ export {
   clearGeolocation,
   addNewAddress,
   getPaymentpage,
-  getWalletBalanceAPI,
+  // getWalletBalanceAPI, (Removed)
   placeOrder,
   getSuccessPage,
   getFailedPage,

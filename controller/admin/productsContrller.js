@@ -6,6 +6,7 @@ const toNumber = (val) => {
   return isNaN(n) ? 0 : n;
 };
 
+// Get products
 const getProducts = async (req, res) => {
   try {
     const errorMessage = req.session.errorMessage;
@@ -73,6 +74,7 @@ const getProducts = async (req, res) => {
     res.status(500).send("Server Error");
   }
 };
+// Get add products
 const getAddProducts = async (req, res) => {
   try {
     const categories = await Categories.find({ isDeleted: false }).lean();
@@ -88,16 +90,11 @@ const getAddProducts = async (req, res) => {
   }
 };
 
+// Post add products
 const postAddProducts = async (req, res) => {
-// ... (omitting irrelevant parts to avoid long payload if possible, actually replace needs full block if I select ranges)
-// I will use multiple chunks.
 
   try {
-    console.log("=== ADD PRODUCT REQUEST ===");
-    console.log("Files:", req.files?.length || 0);
-    console.log("Body keys:", Object.keys(req.body || {}));
 
-    // EXTRACT BODY DATA
     let {
       name,
       description,
@@ -109,7 +106,7 @@ const postAddProducts = async (req, res) => {
       variants,
     } = req.body;
 
-    // BASIC VALIDATIONS
+
     if (!name || !category || !brand || !gender || !concentration) {
       return res.status(400).json({
         success: false,
@@ -117,7 +114,7 @@ const postAddProducts = async (req, res) => {
       });
     }
 
-    //  IMAGE HANDLING
+
     const imageUrls =
       req.files?.map((file) => file.path || file.secure_url || file.url) || [];
 
@@ -128,7 +125,7 @@ const postAddProducts = async (req, res) => {
       });
     }
 
-    //  HANDLE FORM-DATA VARIANTS
+
     if (!variants) {
       const manualVariants = {};
 
@@ -147,7 +144,7 @@ const postAddProducts = async (req, res) => {
       }
     }
 
-    //  PARSE VARIANTS SAFELY
+
     let parsedVariants = [];
 
     // CASE 1: variants is ARRAY
@@ -214,9 +211,9 @@ const postAddProducts = async (req, res) => {
       });
     }
 
-    console.log("Parsed variants:", parsedVariants);
 
-    //  VERIFY CATEGORY EXISTS
+
+
     const categoryExists = await Categories.findById(category);
     if (!categoryExists) {
       return res.status(400).json({
@@ -225,7 +222,7 @@ const postAddProducts = async (req, res) => {
       });
     }
 
-    //  CREATE PRODUCT
+
     const newProduct = new Products({
       name: name.trim(),
       description,
@@ -240,18 +237,17 @@ const postAddProducts = async (req, res) => {
 
     await newProduct.save();
 
-    //  UPDATE CATEGORY
+
     categoryExists.products.push(newProduct._id);
     await categoryExists.save();
 
-    //  SUCCESS RESPONSE
+
     res.status(201).json({
       success: true,
       message: "Product added successfully",
       productId: newProduct._id,
     });
   } catch (error) {
-    console.error("=== ADD PRODUCT ERROR ===");
     console.error(error);
 
     res.status(500).json({
@@ -260,6 +256,7 @@ const postAddProducts = async (req, res) => {
     });
   }
 };
+// Get edit products
 const getEditProducts = async (req, res) => {
   try {
     const categories = await Categories.find({ isDeleted: false }).lean();
@@ -271,13 +268,19 @@ const getEditProducts = async (req, res) => {
     const products = await Products.find({ isDeleted: false })
       .select("name _id")
       .lean();
-    res.render("admin/products/editProducts", { categories, product, products });
+    const successMessage = req.session.successMessage;
+    const errorMessage = req.session.errorMessage;
+    req.session.successMessage = null;
+    req.session.errorMessage = null;
+    
+    res.render("admin/products/editProducts", { categories, product, products, successMessage, errorMessage });
   } catch (err) {
     console.error(err);
     req.session.errorMessage = "Something Went Wrong";
     res.redirect("/admin/products");
   }
 };
+// Post edit product
 const postEditProduct = async (req, res) => {
   try {
     const productId = req.params.id;
@@ -304,14 +307,14 @@ const postEditProduct = async (req, res) => {
       ? req.body.existingImages
       : [];
 
-    // Build updated images
+
     let updatedImages = [...(oldProduct.images || [])];
     imageFiles.forEach((filePath, index) => {
       if (index < 4) {
         updatedImages[index] = filePath;
       }
     });
-    // Fill remaining slots with existing images if available
+
     let existingIdx = 0;
     for (let i = 0; i < 4; i++) {
       if (updatedImages[i] === undefined && existingIdx < existingImages.length) {
@@ -335,7 +338,7 @@ const postEditProduct = async (req, res) => {
     // Trim to exactly 4
     updatedImages = updatedImages.slice(0, 4);
 
-    // Validate images: exactly 4 valid paths
+
     if (updatedImages.length !== 4 || updatedImages.some((img) => !img)) {
       return res.status(400).json({
         success: false,
@@ -360,7 +363,7 @@ const postEditProduct = async (req, res) => {
         .json({ success: false, error: "Product description is required." });
     }
 
-    // Handle old category - might be array from old data
+
     let oldCategoryValue = oldProduct.category;
     if (Array.isArray(oldCategoryValue)) {
       oldCategoryValue = oldCategoryValue[0];
@@ -387,7 +390,7 @@ const postEditProduct = async (req, res) => {
         .json({ success: false, error: "Concentration is required." });
     }
 
-    // Parse variants if provided, else keep old
+
     let parsedVariants = [...oldProduct.variants];
     if (rawVariants) {
       if (Array.isArray(rawVariants)) {
@@ -430,7 +433,7 @@ const postEditProduct = async (req, res) => {
       }
     }
 
-    // Per-variant validation
+
     let variantErrors = [];
     parsedVariants.forEach((v) => {
       const variantNum = v.index + 1;
@@ -472,7 +475,7 @@ const postEditProduct = async (req, res) => {
       });
     }
 
-    // Description word count
+
     const wordCountDesc = finalDescription.split(/\s+/).length;
     if (wordCountDesc < 10 || wordCountDesc > 150) {
       return res.status(400).json({
@@ -481,7 +484,7 @@ const postEditProduct = async (req, res) => {
       });
     }
 
-    // Notes word count
+
     const finalNotes = notes ? notes.trim() : oldProduct.notes;
     const wordCountNotes = finalNotes.split(/\s+/).length;
     if (wordCountNotes > 150 || (wordCountNotes > 0 && wordCountNotes < 5)) {
@@ -496,7 +499,7 @@ const postEditProduct = async (req, res) => {
     const finalBrand = brand ? brand.trim().toUpperCase() : oldProduct.brand;
     // Regex validation removed as we force uppercase now
 
-    // Check duplicate name (exclude current product)
+
     if (finalName.toLowerCase() !== oldProduct.name.toLowerCase()) {
       const existingProduct = await Products.findOne({
         name: { $regex: new RegExp(`^${finalName}$`, "i") },
@@ -511,7 +514,7 @@ const postEditProduct = async (req, res) => {
       }
     }
 
-    // Update product
+
     oldProduct.name = finalName;
     oldProduct.description = finalDescription;
     oldProduct.notes = finalNotes;
@@ -530,7 +533,7 @@ const postEditProduct = async (req, res) => {
 
     await oldProduct.save();
 
-    // Handle category change
+
     // Compare using string conversion to handle ObjectId comparison
     const oldCategoryStr = oldCategoryValue
       ? oldCategoryValue.toString()
@@ -567,6 +570,7 @@ const postEditProduct = async (req, res) => {
   }
 };
 
+// Get product details
 const getProductDetails = async (req, res) => {
   try {
     const { id } = req.params;
@@ -582,10 +586,18 @@ const getProductDetails = async (req, res) => {
 
     // You can add more data processing here if needed, e.g., calculate totals
 
+    // Verify messages from session
+    const successMessage = req.session.successMessage;
+    const errorMessage = req.session.errorMessage;
+    req.session.successMessage = null;
+    req.session.errorMessage = null;
+
     // Render the view
     res.render("admin/products/productDetails", {
       title: "Product Details - Admin",
       product,
+      successMessage,
+      errorMessage,
       // Add other locals if needed, e.g., categories: await Category.find()
     });
   } catch (error) {
@@ -594,6 +606,7 @@ const getProductDetails = async (req, res) => {
     res.redirect("/admin/products");
   }
 };
+// Unlist product
 const unlistProduct = async (req, res) => {
   try {
     const product = await Products.findOne({ _id: req.params.id });
@@ -608,6 +621,7 @@ const unlistProduct = async (req, res) => {
   }
 };
 
+// Delete product
 const deleteProduct = async (req, res) => {
   try {
     const product = await Products.findOne({ _id: req.params.id });

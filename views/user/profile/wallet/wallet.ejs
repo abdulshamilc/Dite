@@ -416,8 +416,8 @@
                     <div><%= transaction.description %></div>
                     <div class="transaction-date"><%= new Date(transaction.date).toLocaleDateString() %></div>
                   </div>
-                  <div class="transaction-amount <%= transaction.amount > 0 ? 'positive' : 'negative' %>">
-                    <%= transaction.amount > 0 ? '+' : '' %>₹<%= Math.abs(transaction.amount).toFixed(2) %>
+                  <div class="transaction-amount <%= (transaction.type === 'debit' || transaction.amount < 0) ? 'negative' : 'positive' %>">
+                    <%= (transaction.type === 'debit' || transaction.amount < 0) ? '-' : '+' %>₹<%= Math.abs(transaction.amount).toFixed(2) %>
                   </div>
                 </div>
               <% }); %>
@@ -484,7 +484,10 @@
     }
     function updateAmountDisplay() {
       const amount = document.getElementById('addAmount').value || 100;
-      document.getElementById('amountDisplay').textContent = amount;
+      const display = document.getElementById('amountDisplay');
+      if (display) {
+          display.textContent = amount;
+      }
     }
     document.getElementById('addAmount').addEventListener('input', updateAmountDisplay);
     function showPaymentStatus(message, isError = false) {
@@ -623,15 +626,10 @@
         });
         const data = await response.json();
         if (response.ok && data.success) {
-          showPaymentStatus('Funds added successfully!');
-          showMessage(`Successfully added ₹${amount.toFixed(2)} to your wallet!`, 'success');
-          // Update balance dynamically
-          const currentBalanceText = document.querySelector('.balance-amount').textContent.replace('₹', '').trim();
-          const currentBalance = parseFloat(currentBalanceText);
-          document.querySelector('.balance-amount').innerHTML = `₹${(currentBalance + amount).toFixed(2)}<span class="balance-currency">INR</span>`;
-          // Add to transactions
-          addTransactionToList('Added funds via Razorpay', amount, new Date().toISOString());
-          closeAddMoneyModal();
+          showPaymentStatus('Funds added successfully! Reloading...');
+          document.getElementById('paymentOverlay').classList.add('reloading'); 
+          // Reload to reflect changes and show success message from session
+          window.location.reload();
         } else {
           throw new Error(data.message || 'Failed to add funds');
         }
@@ -642,7 +640,10 @@
         showMessage(errorMsg, 'error');
         resetAddButton();
       } finally {
-        setTimeout(hidePaymentStatus, 2000);
+        // Ensure overlay is hidden if it wasn't handled by success/reload
+        if (!document.getElementById('paymentOverlay').classList.contains('reloading')) {
+             setTimeout(hidePaymentStatus, 2000);
+        }
       }
     }
     function resetAddButton() {

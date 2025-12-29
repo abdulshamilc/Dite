@@ -65,57 +65,7 @@ const verifyRazorpayPayment = async (req, res) => {
   }
 };
 
-const addFundsToWallet = async (req, res) => {
-  try {
-    // Fetch user from session
-    const user = await User.findOne({ email: req.session.user });
-    if (!user) {
-      console.error("Wallet Error [Anonymous User]: User not authenticated");
-      return res.status(401).json({ success: false, message: "User not authenticated. Please log in." });
-    }
-    const { amount, razorpayPaymentId, razorpayOrderId } = req.body;
-    if (!amount || amount < 100) { // Minimum 100 as per frontend
-      console.error(`Wallet Error [User: ${user._id}]: Invalid amount ${amount}`);
-      return res.status(400).json({ success: false, message: "Amount too low (min Rs. 100)." });
-    }
-    if (!razorpayPaymentId || !razorpayOrderId) {
-      console.error(`Wallet Error [User: ${user._id}]: Missing payment details`);
-      return res.status(400).json({ success: false, message: "Missing payment details." });
-    }
-    // Find or create user's wallet
-    let wallet = await Wallet.findOne({ user: user._id });
-    if (!wallet) {
-      wallet = new Wallet({
-        user: user._id,
-        balance: 0,
-        transactions: []
-      });
-    }
-    // Update balance
-    const oldBalance = wallet.balance;
-    wallet.balance += amount;
-    // Add transaction
-    wallet.transactions.unshift({
-      description: `Added funds via Razorpay (Payment ID: ${razorpayPaymentId})`,
-      amount: amount,
-      date: new Date()
-    });
-    // Optionally limit transactions array to last 100 or so
-    if (wallet.transactions.length > 100) {
-      wallet.transactions = wallet.transactions.slice(0, 100);
-    }
-    await wallet.save();
-    console.log(`Wallet Updated [User: ${user._id}]: Added ₹${amount} (Old: ₹${oldBalance}, New: ₹${wallet.balance})`);
-    return res.json({
-      success: true,
-      message: "Funds added successfully to your wallet!",
-      balance: wallet.balance
-    });
-  } catch (error) {
-    console.error(`Wallet Error [User: ${req.session.user}]:`, error);
-    return res.status(500).json({ success: false, message: "Server error: Failed to add funds. Please contact support." });
-  }
-};
+// addFundsToWallet removed and moved to walletController.js
 
 // Retry Payment: Create Razorpay Order for Existing DB Order
 const retryPaymentOrder = async (req, res) => {
@@ -211,7 +161,7 @@ const verifyRetryPayment = async (req, res) => {
 export {
     createRazorpayOrder,
     verifyRazorpayPayment,
-    addFundsToWallet,
+    // addFundsToWallet, (Removed)
     retryPaymentOrder,
     verifyRetryPayment
 }

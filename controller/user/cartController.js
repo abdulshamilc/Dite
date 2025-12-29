@@ -3,6 +3,7 @@ import Cart from "../../models/cartModel.js";
 import Products from "../../models/productsModels.js";
 import Wishlist from "../../models/wishlistModel.js";
 import Offer from "../../models/offerModel.js";
+// Get cart
 const getCart = async (req, res) => {
   try {
     const email = req.session.user;
@@ -158,6 +159,7 @@ const getCart = async (req, res) => {
   }
 };
 
+// Add to cart
 const addToCart = async (req, res) => {
   try {
     const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.xhr;
@@ -307,6 +309,7 @@ const addToCart = async (req, res) => {
   }
 };
 
+// Delete cart
 const deleteCart = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -327,10 +330,11 @@ const deleteCart = async (req, res) => {
 
     res.redirect("/cart");
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Update quantity
 const updateQuantity = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -423,7 +427,7 @@ const updateQuantity = async (req, res) => {
       return res.status(400).json({ message: "No changes made" });
     }
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).json({ message: "Something went wrong" });
   }
 };

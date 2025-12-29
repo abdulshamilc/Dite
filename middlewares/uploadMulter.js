@@ -14,12 +14,11 @@ const storage = cloudinaryStorage({
     cb(null, folderName);
   },
   allowedFormats: ["jpg", "png", "jpeg", "webp"],
-  transformation: [{ width: 300, height: 400, crop: 'fill' }],
 });
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit per file
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit per file
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
       cb(null, true);

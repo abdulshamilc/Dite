@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <%- include("../../../partials/user/headerHead") %>
     <%- include("../../../partials/user/footerHead") %>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         :root {
             --primary: #1a1a1a;
@@ -243,7 +244,14 @@
             });
 
             if (!hasSelection) {
-                alert('Please select at least one item and specify a valid quantity (1 to available) to return.');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Selection',
+                    text: 'Please select at least one item and specify a valid quantity (1 to available) to return.',
+                    background: '#2a2a2a',
+                    color: '#ffffff',
+                    confirmButtonColor: '#d4af37'
+                });
                 return;
             }
 

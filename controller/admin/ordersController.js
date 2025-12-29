@@ -1,6 +1,9 @@
 import Orders from "../../models/ordersModel.js";
 import { User } from "../../models/userModels.js";
+import PDFDocument from "pdfkit";
+import moment from "moment";
 
+// Get orders
 const getOrders = async (req, res) => {
   try {
     if (!req.session.admin) return res.redirect("/login");
@@ -53,6 +56,7 @@ const getOrders = async (req, res) => {
   }
 };
 
+// Get view orders
 const getViewOrders = async (req, res) => {
   try {
     const orderId = req.params.id;
@@ -105,6 +109,7 @@ const getViewOrders = async (req, res) => {
   }
 };
 
+// Update order status
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -157,8 +162,6 @@ const updateOrderStatus = async (req, res) => {
       return res.redirect("/admin/orders");
     }
 
-    // Optional: Handle special logic for certain statuses
-    // Example: If Cancelled or Returned, adjust totalAmount or add refund logic
     if (status === "Cancelled" || status === "Returned") {
       // Optional: Set totalAmount to 0 or trigger refund
       order.totalAmount = 0;
@@ -174,8 +177,138 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+
+
+// Export order PDF
+const exportOrderPDF = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const order = await Orders.findById(orderId).populate("items.productId");
+    
+    if (!order) {
+      return res.status(404).send("Order not found");
+    }
+
+    const doc = new PDFDocument({ margin: 50 });
+    const filename = `Order-${order.orderID || order._id}.pdf`;
+
+    res.setHeader("Content-disposition", `attachment; filename="${filename}"`);
+    res.setHeader("Content-type", "application/pdf");
+
+    doc.pipe(res);
+
+    // --- Header ---
+    doc
+      .fontSize(20)
+      .text("Dité", { align: "center" }) // Brand Name
+      .fontSize(10)
+      .text("Premium Fashion Store", { align: "center" })
+      .moveDown();
+
+    doc
+      .fontSize(16)
+      .text("Order Report", { align: "center" })
+      .moveDown();
+
+    // --- Order Details ---
+    const startY = doc.y;
+    doc.fontSize(10);
+    
+    doc.text(`Order ID: ${order.orderID || order._id}`, 50, startY);
+    doc.text(`Date: ${moment(order.placedAt).format("DD MMM YYYY, hh:mm A")}`, 50, startY + 15);
+    doc.text(`Status: ${order.orderStatus}`, 50, startY + 30);
+    doc.text(`Payment: ${order.paymentMethod}`, 50, startY + 45);
+
+    // --- Address ---
+    const addressY = startY;
+    const rightX = 300;
+    doc.text("Shipping Address:", rightX, addressY);
+    if (order.address) {
+        doc.text(order.address.fullName || "", rightX, addressY + 15);
+        doc.text((order.address.hoNo || "") + ", " + (order.address.street || ""), rightX, addressY + 30);
+        doc.text(`${order.address.city || ""}, ${order.address.state || ""} - ${order.address.pin || ""}`, rightX, addressY + 45);
+        doc.text(`${order.address.country || ""}`, rightX, addressY + 60);
+        doc.text(`Phone: ${order.address.phone || ""}`, rightX, addressY + 75);
+    }
+    
+    doc.moveDown(4);
+
+    // --- Active Items ---
+    const activeItems = order.items
+        .filter(i => (i.quantity || 0) > 0);
+
+    if (activeItems.length > 0) {
+        doc.fontSize(12).text("Active Items", { underline: true });
+        doc.moveDown(0.5);
+        
+        // Header
+        const yStart = doc.y;
+        doc.fontSize(10).font("Helvetica-Bold");
+        doc.text("Product", 50, yStart);
+        doc.text("Size", 250, yStart);
+        doc.text("Qty", 300, yStart);
+        doc.text("Price", 350, yStart);
+        doc.text("Total", 450, yStart);
+        doc.font("Helvetica");
+        
+        let y = yStart + 20;
+
+        activeItems.forEach(item => {
+            const name = item.name || item.productId?.name || "Product";
+            const price = item.discoundedPrice || item.basePrice || 0;
+            const total = price * item.quantity;
+            
+            doc.text(name.substring(0, 30), 50, y);
+            doc.text((item.mlSize || "") + "ml", 250, y);
+            doc.text(item.quantity.toString(), 300, y);
+            doc.text(price.toFixed(2), 350, y);
+            doc.text(total.toFixed(2), 450, y);
+            y += 15;
+        });
+        doc.moveDown();
+    }
+
+    // --- Cancelled Items ---
+    if (order.cancelProducts && order.cancelProducts.length > 0) {
+        doc.moveDown();
+        doc.fillColor('red').fontSize(12).text("Cancelled Items", { underline: true });
+        doc.fillColor('black'); 
+        doc.moveDown(0.5);
+        
+        order.cancelProducts.forEach(item => {
+            doc.fontSize(10).text(`- ${item.name} (${item.mlSize}ml) x${item.canceledQuantity}`);
+            if (item.reason) doc.fontSize(8).text(`  Reason: ${item.reason}`, { indent: 10 });
+        });
+    }
+
+    // --- Returned Items ---
+    if (order.returndProduct && order.returndProduct.length > 0) {
+        doc.moveDown();
+        doc.fillColor('orange').fontSize(12).text("Returned Items", { underline: true });
+        doc.fillColor('black');
+        doc.moveDown(0.5);
+        
+        order.returndProduct.forEach(item => {
+            doc.fontSize(10).text(`- ${item.name} (${item.mlSize}ml) x${item.returndQuantity} [${item.adminApproved}]`);
+            if (item.reason) doc.fontSize(8).text(`  Reason: ${item.reason}`, { indent: 10 });
+        });
+    }
+
+    doc.moveDown(2);
+    doc.fontSize(12).text(`Total Amount Paid: Rs. ${(order.totalAmount || 0).toFixed(2)}`, { align: 'right' });
+    
+    doc.end();
+
+  } catch (error) {
+    console.error("PDF Export Error:", error);
+    res.status(500).send("Error generating PDF");
+  }
+
+};
+
 export {
     getOrders,
     getViewOrders,
-    updateOrderStatus
+    updateOrderStatus,
+    exportOrderPDF
 };

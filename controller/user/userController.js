@@ -9,19 +9,21 @@ import { generateOTP } from "../../utils/genarateOtp.js";
 import jwt from "jsonwebtoken";
 import Cart from '../../models/cartModel.js' ;
 import Wallet from '../../models/walletModel.js';
+// Not logged in home
 const notLogginedHome = (req, res) => {
   const cartLength = 0 ;
   
 
   res.render("user/home" , {cartLength});
 };
+// Get signup
 const getSignup = (req, res) => {
   if (req.session.user) return res.redirect("/");
   const referralCode = req.query.ref || "";
   res.render("user/authentications/signup", { errors: {}, oldData: { referralCode } });
 };
 
-// STEP 1: Basic Details
+// Signup
 const signup = async (req, res) => {
   try {
     const { error } = signupStep1Validation.validate(req.body, { abortEarly: false });
@@ -62,13 +64,13 @@ const signup = async (req, res) => {
   }
 };
 
-// STEP 2: Password (GET)
+// Get set password
 const getSetPassword = (req, res) => {
   if (!req.session.signupStep1) return res.redirect("/signup");
   res.render("user/authentications/signupPassword", { errors: {}, oldData: {} });
 };
 
-// STEP 2: Password (POST)
+// Post set password
 const postSetPassword = async (req, res) => {
   try {
     if (!req.session.signupStep1) return res.redirect("/signup");
@@ -119,6 +121,7 @@ const postSetPassword = async (req, res) => {
   }
 };
 
+// Get signup OTP verify
 const getSignupOtpVerify = async (req, res) => {
   try {
     if (!req.session.tempData) return res.redirect("/signup");
@@ -127,10 +130,11 @@ const getSignupOtpVerify = async (req, res) => {
 
     res.render("user/authentications/signupOtpVerify", { errors });
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Resend signup OTP
 const resendSignupOtp = async (req, res) => {
   try {
     if (!req.session.tempData) return res.redirect("/signup");
@@ -151,11 +155,12 @@ const resendSignupOtp = async (req, res) => {
     req.session.otpSuccess = "A new OTP has been sent to your email.";
     res.redirect("/signup/verify-otp");
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Error resending OTP");
   }
 };
 
+// Post signup OTP verify
 const postSignupOtpVerify = async (req, res) => {
   try {
     if (!req.session.tempData) {
@@ -205,12 +210,12 @@ const postSignupOtpVerify = async (req, res) => {
     
     // Check if they used a referral code
     const usedReferralCode = newUser.referralCode; // This comes from the signup form input
-    let referredByEmail = null;
+    let referredByCode = null;
 
     if (usedReferralCode) {
       const referrer = await User.findOne({ referralCode: usedReferralCode });
       if (referrer) {
-        referredByEmail = referrer.email;
+        referredByCode = referrer.referralCode;
         referrer.redeemedUsers.push(newUser.email);
         await referrer.save();
 
@@ -225,7 +230,7 @@ const postSignupOtpVerify = async (req, res) => {
 
     // Update newUser object
     newUser.referralCode = myReferralCode;
-    newUser.referredBy = referredByEmail;
+    newUser.referredBy = referredByCode;
 
     // Save user
     const user = new User(newUser);
@@ -273,6 +278,7 @@ const postSignupOtpVerify = async (req, res) => {
   }
 };
 
+// Get login
 const getLogin = async (req, res) => {
   try {
     if (req.session.user) res.render("user/home");
@@ -280,6 +286,7 @@ const getLogin = async (req, res) => {
   } catch (error) {}
 };
 
+// Login
 const login = async (req, res) => {
   //Validating Email
   const { email, password } = req.body;
@@ -347,13 +354,13 @@ const login = async (req, res) => {
   res.redirect(returnTo);
 };
 
-// Forget Password
-
+// Get forgot password
 const getForgotPassword = (req, res) => {
   res.render("user/authentications/forgetPassword");
 };
 
 
+// Forget password
 const forgetPassword = async (req, res) => {
   try {
     const email = req.body.email;
@@ -383,27 +390,23 @@ const forgetPassword = async (req, res) => {
   }
 };
 
+// Get OTP verification
 const getOtpVerification = (req, res) => {
   try {
     if (!req.session.email) return res.redirect("/forgot-password");
     res.render("user/authentications/otpForgetPassword");
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
 
 
+// Post OTP verification
 const PostOtpVerification = async (req, res) => {
   try {
     const EnterdOtp = req.body.otp;
-    console.log(req.session.email)
-    const userOtp = await UserOtpVerification.findOne({
-      email: req.session.email,
-    }).sort({ createdAt: -1 });
 
-    console.log(EnterdOtp)
-    console.log(userOtp)
 
     if (!EnterdOtp) return res.status(400).json({ message: "OTP is required" });
 
@@ -423,7 +426,7 @@ const PostOtpVerification = async (req, res) => {
 
     await UserOtpVerification.create({ email, action, resetToken });
 
-    console.log(`Reset Tocken = ${resetToken}`);
+
 
     await UserOtpVerification.deleteOne({ _id: userOtp._id });
 
@@ -439,6 +442,7 @@ const PostOtpVerification = async (req, res) => {
 };
 
 
+// Get reset password
 const getResetPasword = async (req, res) => {
 
   const { token } = req.params;
@@ -474,9 +478,10 @@ const getResetPasword = async (req, res) => {
 };
 
 
+// Post reset password
 const postResetPassword = async (req, res) => {
   try {
-  console.log("Chekck Point 1")
+
     const token = req.params.token;
     const { newPassword, confirmPassword } = req.body;
 
@@ -485,8 +490,8 @@ const postResetPassword = async (req, res) => {
       return res.status(400).json({ message: error.details[0].message });
     }
 
-    console.log("Tocken = " + token);
-  console.log("Chekck Point 2")
+
+
   let decoded;
   try {
     decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -498,7 +503,7 @@ const postResetPassword = async (req, res) => {
     }
     return res.status(400).json({ message: "Invalid reset token." });
   }
-  console.log("Chekck Point 2")
+
 
     const email = decoded.email;
 
@@ -531,6 +536,7 @@ const postResetPassword = async (req, res) => {
 
 
 
+// Reset password
 const restPassword = async (req, res) => {
   try {
     const userEmail = req.session.user;
@@ -567,20 +573,19 @@ const restPassword = async (req, res) => {
 
     return res.status(200).json({ message: "Password updated successfully!" });
   } catch (error) {
-    console.error(err);
+    console.error(error);
     return res
       .status(500)
       .json({ message: "Server error. Please try again later." });
   }
 };
 
-// Blocked User
-
+// User blocked
 const userBloked = (req, res) => {
   try {
     res.render("user/authentications/userblocked");
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 

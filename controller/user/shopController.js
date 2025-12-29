@@ -4,11 +4,13 @@ import Wishlist from '../../models/wishlistModel.js' ;
 import {User} from '../../models/userModels.js';
 import Offer from "../../models/offerModel.js";
 import Cart from "../../models/cartModel.js";
+import mongoose from "mongoose";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
+// Get category shop helper
 const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
   try {
     const {
@@ -23,8 +25,7 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
       filter = "ALL", // stock, sale, new
     } = req.query;
 
-    // Aggregations for Stats (Brands, Concentrations, Prices)
-    // We filter these aggregations by the baseQuery (e.g. only men's products)
+
     const [brandStats, uniqueConcentrations, priceStats] = await Promise.all([
       Products.aggregate([
         { $match: { ...baseQuery, isDeleted: false, isListed: true, brand: { $ne: null, $exists: true } } }, 
@@ -211,6 +212,7 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
      });
   }
 };
+// Get shop
 const getShop = async (req, res) => {
   try {
     const {
@@ -226,7 +228,7 @@ const getShop = async (req, res) => {
       concentrations: concentrationsQuery,
     } = req.query;
 
-    // Fetch unique values and price stats
+
     const [brandStats, uniqueConcentrations, priceStats] = await Promise.all([
       Products.aggregate([
         { $match: { isDeleted: false, isListed: true, brand: { $ne: null, $exists: true } } },
@@ -250,7 +252,7 @@ const getShop = async (req, res) => {
     const overallMinPrice = priceStats[0]?.minPrice || 0;
     const overallMaxPrice = priceStats[0]?.maxPrice || 10000;
 
-    // Predefined price options
+
     const maxPriceOptions = [overallMinPrice, 1000, 3000, 5000, 10000, overallMaxPrice];
     const minPriceOptions = [5000, 10000, 15000, 30000, 50000, overallMaxPrice];
 
@@ -263,16 +265,13 @@ const getShop = async (req, res) => {
     const selectedBrands = brands ? brands.split(",").map((b) => b.trim().toLowerCase()).filter(Boolean) : [];
     const selectedConcentrations = concentrationsQuery ? concentrationsQuery.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [];
 
-    // Effective sort
-    const effectiveSort = sort || "newest";
 
-    // Build the base query
-    let query = {
+
+    const query = {
       isDeleted: false,
       isListed: true,
     };
 
-    // Search filter 
     let searchMatch = null;
     if (search.trim()) {
       const escapedSearch = escapeRegex(search.trim());
@@ -285,12 +284,12 @@ const getShop = async (req, res) => {
       query.$or = searchMatch.$or;
     }
 
-    // Gender filter
+
     if (gender !== "ALL") {
       query.gender = gender;
     }
 
-    // Brands and Concentrations - case insensitive
+
     if (selectedBrands.length > 0) {
       query.brand = { $in: selectedBrands.map(b => new RegExp('^' + escapeRegex(b) + '$', 'i')) };
     }
@@ -298,7 +297,7 @@ const getShop = async (req, res) => {
       query.concentration = { $in: selectedConcentrations.map(c => new RegExp('^' + escapeRegex(c) + '$', 'i')) };
     }
 
-    // Variant match object
+
     let variantMatch = {};
     if (filter === "stock") {
       variantMatch.stock = { $gt: 0 };
@@ -338,7 +337,7 @@ const getShop = async (req, res) => {
         { $match: { hasDiscount: true } },
       ];
 
-      // Reset base query for aggregation
+
       query = { isDeleted: false, isListed: true };
       if (searchMatch) {
         aggregatePipeline.unshift({ $match: searchMatch });
@@ -348,7 +347,7 @@ const getShop = async (req, res) => {
       }
     }
 
-    // Sorting options
+
     const sortOptions = {
       price_asc: { "variants.0.discountedPrice": 1 },
       price_desc: { "variants.0.discountedPrice": -1 },
@@ -357,7 +356,7 @@ const getShop = async (req, res) => {
     };
     const sortObj = sortOptions[effectiveSort] || sortOptions.newest;
 
-    // Pagination
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const totalQuery = { ...query };
 
@@ -395,7 +394,7 @@ const getShop = async (req, res) => {
         .populate("category");
     }
 
-    // Fetch wishlist if user is authenticated
+
     let wishlist = [];
     if (req.session.user) {
       const user = await User.findOne({ email: req.session.user });
@@ -455,22 +454,23 @@ const getShop = async (req, res) => {
   }
 };
 
+// Product detail
 const productDetail = async (req, res) => {
   try {
-    const product = await Products.findById(req.params.id);
-    if (!product || product.isDeleted) {
-      return res.status(404).render("user/shop/productDetail", {
-        product: null,
-        suggestions: [],
-        error: "Product not found!",
-      });
+    const id = req.params.id
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).render("pageNotFound");
     }
-    // Handle category - support both array (old data) and single value (new data)
+    const product = await Products.findById(id);
+    if (!product || product.isDeleted) {
+      return res.status(404).render("pageNotFound");
+    }
+
     let categoryId = product.category;
     if (Array.isArray(categoryId)) {
       categoryId = categoryId[0];
     }
-    // Fetch active offers for this product or its category
+
     const currentDate = new Date();
     const productOffers = await Offer.find({
       targetModel: 'Product',
@@ -491,6 +491,38 @@ const productDetail = async (req, res) => {
     });
     
     const activeOffers = [...productOffers, ...categoryOffers];
+
+    // Real-time price correction check
+    let productModified = false;
+    if (product.variants && product.variants.length > 0) {
+        product.variants.forEach(variant => {
+            let bestPrice = variant.basePrice;
+            
+            if (activeOffers.length > 0) {
+                 const prices = activeOffers.map((offer) => {
+                    let discounted = variant.basePrice;
+                    if (offer.discountType === "flat") {
+                      discounted = variant.basePrice - offer.discountValue;
+                    } else {
+                      discounted = variant.basePrice - (variant.basePrice * offer.discountValue) / 100;
+                    }
+                    return Math.max(0, discounted);
+                  });
+                  bestPrice = Math.min(variant.basePrice, ...prices);
+            }
+            
+            const roundedBestPrice = Math.round(bestPrice);
+            if (variant.discountedPrice !== roundedBestPrice) {
+                variant.discountedPrice = roundedBestPrice;
+                productModified = true;
+            }
+        });
+        
+        if (productModified) {
+            await product.save();
+        }
+    }
+
 
     const suggestions = await Products.find({
       category: categoryId,
@@ -544,8 +576,7 @@ const productDetail = async (req, res) => {
   }
 };
 
-// Collection field
-
+// Get collections
 const getCollections = async (req, res) => {
   try {
     const categories = await Categories.find({
@@ -555,22 +586,26 @@ const getCollections = async (req, res) => {
     const products = await Products.find({ isDeleted: false, isListed: true });
     res.render("user/shop/collection", { products, categories });
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 };
 
+// Get men shop
 const getMenShop = async (req, res) => {
   await getCategoryShopHelper(req, res, { gender: "MEN" }, "MEN");
 };
 
+// Get women shop
 const getWomenShop = async (req, res) => {
     await getCategoryShopHelper(req, res, { gender: "WOMEN" }, "WOMEN");
 };
 
+// Get unisex shop
 const getUnisexShop = async (req, res) => {
     await getCategoryShopHelper(req, res, { gender: "UNISEX" }, "UNISEX");
 };
 
+// Get category shop
 const getCatogoryShop = async (req, res) => {
   try {
     const categorie = await Categories.findOne({ name: req.params.id });
@@ -606,6 +641,7 @@ const getCatogoryShop = async (req, res) => {
   }
 };
 
+// Get product API
 const getProductAPI = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id);

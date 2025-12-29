@@ -22,6 +22,8 @@ const getSalesReport = async (req, res) => {
     let successfulOrders = 0;
     let deliveredCount = 0;
     let totalDeliveryDays = 0;
+    let totalCouponDiscount = 0;
+    let totalProductDiscount = 0;
     const userSet = new Set();
     const monthlyRevenue = {}; // Keyed by "MMM YYYY" for cross-year accuracy
     const statusCounts = {
@@ -59,6 +61,15 @@ const getSalesReport = async (req, res) => {
       if (order.orderStatus === "Delivered") {
         totalRevenue += order.totalAmount || 0;
         successfulOrders++;
+        totalCouponDiscount += order.discountAmount || 0;
+
+        // Calculate product level discounts
+        order.items.forEach((item) => {
+             const base = item.basePrice || 0;
+             const sold = item.discoundedPrice || item.basePrice || 0;
+             totalProductDiscount += (base - sold) * item.quantity;
+        });
+
         monthlyRevenue[monthKey] =
           (monthlyRevenue[monthKey] || 0) + (order.totalAmount || 0);
         userSet.add(order.userId.toString());
@@ -80,6 +91,58 @@ const getSalesReport = async (req, res) => {
       successfulOrders > 0
         ? Math.round(totalRevenue / successfulOrders).toString()
         : "0";
+
+    // Calculate Returning Customers: Count aggregation for userIds in userSet
+    let returningCustomers = 0;
+    if (userSet.size > 0) {
+      const uniqueUserIds = Array.from(userSet);
+       const returningStats = await Orders.aggregate([
+           { $match: { userId: { $in: uniqueUserIds }, orderStatus: 'Delivered' } },
+           { $group: { _id: "$userId", count: { $sum: 1 } } },
+           { $match: { count: { $gt: 1 } } },
+           { $count: "returning" }
+        ]);
+        returningCustomers = returningStats[0]?.returning || 0;
+    }
+
+    // Calculate Total Returns and Return Customers
+    let totalReturns = 0;
+    const returnCustomerSet = new Set();
+    orders.forEach((order) => {
+      if (order.orderStatus === 'Returned') {
+        totalReturns++;
+        returnCustomerSet.add(order.userId.toString());
+      } else if (order.returndProduct && order.returndProduct.length > 0) {
+        // Count partial returns if needed, but 'Returned' status is usually full return
+        // Assuming user wants count of orders with returns
+        const hasApprovedReturn = order.returndProduct.some(rp => rp.adminApproved === 'Approved');
+        if (hasApprovedReturn && order.orderStatus !== 'Returned') {
+             // If partial return is not counted in status, we might count it here. 
+             // For simplify, lets stick to orderStatus === 'Returned' primarily, 
+             // but if user meant 'items returned', that's different. 
+             // Based on request "Total Return", usually means returned orders.
+        }
+      }
+    });
+    // Re-scanning accurately for all returns (including partials if they don't change main status to Returned?)
+    // Actually, let's stick to the statusCounts.Returned we already have for orders fully returned.
+    // If we want "Total Returns" to mean "All Return Requests", we should check returndProduct array.
+    
+    // Revised logic: Count any order that has AT LEAST ONE approved return item as a "Return" interaction
+    totalReturns = 0;
+    returnCustomerSet.clear();
+    
+    orders.forEach(order => {
+        const hasReturn = order.orderStatus === 'Returned' || 
+                          (order.returndProduct && order.returndProduct.some(rp => rp.adminApproved === 'Approved'));
+        
+        if (hasReturn) {
+            totalReturns++;
+            returnCustomerSet.add(order.userId.toString());
+        }
+    });
+
+    const returnCustomers = returnCustomerSet.size;
 
     // Generate Chart Data based on Period
     let chartDataRaw = [];
@@ -675,6 +738,13 @@ const getSalesReport = async (req, res) => {
           ? moment(order.deliveredAt).format("DD MMM YYYY")
           : "N/A",
         isToday: moment(order.placedAt).isSame(moment(), "day"),
+        discountAmount: order.discountAmount || 0,
+        couponCode: order.couponCode || '',
+        productDiscount: order.items.reduce((acc, item) => {
+           const base = item.basePrice || 0;
+           const sold = item.discoundedPrice || item.basePrice || 0;
+           return acc + ((base - sold) * item.quantity);
+        }, 0)
       };
     });
 
@@ -683,6 +753,13 @@ const getSalesReport = async (req, res) => {
       avgOrderValue: `₹${avgOrderValue}`,
       totalOrders,
       newCustomers,
+      returningCustomers,
+      totalReturns,
+      returnCustomers,
+      totalCouponDiscount,
+      totalProductDiscount,
+      totalCouponDiscount,
+      totalProductDiscount,
 
       revenueData,
       topProductsData,

@@ -1,5 +1,6 @@
 import Categories from "../../models/categories.js";
 
+// Get categories
 const getCategories = async (req, res) => {
   try {
     const errorMessage = req.session.errorMessage;
@@ -63,6 +64,7 @@ const getCategories = async (req, res) => {
   }
 };
 
+// Add category
 const addCategorie = async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -88,11 +90,12 @@ const addCategorie = async (req, res) => {
     req.session.successMessage = "Category added successfully!";
     res.redirect("/admin/categories");
   } catch (error) {
-    console.log(error);
+    console.error(error);
     res.status(500).send("Server error");
   }
 };
 
+// Edit category
 const editCategory = async (req, res) => {
   try {
     const categorie = await Categories.findOne({ _id: req.params.id });
@@ -120,6 +123,7 @@ const editCategory = async (req, res) => {
   }
 };
 
+// Deactivate category
 const DeactivateCategory = async (req, res) => {
   try {
     const categorie = await Categories.findOne({ _id: req.params.id });
@@ -136,6 +140,7 @@ const DeactivateCategory = async (req, res) => {
   }
 };
 
+// Delete category
 const deleteCategory = async (req, res) => {
   try {
     const categorie = await Categories.findOne({ _id: req.params.id });

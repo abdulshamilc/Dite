@@ -3,6 +3,7 @@ import Products from "../../models/productsModels.js";
 import Wallet from "../../models/walletModel.js";
 import { nanoid } from "nanoid";
 
+// Get return
 const getReturn = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
@@ -107,7 +108,7 @@ const getReturn = async (req, res) => {
     ];
 
     const returns = await Orders.aggregate(returnsPipeline);
-    // console.log('Debug Returns:', returns);  // Remove after testing
+
 
     const totalPages = Math.ceil(totalReturns / limit);
 
@@ -131,6 +132,7 @@ const getReturn = async (req, res) => {
   }
 };
 
+// Get return details
 const getReturnDetails = async (req, res) => {
   try {
     const { orderId } = req.params;
@@ -198,6 +200,7 @@ const getReturnDetails = async (req, res) => {
   }
 };
 
+// Return approve
 const returnApprove = async (req, res) => {
   const { orderId } = req.params;
   try {
@@ -307,6 +310,7 @@ const returnApprove = async (req, res) => {
   }
 };
 
+// Return reject
 const returnReject = async (req, res) => {
   const { orderId } = req.params;
   const { reason } = req.body; // In case we add a reason later

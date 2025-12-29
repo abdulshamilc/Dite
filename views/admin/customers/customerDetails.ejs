@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Customer Details - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <style>
+      .bg-brand {
+        background-color: #c5a987;
+      }
+      .text-brand {
+        color: #c5a987;
+      }
+      .border-brand {
+        border-color: #c5a987;
+      }
+      aside {
+        border-right: 2px solid transparent;
+        border-image: linear-gradient(to bottom, #c5a987, transparent) 1;
+      }
+      .nav-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .nav-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .nav-btn.active {
+        box-shadow: inset 0 0 8px rgba(197, 169, 135, 0.5);
+      }
+      .logout-btn {
+        transition: all 0.3s ease-in-out;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .logout-btn:hover {
+        transform: translateX(4px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      }
+      .count-box {
+        background-color: #1a202c;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+      }
+      .status-active {
+        color: #10b981;
+      }
+      .status-blocked {
+        color: #ef4444;
+      }
+      .status-pending {
+        color: #f59e0b;
+      }
+      .status-processing {
+        color: #3b82f6;
+      }
+      .status-completed {
+        color: #10b981;
+      }
+      .status-cancelled {
+        color: #ef4444;
+      }
+      .card {
+        background-color: #1a202c;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+      }
+      .status-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+      .status-active-badge {
+        background-color: #10b981;
+        color: white;
+      }
+      .status-blocked-badge {
+        background-color: #ef4444;
+        color: white;
+      }
+      .target-details {
+        background-color: #2d3748;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        margin-top: 1rem;
+      }
+      .target-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem;
+        border-bottom: 1px solid #374151;
+      }
+      .target-item:last-child {
+        border-bottom: none;
+      }
+      .target-image-container {
+        position: relative;
+        width: 50px;
+        height: 50px;
+        flex-shrink: 0;
+      }
+      .target-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 0.25rem;
+        border: 1px solid #374151;
+      }
+      .placeholder {
+        position: absolute;
+        inset: 0;
+        background-color: #374151;
+        border-radius: 0.25rem;
+        border: 1px solid #374151;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: #9ca3af;
+        display: none;
+      }
+      .btn {
+        padding: 0.5rem 1rem;
+        border-radius: 0.375rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-primary {
+        background-color: #c5a987;
+        color: #1f2937;
+        border: none;
+      }
+      .btn-danger {
+        background-color: #ef4444;
+        color: white;
+        border: none;
+      }
+      .btn-secondary {
+        background-color: transparent;
+        color: #9ca3af;
+        border: 1px solid #374151;
+      }
+      .btn:hover {
+        opacity: 0.9;
+      }
+      .btn-small {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+      }
+      .customer-stats {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        margin: 1rem 0;
+      }
+      .customer-stats h3 {
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin-bottom: 0.25rem;
+      }
+      .customer-stats p {
+        margin: 0;
+        opacity: 0.9;
+      }
+      .customer-name-heading {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #c5a987;
+        text-align: center;
+        margin: 1rem 0;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../../partials/admin/admin-header") %>
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <div class="max-w-6xl mx-auto w-full">
+          <!-- Header -->
+          <div class="mb-8">
+            <a href="/admin/customers" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              Back to Customers
+            </a>
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h1 class="text-3xl font-bold mb-2">Customer Details</h1>
+                <p class="text-gray-400">Customer ID: <span class="text-brand font-semibold">#<%= customer._id %></span></p>
+              </div>
+              <%
+              let statusClass = customer.isBlocked ? 'status-blocked-badge' : 'status-active-badge';
+              let statusText = customer.isBlocked ? 'Blocked' : 'Active';
+              %>
+              <div class="flex items-center gap-4 ml-4">
+                <span class="status-badge <%= statusClass %>"><%= statusText %></span>
+              </div>
+            </div>
+          </div>
+          <!-- Main Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-8">
+            <!-- Customer Summary -->
+            <div class="lg:col-span-2">
+              <div class="card p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 text-brand">Customer Summary</h2>
+                <!-- Stats Info -->
+
+                <!-- Profile Picture -->
+                <div class="flex justify-center mb-4">
+                  <% if (customer.image) { %>
+                    <img src="<%= customer.image %>" alt="Profile Picture" class="w-32 h-32 rounded-full object-cover border-4 border-gray-700 shadow-lg">
+                  <% } else { %>
+                     <div class="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center border-4 border-gray-600 shadow-lg">
+                        <i data-lucide="user" class="w-16 h-16 text-gray-400"></i>
+                     </div>
+                  <% } %>
+                </div>
+
+                <!-- Customer Name Heading -->
+                <div class="customer-name-heading"><%= customer.name %></div>
+                <!-- Basic Details -->
+                <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Basic Information</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p class="text-gray-400 mb-1">Email:</p>
+                      <p class="font-semibold"><%= customer.email %></p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-1">Phone:</p>
+                      <p class="font-semibold"><%= customer.phone %></p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-1">Joined Date:</p>
+                      <p class="font-semibold"><%= new Date(customer.createdAt).toLocaleDateString() %></p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-1">Last Login:</p>
+                      <p class="font-semibold"><%= customer.lastLogin ? new Date(customer.lastLogin).toLocaleDateString() : 'N/A' %></p>
+                    </div>
+                    <div class="md:col-span-2">
+                      <p class="text-gray-400 mb-1">Address:</p>
+                      <p class="text-gray-300">
+                        <% if (customerAddress) { %>
+                          <%= customerAddress.hoNo %>, <%= customerAddress.street %>,<br>
+                          <%= customerAddress.city %>, <%= customerAddress.state %> - <%= customerAddress.pin %><br>
+                          <%= customerAddress.country %>
+                        <% } else { %>
+                          No address provided
+                        <% } %>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Stats Info (Moved) -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pt-4">
+                  <div class="customer-stats">
+                    <h3><%= customer.totalOrders %></h3>
+                    <p>Total Orders</p>
+                  </div>
+                  <div class="customer-stats" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                    <h3>Rs <%= customer.totalSpent %></h3>
+                    <p>Total Spent</p>
+                  </div>
+                  <div class="customer-stats" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
+                    <h3><%= returnedOrderCount %></h3>
+                    <p>Returned Orders</p>
+                  </div>
+                </div>
+                <!-- Referred Customers Details -->
+                <div class="space-y-4">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Referred Customers (<%= referredCount %>)</h3>
+                  <div class="target-details">
+                    <% if (referredCustomers && referredCustomers.length > 0) { %>
+                      <% referredCustomers.forEach(entry => { %>
+                        <div class="target-item">
+                          <div class="target-image-container">
+                             <% if (entry.image) { %>
+                                <img src="<%= entry.image %>" class="target-image" alt="User">
+                             <% } else { %>
+                                <div class="target-image bg-gray-700 flex items-center justify-center text-xs text-white">User</div>
+                             <% } %>
+                          </div>
+                          <div class="flex-1">
+                            <div class="font-semibold"><%= entry.name || entry.email %></div>
+                            <div class="text-sm text-gray-400">
+                              Email: <%= entry.email %>
+                            </div>
+                            <div class="text-sm text-gray-400">
+                              Joined on: <%= new Date(entry.createdAt).toLocaleDateString() %> | Total Spent: Rs <%= entry.totalSpent || 0 %>
+                            </div>
+                          </div>
+                        </div>
+                      <% }); %>
+                    <% } else { %>
+                      <p class="text-gray-400 text-center py-4">No customers referred by this user yet.</p>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Sidebar -->
+            <div class="space-y-6">
+              <!-- Status Update -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Update Status</h3>
+                <button id="toggleBlockBtn" class="btn btn-danger w-full flex items-center justify-center gap-2" data-id="<%= customer._id %>">
+                  <i data-lucide="<%= customer.isBlocked ? 'unlock' : 'lock' %>" class="w-4 h-4"></i>
+                  <%= customer.isBlocked ? 'Unblock Customer' : 'Block Customer' %>
+                </button>
+              </div>
+              <!-- Customer Details -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Customer Details</h3>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <div class="flex justify-between">
+                    <span class="font-semibold">Joined:</span>
+                    <span><%= new Date(customer.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-semibold">Last Updated:</span>
+                    <span><%= new Date(customer.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-semibold">Total Orders:</span>
+                    <span><%= customer.totalOrders %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-semibold">Total Spent:</span>
+                    <span>Rs <%= customer.totalSpent %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="font-semibold">Referred Count:</span>
+                    <span><%= referredCount %></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <!-- Toggle Block/Unblock Modal -->
+    <div id="toggleModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96 card">
+        <h2 class="text-lg font-bold mb-4 text-brand">Confirm Action</h2>
+        <p id="toggleMessage" class="mb-6 text-gray-300"></p>
+        <div class="flex justify-end space-x-4">
+          <button id="cancelToggle" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700 btn-secondary">Cancel</button>
+          <form id="toggleForm" method="POST" action="">
+            <button type="submit" class="px-4 py-2 bg-brand rounded hover:opacity-90 text-gray-800 font-semibold">Confirm</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- Delete Modal -->
+    <div id="deleteModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-gray-900 p-6 rounded-lg shadow-lg w-96 card">
+        <h2 class="text-lg font-bold mb-4 text-brand">Confirm Deletion</h2>
+        <p id="deleteMessage" class="mb-6 text-gray-300"></p>
+        <div class="flex justify-end space-x-4">
+          <button id="cancelDelete" class="px-4 py-2 bg-gray-600 rounded hover:bg-gray-700 btn-secondary">Cancel</button>
+          <form id="deleteForm" method="POST">
+            <button type="submit" class="px-4 py-2 bg-red-600 rounded hover:bg-red-700 btn-danger">Delete</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <!-- Error Popup Modal -->
+    <div
+      id="errorPopup"
+      class="hidden fixed top-5 right-5 bg-red-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span id="errorMessage">Something went wrong!</span>
+      <button id="closeErrorPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <!-- Success Popup Modal -->
+    <div
+      id="successPopup"
+      class="hidden fixed top-5 right-5 bg-green-600 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-3 z-50 transition-all duration-300"
+    >
+      <i data-lucide="check-circle" class="w-5 h-5"></i>
+      <span id="successMessage">Success!</span>
+      <button id="closeSuccessPopup" class="ml-3 hover:text-gray-300">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+    <script>
+      lucide.createIcons();
+      const toggleBtn = document.getElementById('toggleBlockBtn');
+      const toggleModal = document.getElementById('toggleModal');
+      const toggleMessage = document.getElementById('toggleMessage');
+      const toggleForm = document.getElementById('toggleForm');
+      const cancelToggle = document.getElementById('cancelToggle');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+          const id = toggleBtn.dataset.id;
+          const action = toggleBtn.textContent.trim().toLowerCase().includes('block') ? 'block' : 'unblock';
+          toggleMessage.textContent = `Are you sure you want to ${action} this customer?`;
+          toggleForm.action = `/admin/customers/block/${id}`;
+          toggleModal.classList.remove('hidden');
+        });
+      }
+      cancelToggle.addEventListener('click', () => toggleModal.classList.add('hidden'));
+      // Delete
+      const deleteBtn = document.getElementById('deleteCustomerBtn');
+      const deleteModal = document.getElementById('deleteModal');
+      const deleteMessage = document.getElementById('deleteMessage');
+      const deleteForm = document.getElementById('deleteForm');
+      const cancelDelete = document.getElementById('cancelDelete');
+      if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+          const id = deleteBtn.dataset.id;
+          const name = deleteBtn.dataset.name;
+          deleteMessage.textContent = `Are you sure you want to delete "${name}"? This action cannot be undone.`;
+          deleteForm.action = `/admin/customers/delete/${id}`;
+          deleteModal.classList.remove('hidden');
+        });
+      }
+      cancelDelete.addEventListener('click', () => deleteModal.classList.add('hidden'));
+      // Function to show error popup
+      function showErrorPopup(message) {
+        const popup = document.getElementById("errorPopup");
+        const messageElement = document.getElementById("errorMessage");
+        messageElement.textContent = message || "An unexpected error occurred.";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+      // Close manually
+      document.getElementById("closeErrorPopup").addEventListener("click", () => {
+        document.getElementById("errorPopup").classList.add("hidden");
+      });
+      // Function to show success popup
+      function showSuccessPopup(message) {
+        const popup = document.getElementById("successPopup");
+        const messageElement = document.getElementById("successMessage");
+        messageElement.textContent = message || "Success!";
+        popup.classList.remove("hidden");
+        popup.classList.add("opacity-100", "translate-y-0");
+        setTimeout(() => {
+          popup.classList.add("hidden");
+        }, 4000);
+      }
+      // Close success popup manually
+      document.getElementById("closeSuccessPopup").addEventListener("click", () => {
+        document.getElementById("successPopup").classList.add("hidden");
+      });
+      // Display server-side session messages on load
+      <% if (typeof error !== 'undefined' && error) { %>
+        showErrorPopup("<%= error %>");
+      <% } %>
+      <% if (typeof success !== 'undefined' && success) { %>
+        showSuccessPopup("<%= success %>");
+      <% } %>
+    </script>
+  </body>
+</html>
