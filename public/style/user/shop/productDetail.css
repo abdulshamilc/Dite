@@ -1,0 +1,14 @@
+      .gradient-bg {
+        background: linear-gradient(
+          135deg,
+          rgba(30, 58, 138, 0.2) 0%,
+          rgba(0, 0, 0, 1) 100%
+        );
+      }
+      /* Removed padding-top: 80px from body to prevent huge gap */
+      #mainImage {
+        transition: transform 0.3s ease;
+      }
+      #mainImage:hover {
+        transform: scale(1.1);
+      }

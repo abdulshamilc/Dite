@@ -291,14 +291,21 @@ const returnApprove = async (req, res) => {
       returnItem.returndQuantity > 0 &&
       returnItem.discountedPrice > 0
     ) {
-      const totalRefundAmount =
+      const itemRefundAmount =
         returnItem.discountedPrice * returnItem.returndQuantity;
-      await Wallet.refundToWallet(
-        order.userId,
-        totalRefundAmount,
-        `Refund (Return) for order ${order.orderID}: ${returnItem.name} (${returnItem.mlSize}ml)`,
-        order._id.toString()
-      );
+      
+      // Deduct delivery charge (40) from return refund
+      const deliveryDeduction = 40;
+      const totalRefundAmount = Math.max(0, itemRefundAmount - deliveryDeduction);
+      
+      if (totalRefundAmount > 0) {
+        await Wallet.refundToWallet(
+          order.userId,
+          totalRefundAmount,
+          `Refund (Return) for order ${order.orderID}: ${returnItem.name} (${returnItem.mlSize}ml) [Delivery Deducted]`,
+          order._id.toString()
+        );
+      }
     }
 
     req.session.success =

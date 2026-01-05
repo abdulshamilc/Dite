@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+    <link rel="stylesheet" href="/style/admin/dashboard/dashboard.css">
+</head>
+<body class="min-h-screen bg-black text-white">
+<%- include("../../partials/admin/admin-header") %>
+  <div class="flex">
+  <%- include("../../partials/admin/admin-sidebar") %>
+    <main class="flex-1 p-6">
+      <!-- Header -->
+      <div class="mb-6">
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <h1 class="text-3xl font-bold text-white">Admin Dashboard</h1>
+            <p class="text-gray-400 mt-1">Welcome back! Here's your business overview.</p>
+          </div>
+          <div class="text-right">
+            <p class="text-gray-400 text-sm">Last Updated</p>
+            <p class="text-brand font-bold" id="lastUpdated">Loading...</p>
+          </div>
+        </div>
+
+        <!-- Period Filter Buttons -->
+        <div class="flex gap-3 flex-wrap">
+          <button class="period-btn <%= period === 'all' ? 'active' : '' %>" onclick="filterByPeriod('all')">All Time</button>
+          <button class="period-btn <%= period === 'today' ? 'active' : '' %>" onclick="filterByPeriod('today')">Today</button>
+          <button class="period-btn <%= period === 'week' ? 'active' : '' %>" onclick="filterByPeriod('week')">This Week</button>
+          <button class="period-btn <%= period === 'month' ? 'active' : '' %>" onclick="filterByPeriod('month')">This Month</button>
+          <button class="period-btn <%= period === 'year' ? 'active' : '' %>" onclick="filterByPeriod('year')">This Year</button>
+          <button class="period-btn <%= period === 'custom' ? 'active' : '' %>" onclick="filterByPeriod('custom')">Custom Range</button>
+        </div>
+      </div>
+
+      <!-- Overview Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i data-lucide="shopping-cart" class="text-brand w-6 h-6"></i>
+          </div>
+          <div class="stat-value" id="totalOrders"><%= totalOrders %></div>
+          <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i data-lucide="check-circle" class="text-green-500 w-6 h-6"></i>
+          </div>
+          <div class="stat-value" id="successfulOrders"><%= successfulOrders %></div>
+          <div class="stat-label">Successful Orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i data-lucide="x-circle" class="text-red-500 w-6 h-6"></i>
+          </div>
+          <div class="stat-value" id="cancelledOrders"><%= cancelledOrders %></div>
+          <div class="stat-label">Cancelled Orders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i data-lucide="rotate-ccw" class="text-purple-500 w-6 h-6"></i>
+          </div>
+          <div class="stat-value" id="returnedOrders"><%= returnedOrders %></div>
+          <div class="stat-label">Returned Orders</div>
+        </div>
+      </div>
+
+      <!-- Sales Performance Chart -->
+      <h2 class="text-xl font-bold text-brand mb-4">📈 Sales Performance</h2>
+      <div class="chart-container mb-8" style="height: 500px;">
+        <canvas id="salesChart"></canvas>
+      </div>
+
+      <!-- Best Selling Analytics - List View -->
+      <h2 class="text-xl font-bold text-brand mb-4">📊 Best Selling Analytics</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <!-- Top 10 Products -->
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3 text-center">Top 10 Products</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Product Name</th>
+                <th>Units Sold</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (topProducts && topProducts.length > 0) { %>
+                <% topProducts.forEach(prod => { %>
+                  <tr>
+                    <td><%= prod.name %></td>
+                    <td class="text-brand font-bold"><%= prod.totalSold %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="2" class="text-center text-gray-500">No products data</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Top 10 Categories -->
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3 text-center">Top 10 Categories</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Category Name</th>
+                <th>Units Sold</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (topCategories && topCategories.length > 0) { %>
+                <% topCategories.forEach(cat => { %>
+                  <tr>
+                    <td><%= cat.name %></td>
+                    <td class="text-brand font-bold"><%= cat.totalSold %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="2" class="text-center text-gray-500">No categories data</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Top 10 Brands -->
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3 text-center">Top 10 Brands</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Brand Name</th>
+                <th>Units Sold</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (topBrands && topBrands.length > 0) { %>
+                <% topBrands.forEach(brand => { %>
+                  <tr>
+                    <td><%= brand.name || brand._id %></td>
+                    <td class="text-brand font-bold"><%= brand.totalSold %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="2" class="text-center text-gray-500">No brands data</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Customer Insights -->
+      <h2 class="text-xl font-bold text-brand mb-4">👥 Customer Insights</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+        <div class="stat-card">
+          <div class="stat-icon">
+            <i data-lucide="users" class="text-brand w-6 h-6"></i>
+          </div>
+          <div class="stat-value" id="avgOrdersPerCustomer"><%= avgOrdersPerCustomer %></div>
+          <div class="stat-label">Avg Orders per Customer</div>
+        </div>
+        <div class="stat-card col-span-2">
+          <h3 class="text-brand font-bold mb-3">Top Customers by Orders</h3>
+          <div class="space-y-2">
+            <% if (topCustomers && topCustomers.length > 0) { %>
+               <% topCustomers.forEach(customer => { %>
+                <div class="flex justify-between items-center">
+                  <span class="text-gray-300"><%= customer.name || customer.email || 'Unknown' %></span>
+                  <span class="text-brand font-bold"><%= customer.orderCount %> orders</span>
+                </div>
+               <% }) %>
+            <% } else { %>
+               <p class="text-gray-500">No customer data available yet.</p>
+            <% } %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Performance -->
+      <h2 class="text-xl font-bold text-brand mb-4">📦 Product Performance</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3">Top Selling Products</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Sold</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (topProducts && topProducts.length > 0) { %>
+                <% topProducts.slice(0, 5).forEach(prod => { %>
+                  <tr>
+                    <td><%= prod.name %></td>
+                    <td><%= prod.totalSold %> units</td>
+                    <td class="text-brand font-bold">₹<%= prod.totalRevenue ? prod.totalRevenue.toLocaleString() : '0' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                  <tr><td colspan="3">No sales data found.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3">Least Selling Products</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Sold</th>
+                <th>Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (leastSellingProducts && leastSellingProducts.length > 0) { %>
+                <% leastSellingProducts.forEach(prod => { %>
+                  <tr>
+                    <td><%= prod.name %></td>
+                    <td><%= prod.totalSold %> units</td>
+                    <td class="text-brand font-bold">₹<%= prod.totalRevenue ? prod.totalRevenue.toLocaleString() : '0' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                  <tr><td colspan="3">No data available.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Stock Alerts Check -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3">🔴 Out of Stock Products</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Variant</th>
+                <th>Category</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (outOfStockProducts && outOfStockProducts.length > 0) { %>
+                 <% outOfStockProducts.forEach(prod => { %>
+                  <tr onclick="window.location.href='/admin/products/<%= prod.productId %>'" style="cursor: pointer;">
+                    <td><a href="/admin/products/<%= prod.productId %>" class="text-brand hover:underline"><%= prod.productName %></a></td>
+                    <td><%= prod.variant %></td>
+                    <td><%= prod.category ? prod.category.name : 'Uncategorized' %></td>
+                    <td><span class="badge badge-danger">Restock Now</span></td>
+                  </tr>
+                 <% }) %>
+              <% } else { %>
+                  <tr><td colspan="4">All products are in stock.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+        <div class="table-container">
+          <h3 class="text-brand font-bold mb-3">⚠️ Low Stock Products</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Variant</th>
+                <th>Stock</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (lowStockProducts && lowStockProducts.length > 0) { %>
+                 <% lowStockProducts.forEach(prod => { %>
+                  <tr onclick="window.location.href='/admin/products/<%= prod.productId %>'" style="cursor: pointer;">
+                    <td><a href="/admin/products/<%= prod.productId %>" class="text-brand hover:underline"><%= prod.productName %></a></td>
+                    <td><%= prod.variant %></td>
+                    <td class="text-gray-300"><%= prod.stock %> units</td>
+                  </tr>
+                 <% }) %>
+              <% } else { %>
+                  <tr><td colspan="3">No low stock alerts.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Payment Insights - Single Chart -->
+      <h2 class="text-xl font-bold text-brand mb-4">💳 Payment Insights</h2>
+      <div class="grid grid-cols-1 gap-4 mb-8">
+        <div class="chart-container">
+          <div class="chart-title">Methods Overview</div>
+          <canvas id="paymentBarChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Coupons Performance -->
+      <h2 class="text-xl font-bold text-brand mb-4">🎁 Coupons Performance</h2>
+      <div class="table-container">
+        <h3 class="text-brand font-bold mb-3">Coupon Performance</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Coupon Code</th>
+              <th>Usage Count</th>
+              <th>Total Discount</th>
+              <th>Expiry</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (couponStats && couponStats.length > 0) { %>
+              <% couponStats.forEach((stat, index) => { %>
+                <tr>
+                  <td class="font-mono font-bold text-brand">
+                    <%= stat.code %>
+                    <% if (index === 0) { %>
+                      <span class="badge badge-best">🏆 Best</span>
+                    <% } %>
+                  </td>
+                  <td><%= stat.count %> times</td>
+                  <td class="text-brand">₹<%= stat.totalDiscount %></td>
+                  <td><%= stat.expiry ? new Date(stat.expiry).toLocaleDateString() : 'N/A' %></td>
+                  <td>
+                    <% if (stat.isActive) { %>
+                       <span class="badge badge-success">Active</span>
+                    <% } else { %>
+                       <span class="badge badge-danger">Inactive</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+                <tr><td colspan="5">No coupons used yet.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+    <%- include("../../partials/admin/footer") %>
+
+  <!-- Data for Charts -->
+  <script>
+    const paymentMethodsData = <%- JSON.stringify(typeof paymentMethods !== 'undefined' ? paymentMethods : []) %>;
+    const salesLabelsData = <%- JSON.stringify(typeof salesLabels !== 'undefined' ? salesLabels : []) %>;
+    const salesValuesData = <%- JSON.stringify(typeof salesValues !== 'undefined' ? salesValues : []) %>;
+  </script>
+
+  <script>
+    lucide.createIcons();
+
+    // Filter by period function
+    function filterByPeriod(period) {
+      // Update active button
+      document.querySelectorAll('.period-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      event.target.classList.add('active');
+
+      // For custom range, you can add a date picker modal here
+      if (period === 'custom') {
+        alert('Custom date range picker will be implemented here');
+        return;
+      }
+
+      // Reload page with period parameter
+      window.location.href = `/admin/dashboard?period=${period}`;
+    }
+
+    // Update timestamp
+    document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+
+    // Chart configurations
+    const chartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { color: '#9ca3af', font: { size: 10 } }
+        }
+      }
+    };
+
+
+    // Sales Performance Line Chart
+    if (salesLabelsData.length > 0) {
+      new Chart(document.getElementById('salesChart'), {
+        type: 'line',
+        data: {
+          labels: salesLabelsData,
+          datasets: [{
+            label: 'Sales (₹)',
+            data: salesValuesData,
+            borderColor: '#c5a987',
+            backgroundColor: 'rgba(197, 169, 135, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: '#c5a987',
+            pointBorderColor: '#fff',
+            pointBorderWidth: 2,
+            pointRadius: 5,
+            pointHoverRadius: 7
+          }]
+        },
+        options: {
+          ...chartOptions,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { 
+                color: '#9ca3af',
+                callback: function(value) {
+                  return '₹' + value.toLocaleString();
+                }
+              },
+              grid: { color: '#374151' }
+            },
+            x: {
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#374151' }
+            }
+          }
+        }
+      });
+    }
+
+    // Payment Data Formatting
+    const paymentLabels = paymentMethodsData.map(p => p._id);
+    const paymentValues = paymentMethodsData.map(p => p.count);
+
+    // Payment Methods Bar Chart
+    if (paymentLabels.length > 0) {
+      new Chart(document.getElementById('paymentBarChart'), {
+        type: 'bar',
+        data: {
+          labels: paymentLabels.map(l => l ? l.toUpperCase() : 'UNKNOWN'),
+          datasets: [{
+             label: 'Transactions',
+             data: paymentValues,
+             backgroundColor: '#c5a987'
+          }]
+        },
+        options: {
+          ...chartOptions,
+          scales: {
+            y: { 
+              beginAtZero: true,
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#374151' }
+            },
+            x: { 
+              ticks: { color: '#9ca3af' },
+              grid: { color: '#374151' }
+            }
+          }
+        }
+      });
+    }
+
+  </script>
+</body>
+</html>

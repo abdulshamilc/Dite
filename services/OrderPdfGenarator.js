@@ -16,27 +16,20 @@ const generateInvoice = async (order, user) => {
       const secondaryColor = "#555555";
       const tableHeaderBg = "#f4f4f4";
       const lineColor = "#e0e0e0";
+      const dangerColor = "#c0392b"; // RED for Returned & Cancelled
 
-      // Helper to draw horizontal line
       const drawLine = (y) => {
         doc.moveTo(50, y).lineTo(545, y).strokeColor(lineColor).stroke();
       };
 
       // --- 1. Header Section ---
-      
-      // Logo
       const logoPath = path.join(process.cwd(), "public", "images", "logo", "DiteLogo.png");
       try {
         doc.image(logoPath, 50, 45, { width: 60 });
-      } catch (e) {
-        doc
-          .fillColor("#000000")
-          .fontSize(24)
-          .font("Helvetica-Bold")
-          .text("Dité", 50, 50);
+      } catch {
+        doc.fontSize(24).font("Helvetica-Bold").text("Dité", 50, 50);
       }
 
-      // Company Info (Top Right)
       doc
         .fillColor(primaryColor)
         .fontSize(10)
@@ -50,126 +43,88 @@ const generateInvoice = async (order, user) => {
       const invoiceTopY = 140;
       drawLine(invoiceTopY - 20);
 
-      // --- 2. Invoice Details & Bill To ---
-      
-      doc
-        .fillColor(primaryColor)
-        .fontSize(20)
-        .font("Helvetica-Bold")
-        .text("INVOICE", 50, invoiceTopY);
+      // --- 2. Invoice Details ---
+      doc.fontSize(20).font("Helvetica-Bold").text("INVOICE", 50, invoiceTopY);
 
-      // Left Column: Invoice Info
       doc.fontSize(10);
-      
-      const labelX = 50;
-      const valueX = 120;
       let infoY = invoiceTopY + 35;
       const spacing = 18;
 
-      doc.font("Helvetica-Bold").text("Invoice No:", labelX, infoY);
-      doc.font("Helvetica").text(`INV-${order.orderID || order._id.toString().slice(-6).toUpperCase()}`, valueX, infoY);
-      
-      infoY += spacing;
-      doc.font("Helvetica-Bold").text("Date:", labelX, infoY);
-      doc.font("Helvetica").text(moment(order.createdAt).format("DD MMMM YYYY"), valueX, infoY);
-      
-      infoY += spacing;
-      doc.font("Helvetica-Bold").text("Status:", labelX, infoY);
-      doc.font("Helvetica").text(order.orderStatus, valueX, infoY);
+      doc.font("Helvetica-Bold").text("Invoice No:", 50, infoY);
+      doc.font("Helvetica").text(`INV-${order.orderID || order._id.toString().slice(-6)}`, 120, infoY);
 
-      // Right Column: Bill To
-      const billToX = 350;
+      infoY += spacing;
+      doc.font("Helvetica-Bold").text("Date:", 50, infoY);
+      doc.font("Helvetica").text(moment(order.createdAt).format("DD MMM YYYY"), 120, infoY);
+
+      infoY += spacing;
+      doc.font("Helvetica-Bold").text("Status:", 50, infoY);
+      doc.font("Helvetica").text(order.orderStatus, 120, infoY);
+
+      // Bill To
       let billY = invoiceTopY + 35;
-
-      doc.font("Helvetica-Bold").text("Bill To:", billToX, billY);
-      billY += spacing;
-      
-      doc.font("Helvetica");
       const address = order.address || {};
-      
-      doc.text(address.fullName || "Valued Customer", billToX, billY);
-      billY += 15; // Tighter line height for address
-      
-      if(address.hoNo || address.street) {
-        doc.text(`${address.hoNo || ""} ${address.street || ""}`.trim(), billToX, billY);
+
+      doc.font("Helvetica-Bold").text("Bill To:", 350, billY);
+      billY += spacing;
+
+      doc.font("Helvetica");
+      doc.text(address.fullName || "Valued Customer", 350, billY);
+      billY += 15;
+      if (address.street) {
+        doc.text(address.street, 350, billY);
         billY += 15;
       }
-      
-      if(address.city || address.state) {
-        doc.text(`${address.city || ""}, ${address.state || ""}`, billToX, billY);
+      if (address.city || address.state) {
+        doc.text(`${address.city || ""}, ${address.state || ""}`, 350, billY);
         billY += 15;
       }
-      
-      if(address.country || address.pin) {
-        doc.text(`${address.country || ""} - ${address.pin || ""}`, billToX, billY);
-        billY += 15;
-      }
-      
-      if(address.phone) {
-        doc.text(`Ph: ${address.phone}`, billToX, billY);
+      if (address.pin) {
+        doc.text(`PIN: ${address.pin}`, 350, billY);
       }
 
-      // --- 3. Build Product List (Merger) ---
+      // --- 3. Product Merge ---
       let allItems = [];
 
-      // A. Active Items
-      if (order.items && order.items.length > 0) {
-        order.items.forEach(item => {
-           // check if returned
-           const isReturned = order.returndProduct && order.returndProduct.some(
-             rp => rp.productId.toString() === item.productId.toString() && rp.mlSize === item.mlSize && rp.adminApproved === 'Approved'
-           );
-           
-           allItems.push({
-             name: item.name,
-             mlSize: item.mlSize,
-             quantity: item.quantity,
-             price: item.discoundedPrice || item.discountedPrice || item.basePrice || 0,
-             status: isReturned ? 'Returned' : 'Active', 
-           });
-        });
-      }
+      order.items?.forEach(item => {
+        const isReturned = order.returndProduct?.some(
+          rp =>
+            rp.productId.toString() === item.productId.toString() &&
+            rp.mlSize === item.mlSize &&
+            rp.adminApproved === "Approved"
+        );
 
-      // B. Cancelled Items
-      if (order.cancelProducts && order.cancelProducts.length > 0) {
-        order.cancelProducts.forEach(cp => {
-          allItems.push({
-             name: cp.name,
-             mlSize: cp.mlSize,
-             quantity: cp.canceledQuantity,
-             price: cp.discountedPrice || cp.basePrice || 0,
-             status: 'Cancelled'
-          });
+        allItems.push({
+          name: item.name,
+          mlSize: item.mlSize,
+          quantity: item.quantity,
+          price: item.discountedPrice || item.basePrice || 0,
+          status: isReturned ? "Returned" : "Active"
         });
-      }
-
-      // Sort: Active first, then Returned, then Cancelled
-      allItems.sort((a, b) => {
-         const order = { 'Active': 1, 'Returned': 2, 'Cancelled': 3 };
-         return (order[a.status] || 99) - (order[b.status] || 99);
       });
 
-      // --- 4. Product Table ---
+      order.cancelProducts?.forEach(cp => {
+        allItems.push({
+          name: cp.name,
+          mlSize: cp.mlSize,
+          quantity: cp.canceledQuantity,
+          price: cp.discountedPrice || cp.basePrice || 0,
+          status: "Cancelled"
+        });
+      });
+
+      allItems.sort((a, b) => ({ Active: 1, Returned: 2, Cancelled: 3 }[a.status] - { Active: 1, Returned: 2, Cancelled: 3 }[b.status]));
+
+      // --- 4. Table ---
       const tableTop = Math.max(billY, infoY) + 30;
-      
-      const col1 = 50;  // #
-      const col2 = 80;  // Item
-      const col3 = 300; // Qty
-      const col4 = 360; // Status
-      const col5 = 430; // Price
-      const col6 = 500; // Total
+      const col = [50, 80, 300, 360, 430, 500];
 
-      // Header Background
       doc.rect(50, tableTop, 495, 25).fill(tableHeaderBg);
-
-      // Header Text
       doc.fillColor(primaryColor).fontSize(9).font("Helvetica-Bold");
-      doc.text("#", col1 + 5, tableTop + 8);
-      doc.text("Item Description", col2, tableTop + 8);
-      doc.text("Qty", col3, tableTop + 8, { align: "center", width: 40 });
-      doc.text("Status", col4, tableTop + 8, { align: "center", width: 60 });
-      doc.text("Price", col5, tableTop + 8, { align: "right", width: 60 });
-      doc.text("Total", col6, tableTop + 8, { align: "right", width: 45 });
+
+      ["#", "Item", "Qty", "Status", "Price", "Total"].forEach((t, i) => {
+        doc.text(t, col[i], tableTop + 8);
+      });
 
       let y = tableTop + 35;
       let calculatedSubTotal = 0;
@@ -177,119 +132,83 @@ const generateInvoice = async (order, user) => {
       doc.font("Helvetica").fontSize(9);
 
       allItems.forEach((item, i) => {
-         const price = item.price;
-         const qty = item.quantity;
-         const lineTotal = price * qty;
-         
-         // Calculate Subtotal (Active and Returned usually count towards initial invoice value)
-         if (item.status === 'Active' || item.status === 'Returned') {
-            calculatedSubTotal += lineTotal;
-         }
+        const lineTotal = item.price * item.quantity;
+        if (item.status !== "Cancelled") calculatedSubTotal += lineTotal;
 
-         const name = item.name || "Product";
-         const variant = item.mlSize ? `${item.mlSize}ml` : "";
-         const fullName = `${name} (${variant})`;
+        if (y > 700) {
+          doc.addPage();
+          y = 50;
+        }
 
-         // Calculate Dynamic Height
-         const textWidth = 210;
-         const textHeight = doc.heightOfString(fullName, { width: textWidth });
-         const rowHeight = Math.max(textHeight, 15) + 10;
+        if (item.status !== "Active") doc.fillColor(dangerColor);
+        else doc.fillColor(primaryColor);
 
-         // Check Page Break
-         if (y + rowHeight > 700) {
-            doc.addPage();
-            y = 50;
-         }
+        doc.text(i + 1, col[0], y);
+        doc.text(`${item.name} (${item.mlSize}ml)`, col[1], y, { width: 200 });
+        doc.text(item.quantity, col[2], y);
+        doc.text(item.status, col[3], y);
+        doc.fillColor(primaryColor);
+        doc.text(`Rs.${item.price}`, col[4], y);
+        doc.text(item.status === "Cancelled" ? "0" : `Rs.${lineTotal}`, col[5], y);
 
-         // Status Color
-         if (item.status === 'Cancelled') doc.fillColor("red");
-         else if (item.status === 'Returned') doc.fillColor("orange");
-         else doc.fillColor(primaryColor);
-
-         doc.text(((i + 1).toString()), col1 + 5, y);
-         
-         doc.text(fullName, col2, y, { width: textWidth });
-         doc.text(qty.toString(), col3, y, { align: "center", width: 40 });
-         doc.text(item.status, col4, y, { align: "center", width: 60 });
-         
-         doc.fillColor(primaryColor); // Reset for numbers
-         
-         doc.text(`Rs.${price.toLocaleString()}`, col5, y, { align: "right", width: 60 });
-         
-         const displayTotal = item.status === 'Cancelled' ? '0' : `Rs.${lineTotal.toLocaleString()}`;
-         doc.text(displayTotal, col6, y, { align: "right", width: 45 });
-
-         y += rowHeight;
-         
-         // Row Divider
-         doc.moveTo(50, y - 5).lineTo(545, y - 5).strokeColor("#f9f9f9").stroke();
+        y += 25;
+        drawLine(y - 5);
       });
-      
-      if (allItems.length === 0) {
-         doc.text("No items found.", 50, y);
-         y += 20;
-      }
 
-      y += 20;
-
-      // --- 5. Summary ---
-      if (y > 650) {
+      // --- FIX: SAFE SPACE BEFORE SUMMARY ---
+      if (y > 620) {
         doc.addPage();
         y = 50;
+      } else {
+        y += 30;
       }
 
-      const summaryLabelX = 350;
-      const summaryValueX = 460;
-      const summaryWidth = 85;
-      const lineHeight = 18;
+      // --- 5. Summary ---
+      const rightMargin = 545;
+      const colWidth = 100;
+      const valueX = rightMargin - colWidth; // 445
+      const labelX = valueX - colWidth - 10; // 335
 
-      doc.fontSize(10).font("Helvetica");
+      const printSummaryRow = (label, value, isBold = false) => {
+          if (isBold) doc.font("Helvetica-Bold");
+          else doc.font("Helvetica");
+          
+          doc.text(label, labelX, y, { width: colWidth, align: "right" });
+          doc.text(value, valueX, y, { width: colWidth, align: "right" });
+          y += 20;
+      };
 
-      // Grand Total logic
-      const safeTotal = order.totalAmount || 0;
+      printSummaryRow("Subtotal:", `Rs.${calculatedSubTotal.toFixed(2)}`);
+
+      if (order.discountAmount) {
+        printSummaryRow("Discount:", `-Rs.${order.discountAmount.toFixed(2)}`);
+      }
+
+      printSummaryRow("Delivery:", `Rs.${(order.deliveryCharge || 0).toFixed(2)}`);
       
-      // Attempt to deduce shipping/discount
-      // If we assume calculatedSubTotal is the pure product cost
-      const diff = safeTotal - calculatedSubTotal;
-
-      doc.text("Subtotal:", summaryLabelX, y, { align: "right" });
-      doc.text(`Rs. ${calculatedSubTotal.toLocaleString()}`, summaryValueX, y, { align: "right", width: summaryWidth });
-      y += lineHeight;
-
-      if (Math.abs(diff) > 1) { // Ignore tiny float errors
-         const label = diff > 0 ? "Shipping / Logic:" : "Discount:";
-         doc.text(label, summaryLabelX, y, { align: "right" });
-         doc.text(`Rs. ${diff.toLocaleString()}`, summaryValueX, y, { align: "right", width: summaryWidth });
-         y += lineHeight;
+      if (order.tax) {
+        printSummaryRow("Tax:", `Rs.${order.tax.toFixed(2)}`);
       }
 
-      drawLine(y); 
+      drawLine(y);
       y += 10;
 
-      doc.fontSize(12).font("Helvetica-Bold");
-      doc.text("Grand Total:", summaryLabelX, y, { align: "right" });
-      doc.text(`Rs. ${safeTotal.toLocaleString()}`, summaryValueX, y, { align: "right", width: summaryWidth });
-
+      printSummaryRow("Grand Total:", `Rs.${(order.totalAmount || 0).toFixed(2)}`, true);
 
       // --- 6. Footer ---
-      const pageHeight = doc.page.height;
-      if (y > pageHeight - 100) doc.addPage();
-      
       const bottomY = doc.page.height - 60;
-      
-      doc.moveTo(50, bottomY).lineTo(545, bottomY).strokeColor(lineColor).stroke();
-      
+      drawLine(bottomY);
+
       doc
         .fontSize(10)
         .font("Helvetica-Bold")
-        .fillColor(primaryColor)
         .text("Thank you for choosing Dité!", 50, bottomY + 15, { align: "center", width: 495 });
-      
+
       doc
         .fontSize(9)
         .font("Helvetica")
         .fillColor(secondaryColor)
-        .text("For support, please contact us at support@dite.com", 50, bottomY + 30, { align: "center", width: 495 });
+        .text("For support: support@dite.com", 50, bottomY + 30, { align: "center", width: 495 });
 
       doc.end();
     } catch (err) {

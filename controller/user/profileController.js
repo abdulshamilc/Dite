@@ -676,6 +676,10 @@ const confirmCancel = async (req, res) => {
         totalEffectiveQty += Math.max(0, (item.quantity || 0) - approvedReturnForThis);
       });
       const allCancelled = totalEffectiveQty <= 0;
+      
+      if (allCancelled) {
+         cancelSubtotal += (order.deliveryCharge || 0);
+      }
 
       // Update order status
       order.orderStatus = allCancelled ? "Cancelled" : order.orderStatus;
@@ -704,7 +708,7 @@ const confirmCancel = async (req, res) => {
         remainingSubtotal += ((item.discountedPrice || item.basePrice || 0) * effQty);
       });
       order.subTotal = remainingSubtotal;  // Set subTotal for consistency
-      order.totalAmount = remainingSubtotal + (order.shipping || 0) + (order.tax || 0);
+      order.totalAmount = remainingSubtotal + (order.deliveryCharge || 0) + (order.tax || 0);
 
       await order.save();
 

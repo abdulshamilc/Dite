@@ -189,6 +189,10 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    deliveryCharge: {
+      type: Number,
+      default: 0,
+    },
 
     deliveredAt: {
       type: Date,

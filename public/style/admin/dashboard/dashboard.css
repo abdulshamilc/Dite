@@ -1,0 +1,164 @@
+    .bg-brand {
+      background-color: #c5a987;
+    }
+    .text-brand {
+      color: #c5a987;
+    }
+    .border-brand {
+      border-color: #c5a987;
+    }
+    .stat-card {
+      background-color: #1a202c;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      transition: transform 0.3s ease;
+      border: 1px solid #374151;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: #c5a987;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #c5a987;
+      margin-bottom: 0.25rem;
+    }
+    .stat-label {
+      color: #9ca3af;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stat-icon {
+      width: 36px;
+      height: 36px;
+      background: rgba(197, 169, 135, 0.1);
+      border-radius: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 0.75rem;
+    }
+    .chart-container {
+      background-color: #1a202c;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+    .chart-title {
+      font-size: 1.25rem;
+      font-weight: bold;
+      color: #c5a987;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .list-container {
+      background-color: #1a202c;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      border-bottom: 1px solid #374151;
+      transition: background 0.2s ease;
+    }
+    .list-item:hover {
+      background: rgba(197, 169, 135, 0.05);
+    }
+    .list-item:last-child {
+      border-bottom: none;
+    }
+    .list-item-name {
+      color: #9ca3af;
+      font-size: 0.95rem;
+    }
+    .list-item-count {
+      color: #c5a987;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+    .table-container {
+      background-color: #1a202c;
+      border: 1px solid #374151;
+      border-radius: 0.75rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th {
+      background: #374151;
+      color: #c5a987;
+      padding: 0.75rem;
+      text-align: left;
+      font-weight: bold;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    td {
+      padding: 0.75rem;
+      border-bottom: 1px solid #374151;
+      color: #9ca3af;
+    }
+    tr:hover {
+      background: rgba(197, 169, 135, 0.05);
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 0.25rem;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    .badge-success {
+      background: #10b981;
+      color: white;
+    }
+    .badge-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .badge-warning {
+      background: #fbbf24;
+      color: #1f2937;
+    }
+    .period-btn {
+      background: #374151;
+      color: #9ca3af;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+      border: 1px solid #4b5563;
+      cursor: pointer;
+    }
+    .period-btn:hover {
+      background: #4b5563;
+      color: #ffffff;
+      border-color: #6b7280;
+    }
+    .period-btn.active {
+      background: #c5a987;
+      color: #1f2937;
+      border-color: #c5a987;
+    }
+    .badge-best {
+      background: #c5a987;
+      color: #1f2937;
+      margin-left: 0.5rem;
+    }

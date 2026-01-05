@@ -1,0 +1,87 @@
+      :root {
+        --bg: linear-gradient(135deg, #0b0b0b, #1e1e1e);
+        --text: #f5f5f5;
+        --surface: #ffffff;
+        --accent: #d3a35b;
+        --radius: 14px;
+      }
+
+      *,*::before,*::after { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      .login-container {
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .blocked-message {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 28px;
+        max-width: 400px;
+        text-align: center;
+        box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 12px 30px rgba(0,0,0,.15);
+      }
+
+      .logo {
+        margin-bottom: 20px;
+      }
+      .logo img {
+        max-width: 150px;
+        height: auto;
+      }
+
+      .error-box {
+        background: #e63946;
+        color: #fff;
+        padding: 12px;
+        border-radius: 6px;
+        margin-bottom: 20px;
+        font-size: 15px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .home-btn {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 12px 24px;
+        font-weight: 700;
+        font-size: 16px;
+        cursor: pointer;
+        transition: background 0.2s ease, transform 0.2s;
+        display: inline-block;
+        text-decoration: none;
+      }
+      .home-btn:hover {
+        background: #b5823d;
+        transform: scale(1.05);
+      }
+
+      .login-image {
+        flex: 1;
+        display: none;
+      }
+      .login-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: var(--radius);
+      }
+      @media (min-width: 960px) {
+        .login-container { flex-direction: row; }
+        .login-image { display: block; max-width: 400px; }
+        .blocked-message { margin-right: 20px; }
+      }

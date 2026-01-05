@@ -1,0 +1,528 @@
+      .checkout-container,
+      .checkout-container * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background-color: #1a1a1a;
+        color: #ffffff;
+        line-height: 1.6;
+      }
+
+      /* Main Content */
+      .checkout-container {
+        max-width: 1400px;
+        margin: 6rem auto 2rem;
+        padding: 2rem;
+      }
+
+      .checkout-title {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 600;
+        margin-bottom: 2rem;
+        letter-spacing: 2px;
+      }
+
+      .checkout-content {
+        display: flex;
+        gap: 2rem;
+        align-items: flex-start;
+      }
+
+      .left-content {
+        flex: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      /* Checkout Sections */
+      .checkout-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .section {
+        background-color: #1a1a1a;
+        padding: 1.5rem;
+        border-radius: 8px;
+      }
+
+      .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #d4c5a9;
+      }
+
+      /* Order Review */
+      .order-review .cart-item {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background-color: #1a1a1a;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        position: relative;
+        align-items: flex-start;
+      }
+
+      .item-image {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 4px;
+        background-color: #333;
+        flex-shrink: 0;
+      }
+
+      .item-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 0;
+      }
+
+      .item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .item-name {
+        font-size: 1rem;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+        flex: 1;
+      }
+
+      .item-size {
+        font-size: 0.85rem;
+        color: #999;
+      }
+
+      .item-price {
+        font-size: 1.1rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .quantity-display {
+        font-size: 0.9rem;
+        color: #ccc;
+        min-width: 30px;
+        text-align: center;
+      }
+
+      .item-total {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #4ade80;
+      }
+
+      .item-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 0.5rem;
+        gap: 1rem;
+      }
+
+      .stock-status {
+        font-size: 0.85rem;
+        color: #4ade80;
+      }
+
+      .delivery-info {
+        font-size: 0.75rem;
+        color: #999;
+      }
+
+      .delivery-date {
+        color: #4ade80;
+      }
+
+      /* Address Display */
+      .address-display {
+        background-color: #333;
+        padding: 1.5rem;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .address-name {
+        font-weight: 500;
+        font-size: 1.1rem;
+      }
+
+      .address-line {
+        font-size: 0.95rem;
+        color: #ccc;
+      }
+
+      .view-btn {
+        padding: 0.5rem 1rem;
+        background-color: transparent;
+        color: #d4c5a9;
+        border: 1px solid #d4c5a9;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 500;
+        align-self: flex-start;
+        margin-top: 1rem;
+      }
+
+      .view-btn:hover {
+        background-color: #d4c5a9;
+        color: #000;
+      }
+
+      /* Payment Selection */
+      .payment-selection {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .payment-option {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 1rem;
+        background-color: #333;
+        border-radius: 4px;
+        border: 2px solid transparent;
+        cursor: pointer;
+      }
+
+      .payment-option:hover,
+      .payment-option.selected {
+        border-color: #d4c5a9;
+      }
+
+      .payment-radio {
+        width: 20px;
+        height: 20px;
+        accent-color: #d4c5a9;
+      }
+
+      .payment-icon {
+        font-size: 1.5rem;
+      }
+
+      /* Price Sidebar */
+      .price-sidebar {
+        flex: 1;
+        background-color: #2a2a2a;
+        padding: 1.5rem;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        position: sticky;
+        top: 2rem; /* Matches your .checkout-container padding for smooth sticking */
+        align-self: flex-start; /* Ensures it doesn't stretch full height */
+        max-height: calc(100vh - 4rem); /* Prevents overflow beyond viewport height, accounting for top/bottom padding */
+        overflow-y: auto; /* Allows internal scrolling if content is too tall */
+      }
+
+      /* Order Summary in Sidebar */
+      .order-summary {
+        flex: 1;
+      }
+
+      .summary-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #d4c5a9;
+        margin-bottom: 1rem;
+      }
+
+      .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #444;
+        font-size: 0.9rem;
+      }
+
+      .summary-item:last-child {
+        border-bottom: none;
+      }
+
+      .summary-name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .summary-qty {
+        color: #999;
+        white-space: nowrap;
+        margin-right: 0.5rem;
+      }
+
+      .summary-total {
+        font-weight: 500;
+        color: #4ade80;
+        white-space: nowrap;
+      }
+
+      .price-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #d4c5a9;
+        margin-bottom: 1rem;
+      }
+
+      .price-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #444;
+      }
+
+      .price-detail:last-child {
+        border-bottom: none;
+        font-weight: 600;
+        color: #4ade80;
+      }
+
+      .confirm-btn {
+        width: 100%;
+        padding: 1rem;
+        background-color: #4ade80;
+        color: #000;
+        border: none;
+        border-radius: 4px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: auto;
+      }
+
+      .confirm-btn:hover {
+        background-color: #22c55e;
+      }
+
+      .confirm-btn:disabled {
+        background-color: #666;
+        cursor: not-allowed;
+      }
+
+      /* Payment Status Overlay */
+      .payment-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 10000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.2rem;
+      }
+
+      .payment-overlay.show {
+        display: flex;
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      .modal {
+        background-color: #2a2a2a;
+        padding: 2rem;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        position: relative;
+      }
+
+      .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: #d4c5a9;
+        text-align: center;
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #999;
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+
+      .modal-close:hover {
+        color: #fff;
+      }
+
+      .address-detail {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #444;
+      }
+
+      .address-detail:last-child {
+        border-bottom: none;
+      }
+
+      .address-detail-label {
+        font-weight: 500;
+        color: #d4c5a9;
+      }
+
+      .address-detail-value {
+        color: #ccc;
+        text-align: right;
+      }
+
+      /* Responsive Design */
+      @media (max-width: 1024px) {
+        .checkout-content {
+          flex-direction: column;
+        }
+
+        .price-sidebar {
+          order: -1;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .checkout-container {
+          padding: 1rem;
+        }
+
+        .order-review .cart-item {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .item-image {
+          width: 100%;
+          height: 200px;
+          align-self: center;
+        }
+
+        .item-header {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+        }
+
+        .item-price,
+        .item-total {
+          text-align: right;
+        }
+
+        .item-footer {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 0.5rem;
+          text-align: center;
+        }
+
+        .address-display {
+          text-align: left;
+        }
+
+        .payment-option {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+
+        .price-detail {
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .address-detail {
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .address-detail-value {
+          text-align: left;
+          margin-top: 0.25rem;
+        }
+
+        /* Adjust sidebar summary for mobile */
+        .summary-item {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.25rem;
+          text-align: left;
+        }
+
+        .summary-qty {
+          margin-right: 0;
+        }
+
+        .summary-total {
+          align-self: flex-end;
+        }
+      }
+      /* Back Button Style */
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: #d4c5a9;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 1rem;
+        transition: color 0.2s;
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 1rem;
+        padding: 0;
+      }
+      .back-btn:hover {
+        color: #fff;
+      }

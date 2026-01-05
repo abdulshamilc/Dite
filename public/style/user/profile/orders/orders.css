@@ -1,0 +1,40 @@
+        :root {
+            --primary: #080808;
+            --secondary: #ffffff;
+            --accent: #d4af37;
+            --border: #333333;
+        }
+        
+        body {
+            background-color: var(--primary);
+            color: var(--secondary);
+        }
+        
+        .accent-text { color: var(--accent); }
+        .accent-border { border-color: var(--accent); }
+        .order-card {
+            background-color: #262626;
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+        .order-card:hover {
+            border-color: var(--accent);
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+        .status-pending { background-color: rgba(212, 175, 55, 0.1); color: var(--accent); }
+        .status-shipped { background-color: rgba(100, 200, 100, 0.1); color: #64c864; }
+        .status-delivered { background-color: rgba(100, 200, 100, 0.1); color: #64c864; }
+        .status-canceled { background-color: rgba(255, 100, 100, 0.1); color: #ff6464; }
+        .status-returned { background-color: rgba(255, 100, 100, 0.1); color: #ff6464; }
+        .pagination-btn { @apply px-3 py-2 rounded-md font-medium transition-colors; }
+        .pagination-btn:hover:not(.disabled) { @apply bg-gray-700 text-accent; }
+        .pagination-btn.active { @apply bg-accent text-primary font-semibold; }
+        .pagination-btn.disabled { @apply text-gray-500 cursor-not-allowed; }
+
+        /* Style for clickable order link */
+        .order-link {
+            @apply block no-underline text-current;
+        }
+        .order-link:hover {
+            @apply no-underline text-current;
+        }

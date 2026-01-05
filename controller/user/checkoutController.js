@@ -93,7 +93,7 @@ const getCheckout = async (req, res) => {
           
           subtotal += price * item.quantity;
       }
-      total = subtotal;
+      total = subtotal + 40; // Add fixed delivery charge
   }
 
   res.render("user/checkout/selectAddress", {
@@ -220,7 +220,12 @@ const getPaymentpage = async (req, res) => {
         }
     }
 
-    res.render("user/checkout/finalChekout", { user, cart, selectedAddress });
+    res.render("user/checkout/finalChekout", { 
+      user, 
+      cart, 
+      selectedAddress,
+      razorpayKey: process.env.RAZORPAY_KEY_ID 
+    });
   } catch (error) {
     console.error(error);
     res.redirect("/cart");
@@ -427,11 +432,16 @@ const placeOrder = async (req, res) => {
              appliedCouponCode = coupon.code;
 
              const updatedCoupon = await Coupon.findOneAndUpdate(
-               { _id: coupon._id }, 
+               { _id: coupon._id, usageLimit: { $gt: 0 } }, 
                { $inc: { usageLimit: -1 } }, 
                { new: true }
              );
-             if (updatedCoupon && updatedCoupon.usageLimit <= 0) {
+
+             if (!updatedCoupon) {
+                 return res.status(400).json({ success: false, message: "Coupon limit reached just now. Please remove it or try another." });
+             }
+
+             if (updatedCoupon.usageLimit <= 0) {
                  await Coupon.updateOne({ _id: coupon._id }, { $set: { isActive: false } });
              }
            }
@@ -476,6 +486,15 @@ const placeOrder = async (req, res) => {
     // Generate Order ID early
     const orderID = `ORD-${nanoid(8)}`;
 
+    // Add Delivery Charge
+    const deliveryCharge = 40;
+    totalAmount += deliveryCharge;
+
+    // Validate COD Limit
+    if (normalizedPaymentMethod === 'cod' && totalAmount > 1000) {
+        return res.status(400).json({ success: false, message: "Cash on Delivery is not available for orders above Rs. 1000." });
+    }
+
     // For Wallet: Deduction
     if (normalizedPaymentMethod === 'wallet' || normalizedPaymentMethod === 'Wallet') {
         try {
@@ -496,6 +515,7 @@ const placeOrder = async (req, res) => {
       paymentInfo, // Structured as per schema
       totalAmount,
       discountAmount: finalDiscountAmount,
+      deliveryCharge,
       couponCode: appliedCouponCode,
       orderStatus: "Placed", // Schema default; separate from paymentStatus
       tracking: [

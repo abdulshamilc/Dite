@@ -412,7 +412,7 @@ const updateQuantity = async (req, res) => {
       const cartTotal = cart.items.reduce(
         (acc, item) => acc + item.discountedPrice * item.quantity,
         0
-      );
+      ) + 40; // Add fixed delivery charge
 
       return res.json({
         success: true,
