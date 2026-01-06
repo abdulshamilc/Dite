@@ -270,9 +270,7 @@ const getCouponDetails = async (req, res) => {
     }));
 
     const usedCount = usedByUsers.length;
-    // Assuming usageLimit is decremented on use, coupon.usageLimit is the remaining.
-    // If usageLimit is static (depends on implementation), we might need logic.
-    // Based on checkoutController: usageLimit is decremented.
+    
     const remainingUses = coupon.usageLimit;
 
     // Get session messages

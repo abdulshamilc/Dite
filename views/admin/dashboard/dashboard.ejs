@@ -35,7 +35,6 @@
           <button class="period-btn <%= period === 'week' ? 'active' : '' %>" onclick="filterByPeriod('week')">This Week</button>
           <button class="period-btn <%= period === 'month' ? 'active' : '' %>" onclick="filterByPeriod('month')">This Month</button>
           <button class="period-btn <%= period === 'year' ? 'active' : '' %>" onclick="filterByPeriod('year')">This Year</button>
-          <button class="period-btn <%= period === 'custom' ? 'active' : '' %>" onclick="filterByPeriod('custom')">Custom Range</button>
         </div>
       </div>
 
@@ -366,12 +365,6 @@
         btn.classList.remove('active');
       });
       event.target.classList.add('active');
-
-      // For custom range, you can add a date picker modal here
-      if (period === 'custom') {
-        alert('Custom date range picker will be implemented here');
-        return;
-      }
 
       // Reload page with period parameter
       window.location.href = `/admin/dashboard?period=${period}`;

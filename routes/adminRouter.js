@@ -14,9 +14,10 @@ import {
     PostOtpVerification,
     getResetPasword,
     postResetPassword,
-    getDashboard,
     logOut
 } from '../controller/admin/adminController.js';
+
+import { getDashboard } from '../controller/admin/dashboardController.js';
 
 import {
     getOrders,

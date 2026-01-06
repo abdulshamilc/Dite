@@ -162,7 +162,7 @@
             <!-- Page Limit -->
             <div class="flex items-center space-x-2">
               <label for="pageLimit" class="text-gray-400">Show</label>
-              <select id="limitSelect" onchange="changePageLimit(this.value)">
+              <select id="limitSelect" onchange="changePageLimit(this.value)" class="bg-white text-black rounded">
                 <option value="5" <%= limit == 5 ? "selected" : "" %>>5</option>
                 <option value="10" <%= limit == 10 ? "selected" : "" %>>10</option>
                 <option value="20" <%= limit == 20 ? "selected" : "" %>>20</option>

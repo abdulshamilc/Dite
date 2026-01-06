@@ -117,8 +117,7 @@ const customerDetails = async (req, res) => {
     const referredCount = referredCustomers.length;
 
     // Calculate returned orders for this customer
-    // We count orders where at least one item is returned or the main status is Returned
-    // However, looking at the schema, we can check returndProduct array in Order model
+   
     const returnedOrders = await import("../../models/ordersModel.js").then(mod => mod.default.find({ 
       userId: id,
       $or: [
@@ -127,7 +126,6 @@ const customerDetails = async (req, res) => {
       ]
     }));
     
-    // Calculate total count of returned items or orders? 
     // Usually "Returned Orders" implies number of order documents containing returns.
     const returnedOrderCount = returnedOrders.length;
 
