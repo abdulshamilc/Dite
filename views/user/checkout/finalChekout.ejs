@@ -7,12 +7,601 @@
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <link rel="stylesheet" href="/style/user/checkout/finalChekout.css">
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Cormorant Garamond', 'Georgia', serif;
+        background: #050505;
+        color: #e0e0e0;
+        min-height: 100vh;
+        padding-top: 85px;
+      }
+
+      /* Price/Amount Standard Font */
+      .item-total, .price-value, .summary-total, .summary-qty, 
+      #checkoutSubtotal, #checkoutTotal, #discountDisplay, #wallet-balance {
+        font-family: Arial, sans-serif !important;
+      }
+
+      .checkout-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 4rem 6rem;
+      }
+
+      @media (max-width: 1200px) {
+        .checkout-container {
+          padding: 3rem 4rem;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .checkout-container {
+          padding: 2rem 3rem;
+        }
+      }
+
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: #d4af37;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 2rem;
+        font-size: 1rem;
+      }
+
+      .back-btn:hover {
+        background: rgba(212, 175, 55, 0.2);
+        transform: translateX(-5px);
+      }
+
+      .checkout-title {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 300;
+        letter-spacing: 6px;
+        text-align: center;
+        margin-bottom: 3rem;
+        background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 50%, #d4af37 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInDown 0.8s ease-out;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .checkout-content {
+        display: grid;
+        grid-template-columns: 1fr 450px;
+        gap: 3rem;
+        animation: fadeInUp 0.8s ease-out;
+      }
+
+      .left-content {
+        flex: 1;
+      }
+
+      .section {
+        background: #0d0d0d;
+        border: 1px solid rgba(212, 175, 55, 0.12);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.4s ease;
+      }
+
+      .section:hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15);
+      }
+
+      .section-title {
+        font-size: 1.8rem;
+        font-weight: 400;
+        letter-spacing: 2px;
+        color: #d4af37;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+      }
+
+      /* Cart Items */
+      .cart-item {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(212, 175, 55, 0.08);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .cart-item:hover {
+        border-color: rgba(212, 175, 55, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .item-image {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid rgba(212, 175, 55, 0.2);
+      }
+
+      .item-details {
+        flex: 1;
+      }
+
+      .item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+
+      .item-name {
+        font-size: 1.3rem;
+        font-weight: 500;
+        color: #d4af37;
+        letter-spacing: 0.5px;
+      }
+
+      .item-size, .quantity-display {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 0.25rem;
+      }
+
+      .item-total {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .item-footer {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(212, 175, 55, 0.1);
+      }
+
+      .stock-status {
+        color: #4ade80;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .delivery-info {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .delivery-date {
+        color: #d4af37;
+      }
+
+      /* Address Display */
+      .address-display {
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(212, 175, 55, 0.12);
+        border-radius: 12px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+      }
+
+      .address-display:hover {
+        border-color: rgba(212, 175, 55, 0.3);
+      }
+
+      .address-name {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #d4af37;
+        margin-bottom: 0.75rem;
+      }
+
+      .address-line {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.5rem;
+      }
+
+      .view-btn {
+        margin-top: 1rem;
+        padding: 0.6rem 1.5rem;
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: #d4af37;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .view-btn:hover {
+        background: rgba(212, 175, 55, 0.2);
+        border-color: #d4af37;
+      }
+
+      /* Payment Options */
+      .payment-selection {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .payment-option {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.01);
+        border: 2px solid rgba(212, 175, 55, 0.12);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        gap: 1rem;
+      }
+
+      .payment-option:hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.1);
+      }
+
+      .payment-option.selected {
+        border-color: #d4af37;
+        background: rgba(212, 175, 55, 0.05);
+      }
+
+      .payment-radio {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+      }
+
+      .payment-icon {
+        font-size: 1.5rem;
+      }
+
+      /* Price Sidebar */
+      .price-sidebar {
+        position: sticky;
+        top: 100px;
+        height: fit-content;
+      }
+
+      .order-summary {
+        background: #0d0d0d;
+        border: 1px solid rgba(212, 175, 55, 0.12);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.4s ease;
+      }
+
+      .order-summary:hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15);
+      }
+
+      .summary-title {
+        font-size: 1.5rem;
+        font-weight: 400;
+        letter-spacing: 2px;
+        color: #d4af37;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+
+      .summary-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 8px;
+        margin-bottom: 0.75rem;
+      }
+
+      .summary-name {
+        font-size: 1rem;
+        color: #d4af37;
+        font-weight: 500;
+      }
+
+      .summary-qty {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .summary-total {
+        font-size: 1.1rem;
+        color: #fff;
+        font-weight: 600;
+      }
+
+      /* Coupon Section */
+      .coupon-section {
+        background: #0d0d0d;
+        border: 1px solid rgba(212, 175, 55, 0.12);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .coupon-section input {
+        flex: 1;
+        padding: 0.9rem 1.2rem;
+        background: #0a0a0a;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 8px;
+        color: #fff;
+        text-transform: uppercase;
+        font-size: 1rem;
+      }
+
+      .coupon-section input:focus {
+        outline: none;
+        border-color: #d4af37;
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+      }
+
+      .coupon-section button {
+        padding: 0.9rem 1.8rem;
+        background: linear-gradient(135deg, #a08830, #c4b896);
+        color: #000;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+      }
+
+      .coupon-section button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+      }
+
+      #couponMessage {
+        font-size: 0.9rem;
+        margin-top: 0.75rem;
+        min-height: 1.2em;
+      }
+
+      /* Price Details */
+      .price-title {
+        font-size: 1.5rem;
+        font-weight: 400;
+        letter-spacing: 2px;
+        color: #d4af37;
+        margin-bottom: 1.5rem;
+        text-align: center;
+      }
+
+      .price-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        font-size: 1rem;
+        color: rgba(255, 255, 255, 0.8);
+        border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+      }
+
+      .price-detail span:last-child {
+        font-weight: 600;
+        color: #fff;
+      }
+
+      #discountRow {
+        color: #4ade80;
+      }
+
+      /* Confirm Button */
+      .confirm-btn {
+        width: 100%;
+        padding: 1.2rem;
+        background: linear-gradient(135deg, #a08830, #c4b896);
+        border: none;
+        border-radius: 8px;
+        color: #000;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+      }
+
+      .confirm-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+      }
+
+      .confirm-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+        opacity: 1;
+      }
+
+      .modal {
+        background: #1a1a1a;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 15px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        position: relative;
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+      }
+
+      .modal-overlay.show .modal {
+        transform: scale(1);
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #d4af37;
+        font-size: 2rem;
+        cursor: pointer;
+        line-height: 1;
+      }
+
+      .modal-title {
+        font-size: 1.8rem;
+        color: #d4af37;
+        margin-bottom: 1.5rem;
+        letter-spacing: 1px;
+      }
+
+      .address-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+      }
+
+      .address-detail-label {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.95rem;
+      }
+
+      .address-detail-value {
+        color: #fff;
+        font-weight: 500;
+      }
+
+      /* Payment Overlay */
+      .payment-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .payment-overlay.show {
+        display: flex;
+        opacity: 1;
+      }
+
+      #paymentMessage {
+        font-size: 1.5rem;
+        color: #4ade80;
+        text-align: center;
+        padding: 2rem;
+      }
+
+      @media (max-width: 1200px) {
+        .checkout-content {
+          grid-template-columns: 1fr 400px;
+          gap: 2rem;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .checkout-content {
+          grid-template-columns: 1fr;
+        }
+
+        .price-sidebar {
+          position: static;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .checkout-container {
+          padding: 2rem 1.5rem;
+        }
+
+        .cart-item {
+          flex-direction: column;
+        }
+
+        .item-image {
+          width: 100%;
+          height: 200px;
+        }
+
+        .checkout-title {
+          font-size: 2rem;
+          letter-spacing: 3px;
+        }
+
+        .section {
+          padding: 1.5rem;
+        }
+      }
+    </style>
   </head>
 
   <body>
-        <%- include("../../partials/user/header") %>
-    <!-- Main Content -->
+    <%- include("../../partials/user/header") %>
+    
     <main class="checkout-container">
       <button onclick="history.back()" class="back-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
@@ -22,130 +611,113 @@
 
       <div class="checkout-content">
         <div class="left-content">
-          <div class="checkout-sections">
-            <!-- Product Overview (Order Review) -->
-            <div class="section">
-              <h2 class="section-title">Product Overview</h2>
-              <div class="order-review">
-                <% if (cart && cart.items.length > 0) { %> <%
-                cart.items.forEach(item => { %>
-                <div class="cart-item">
-                  <img
-                    src="<%= item.image %>"
-                    alt="<%= item.name %>"
-                    class="item-image"
-                  />
-                  <div class="item-details">
-                    <div class="item-header">
-                      <div>
-                        <div class="item-name"><%= item.name %></div>
-                        <% if (item.size) { %>
-                        <div class="item-size">Size: <%= item.size %></div>
-                        <% } %>
-                        <div class="quantity-display">
-                          Qty: <%= item.quantity %>
+          <!-- Product Overview -->
+          <div class="section">
+            <h2 class="section-title">Product Overview</h2>
+            <div class="order-review">
+              <% if (cart && cart.items.length > 0) { %>
+                <% cart.items.forEach(item => { %>
+                  <div class="cart-item">
+                    <img src="<%= item.image %>" alt="<%= item.name %>" class="item-image" />
+                    <div class="item-details">
+                      <div class="item-header">
+                        <div>
+                          <div class="item-name"><%= item.name %></div>
+                          <% if (item.size) { %>
+                            <div class="item-size">Size: <%= item.size %></div>
+                          <% } %>
+                          <div class="quantity-display">Qty: <%= item.quantity %></div>
+                        </div>
+                        <div class="item-total">Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %></div>
+                      </div>
+                      <div class="item-footer">
+                        <div>
+                          <div class="stock-status"><%= item.stockStatus %></div>
+                          <div class="delivery-info">
+                            Arrives by <span class="delivery-date"><%= new Date(item.deliveryDate).toLocaleDateString() %></span>
+                          </div>
                         </div>
                       </div>
-                      <div class="item-total">
-                        Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %>
-                      </div>
-                    </div>
-                    <div class="item-footer">
-                      <div>
-                        <div class="stock-status"><%= item.stockStatus %></div>
-                        <div class="delivery-info">
-                          Arrives by Tuesday,
-                          <span class="delivery-date">Oct 07 @ 10:00</span>
-                        </div>
-                      </div>
-                      <div class="free-delivery"></div>
                     </div>
                   </div>
-                </div>
-                <% }); %> <% } else { %>
-                <p style="text-align: center; padding: 2rem; color: #999">
-                  No items in cart.
-                </p>
-                <% } %>
-              </div>
+                <% }); %>
+              <% } else { %>
+                <p style="text-align: center; padding: 2rem; color: #999">No items in cart.</p>
+              <% } %>
             </div>
+          </div>
 
-            <!-- Delivery Address Display -->
-            <div class="section">
-              <h2 class="section-title">Delivery Address</h2>
-              <% if (selectedAddress) { %>
+          <!-- Delivery Address -->
+          <div class="section">
+            <h2 class="section-title">Delivery Address</h2>
+            <% if (selectedAddress) { %>
               <div class="address-display">
                 <div class="address-name"><%= selectedAddress.fullName %></div>
                 <div class="address-line"><%= selectedAddress.hoNo %>, <%= selectedAddress.street %></div>
                 <div class="address-line"><%= selectedAddress.city %>, <%= selectedAddress.state %> - <%= selectedAddress.pin %></div>
                 <div class="address-line">Phone: <%= selectedAddress.phone %></div>
                 <% if (selectedAddress.altPhone) { %>
-                <div class="address-line">Alternate Phone: <%= selectedAddress.altPhone %></div>
+                  <div class="address-line">Alternate Phone: <%= selectedAddress.altPhone %></div>
                 <% } %>
                 <div class="address-line">Country: <%= selectedAddress.country %></div>
-                <button type="button" class="view-btn" onclick="openViewModal(selectedAddressData)">
-                  View Full Details
-                </button>
+                <button type="button" class="view-btn" onclick="openViewModal(selectedAddressData)">View Full Details</button>
               </div>
-              <% } else { %>
-              <p style="color: #999; text-align: center; padding: 1rem">
-                No address selected.
-              </p>
-              <% } %>
-            </div>
+            <% } else { %>
+              <p style="color: #999; text-align: center; padding: 1rem">No address selected.</p>
+            <% } %>
+          </div>
 
-            <!-- Payment Options -->
-            <div class="section">
-              <h2 class="section-title">Payment Option</h2>
-              <div class="payment-selection">
-                <label class="payment-option">
-                  <input type="radio" class="payment-radio" name="payment" value="razorpay" required />
-                  <span class="payment-icon">💳</span>
-                  <span>Razorpay</span>
-                </label>
-                <label class="payment-option" id="codPaymentOption">
-                  <input type="radio" class="payment-radio" name="payment" value="cod" id="codRadio" />
-                  <span class="payment-icon">💰</span>
-                  <span>Cash on Delivery</span>
-                  <span id="codWarning" style="display:none; color: #ef4444; font-size: 0.8rem; margin-left: auto;">(Unavailable > Rs.1000)</span>
-                </label>
-                <label class="payment-option">
-                  <input type="radio" class="payment-radio" name="payment" value="wallet" id="walletOption" />
-                  <span class="payment-icon">👛</span>
-                  <span>Wallet <span id="wallet-balance"></span></span>
-                </label>
-              </div>
+          <!-- Payment Options -->
+          <div class="section">
+            <h2 class="section-title">Payment Option</h2>
+            <div class="payment-selection">
+              <label class="payment-option">
+                <input type="radio" class="payment-radio" name="payment" value="razorpay" required />
+                <span class="payment-icon">💳</span>
+                <span>Razorpay</span>
+              </label>
+              <label class="payment-option" id="codPaymentOption">
+                <input type="radio" class="payment-radio" name="payment" value="cod" id="codRadio" />
+                <span class="payment-icon">💰</span>
+                <span>Cash on Delivery</span>
+                <span id="codWarning" style="display:none; color: #ef4444; font-size: 0.85rem; margin-left: auto;">(Unavailable > Rs.1000)</span>
+              </label>
+              <label class="payment-option">
+                <input type="radio" class="payment-radio" name="payment" value="wallet" id="walletOption" />
+                <span class="payment-icon">👛</span>
+                <span>Wallet <span id="wallet-balance"></span></span>
+              </label>
             </div>
           </div>
         </div>
 
-        <!-- Price Details Sidebar -->
+        <!-- Price Sidebar -->
         <div class="price-sidebar">
           <% if (cart && cart.items.length > 0) { %>
-          <div class="order-summary">
-            <h3 class="summary-title">Order Summary</h3>
-            <% cart.items.forEach(item => { %>
-            <div class="summary-item">
-              <span class="summary-name"><%= item.name %></span>
-              <span class="summary-qty">Qty: <%= item.quantity %> x Rs. <%= item.discountedPrice.toFixed(2) %></span>
-              <span class="summary-total">Rs. <%= (item.discountedPrice * item.quantity).toFixed(2) %></span>
+            <div class="order-summary">
+              <h3 class="summary-title">Order Summary</h3>
+              <% cart.items.forEach(item => { %>
+                <div class="summary-item">
+                  <span class="summary-name"><%= item.name %></span>
+                  <span class="summary-qty">Qty: <%= item.quantity %> x Rs. <%= item.discountedPrice.toFixed(2) %></span>
+                  <span class="summary-total">Rs. <%= (item.discountedPrice * item.quantity).toFixed(2) %></span>
+                </div>
+              <% }); %>
             </div>
-            <% }); %>
-          </div>
           <% } %>
 
-          
           <!-- Coupon Section -->
-          <div class="coupon-section" style="margin-bottom: 2rem; border-bottom: 1px solid #444; padding-bottom: 1.5rem;">
+          <div class="coupon-section">
             <h3 class="summary-title">Have a Coupon?</h3>
             <div style="display: flex; gap: 0.5rem;">
-              <input type="text" id="couponInput" placeholder="Enter code" style="flex: 1; padding: 0.75rem; border-radius: 4px; border: 1px solid #444; background: #333; color: #fff; text-transform: uppercase;">
-              <button id="applyCouponBtn" onclick="applyCoupon()" style="padding: 0.5rem 1rem; background: #d4c5a9; color: #000; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">APPLY</button>
+              <input type="text" id="couponInput" placeholder="Enter code">
+              <button id="applyCouponBtn" onclick="applyCoupon()">APPLY</button>
             </div>
-             <p id="couponMessage" style="font-size: 0.85rem; margin-top: 0.5rem; min-height: 1.2em;"></p>
+            <p id="couponMessage"></p>
           </div>
 
-          <div>
+          <!-- Price Details -->
+          <div class="order-summary">
             <h2 class="price-title">Price Details</h2>
             <% let subtotal = 0; %>
             <% if (cart && cart.items.length > 0) { %>
@@ -156,21 +728,20 @@
               <span id="checkoutSubtotal">Rs. <%= subtotal.toFixed(2) %></span>
             </div>
             <div class="price-detail" id="discountRow" style="display: none;">
-               <span>Discount</span>
-               <span id="discountDisplay" style="color: #4ade80;">- Rs. 0.00</span>
+              <span>Discount</span>
+              <span id="discountDisplay">- Rs. 0.00</span>
             </div>
             <div class="price-detail">
               <span>Delivery Charges</span>
               <span>Rs. 40.00</span>
             </div>
-            <div class="price-detail">
-              <span>Total</span>
-              <span id="checkoutTotal">Rs. <%= (subtotal + 40).toFixed(2) %></span>
+            <div class="price-detail" style="border-bottom: none; font-size: 1.2rem; padding-top: 1rem;">
+              <span style="color: #d4af37; font-weight: 700;">Total</span>
+              <span id="checkoutTotal" style="color: #d4af37; font-weight: 700;">Rs. <%= (subtotal + 40).toFixed(2) %></span>
             </div>
           </div>
-          <button class="confirm-btn" id="confirmBtn" onclick="confirmOrder()">
-            CONFIRM ORDER
-          </button>
+          
+          <button class="confirm-btn" id="confirmBtn" onclick="confirmOrder()">CONFIRM ORDER</button>
         </div>
       </div>
     </main>
@@ -189,11 +760,7 @@
             <span class="address-detail-label">Phone:</span>
             <span class="address-detail-value" id="viewPhone"></span>
           </div>
-          <div
-            class="address-detail"
-            id="viewAltPhoneContainer"
-            style="display: none"
-          >
+          <div class="address-detail" id="viewAltPhoneContainer" style="display: none">
             <span class="address-detail-label">Alternate Phone:</span>
             <span class="address-detail-value" id="viewAltPhone"></span>
           </div>
@@ -232,21 +799,20 @@
 
     <!-- Error Modal -->
     <div class="modal-overlay" id="errorModal" style="z-index: 200;">
-      <div class="modal" style="max-width: 400px; text-align: center; border: 1px solid #444;">
+      <div class="modal" style="max-width: 400px; text-align: center;">
         <button class="modal-close" onclick="closeErrorModal()">&times;</button>
         <div style="margin-bottom: 1rem; color: #ef4444;">
-           <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
         </div>
         <h2 class="modal-title" style="margin-bottom: 0.5rem;" id="errorTitle">Action Required</h2>
         <p style="color: #9ca3af; margin-bottom: 1.5rem;" id="errorMessage">Please select a payment method.</p>
-        <button onclick="closeErrorModal()" style="padding: 0.6rem 2rem; background: #333; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#444'" onmouseout="this.style.background='#333'">OK</button>
+        <button onclick="closeErrorModal()" style="padding: 0.6rem 2rem; background: rgba(212, 175, 55, 0.1); color: #d4af37; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='rgba(212, 175, 55, 0.2)'" onmouseout="this.style.background='rgba(212, 175, 55, 0.1)'">OK</button>
       </div>
     </div>
 
-    <!-- Footer -->
     <%- include("../../partials/user/footer") %>
 
-   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <%
   let globalSubtotal = 0;
   if (cart && cart.items.length > 0) {
@@ -254,16 +820,15 @@
   }
 %>
 <script>
-  // Pass data from EJS to JS
   const subtotal = <%= globalSubtotal %>;
   const cartItems = <%- JSON.stringify(cart ? cart.items : []) %>;
   const selectedAddressId = '<%= selectedAddress ? selectedAddress._id : "" %>';
   const selectedAddressData = <%- JSON.stringify(selectedAddress || null) %>;
   const selectedAddress = <%- JSON.stringify(selectedAddress) %>;
-  const userEmail = '<%= user ? user.email : "" %>'; // Assume user object from backend; fallback empty
+  const userEmail = '<%= user ? user.email : "" %>';
   let razorpayInstance = null;
   let appliedCouponCode = null;
-  let currentTotal = subtotal + 40; // Add fixed delivery charge
+  let currentTotal = subtotal + 40;
 
   async function applyCoupon() {
     const couponInput = document.getElementById('couponInput');
@@ -276,7 +841,6 @@
       return;
     }
 
-    // Disable button to prevent double clicks
     const applyBtn = document.getElementById('applyCouponBtn');
     applyBtn.disabled = true;
     applyBtn.textContent = '...';
@@ -285,7 +849,7 @@
       const response = await fetch('/checkout/apply-coupon', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ couponCode: code, subtotal: subtotal }) // Use base subtotal for calculation
+        body: JSON.stringify({ couponCode: code, subtotal: subtotal })
       });
 
       const data = await response.json();
@@ -294,9 +858,7 @@
         messageEl.textContent = `Coupon '${data.couponCode}' applied! You saved Rs. ${data.discountAmount.toFixed(2)}`;
         messageEl.style.color = '#4ade80';
         
-        // Update UI
         document.getElementById('discountRow').style.display = 'flex';
-        document.getElementById('discountDisplay').textContent = `- Rs. ${data.discountAmount.toFixed(2)}`;
         document.getElementById('discountDisplay').textContent = `- Rs. ${data.discountAmount.toFixed(2)}`;
         const totalWithDelivery = data.newTotal + 40;
         document.getElementById('checkoutTotal').textContent = `Rs. ${totalWithDelivery.toFixed(2)}`;
@@ -304,9 +866,8 @@
         appliedCouponCode = data.couponCode;
         currentTotal = totalWithDelivery;
         
-        validateCOD(); // Re-validate COD availability
+        validateCOD();
 
-        // Disable input
         couponInput.disabled = true;
         applyBtn.textContent = 'APPLIED';
       } else {
@@ -325,7 +886,6 @@
     }
   }
 
-  // Utility to redirect to failed page with error message and type
   function redirectToFailed(errorMsg, errorType = 'unknown', deleteCart = false) {
     const encodedError = encodeURIComponent(errorMsg);
     const encodedType = encodeURIComponent(errorType);
@@ -338,7 +898,6 @@
     window.location.href = `/checkout/failed?${params}`;
   }
 
-  // Confirm Order (with validations)
   function confirmOrder() {
     if (cartItems.length === 0) {
       showErrorModal("Your cart is empty. Add items to proceed.", "Cart Empty");
@@ -356,7 +915,6 @@
     const paymentMethod = selectedPayment.value;
     document.getElementById('confirmBtn').disabled = true;
     if (paymentMethod === 'cod') {
-      // COD flow
       showPaymentStatus('Placing COD order...');
       fetch('/checkout/placeOrder', {
         method: 'POST',
@@ -373,23 +931,24 @@
         if (data.success) {
           window.location.href = '/checkout/success';
         } else {
-          // specific coupon error handling
           if (data.message && data.message.toLowerCase().includes('coupon')) {
-             hidePaymentStatus();
-             Swal.fire({
-                icon: 'error',
-                title: 'Coupon Issue',
-                text: data.message,
-                confirmButtonColor: '#d4c5a9',
-                allowOutsideClick: false
-             }).then(() => {
-                location.reload(); 
-             });
-             return;
+            hidePaymentStatus();
+            Swal.fire({
+              icon: 'error',
+              title: 'Coupon Issue',
+              text: data.message,
+              confirmButtonColor: '#d4af37',
+              allowOutsideClick: false,
+              background: '#1a1a1a',
+              color: '#ffffff'
+            }).then(() => {
+              location.reload();
+            });
+            return;
           }
           const errorMsg = data.message || 'COD order placement failed. Please try again.';
           showPaymentStatus(errorMsg, true);
-          setTimeout(() => redirectToFailed(errorMsg, 'cod_failed', true), 1500); // Brief show, then redirect
+          setTimeout(() => redirectToFailed(errorMsg, 'cod_failed', true), 1500);
         }
       })
       .catch(err => {
@@ -415,7 +974,7 @@
           items: cartItems,
           addressId: selectedAddressId,
           paymentMethod: 'wallet',
-          couponCode: appliedCouponCode // Add coupon code to wallet payment
+          couponCode: appliedCouponCode
         })
       })
       .then(res => res.json())
@@ -423,19 +982,20 @@
         if (data.success) {
           window.location.href = '/checkout/success';
         } else {
-          // specific coupon error handling
           if (data.message && data.message.toLowerCase().includes('coupon')) {
-             hidePaymentStatus();
-             Swal.fire({
-                icon: 'error',
-                title: 'Coupon Issue',
-                text: data.message,
-                confirmButtonColor: '#d4c5a9',
-                allowOutsideClick: false
-             }).then(() => {
-                location.reload(); 
-             });
-             return;
+            hidePaymentStatus();
+            Swal.fire({
+              icon: 'error',
+              title: 'Coupon Issue',
+              text: data.message,
+              confirmButtonColor: '#d4af37',
+              allowOutsideClick: false,
+              background: '#1a1a1a',
+              color: '#ffffff'
+            }).then(() => {
+              location.reload();
+            });
+            return;
           }
           const errorMsg = data.message || 'Wallet payment failed. Please try again.';
           showPaymentStatus(errorMsg, true);
@@ -451,9 +1011,8 @@
     }
   }
 
-  // Initiate Razorpay (added try-catch)
   function initiateRazorpay() {
-    if (!currentTotal || currentTotal < 1) { // Use currentTotal
+    if (!currentTotal || currentTotal < 1) {
       const errorMsg = 'Invalid order amount. Please check your cart.';
       showPaymentStatus(errorMsg, true);
       setTimeout(() => redirectToFailed(errorMsg, 'invalid_amount'), 1500);
@@ -463,7 +1022,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        amount: currentTotal, // Use currentTotal which includes discount
+        amount: currentTotal,
         currency: "INR",
         receipt: "receipt#" + Date.now(),
         notes: { desc: "Order Payment" }
@@ -486,25 +1045,24 @@
     });
   }
 
-  // Open Razorpay Checkout (added email prefill)
   function openRazorpayCheckout(order) {
     const options = {
       key: '<%= typeof razorpayKey !== "undefined" ? razorpayKey : "" %>', 
-      amount: Math.round(currentTotal * 100), // Amount in paise, using updated total
+      amount: Math.round(currentTotal * 100),
       currency: "INR",
       name: "Dité",
-      description: `Payment of Rs. ${currentTotal.toFixed(2)}`, // Use currentTotal for description
+      description: `Payment of Rs. ${currentTotal.toFixed(2)}`,
       order_id: order.id,
       handler: function(response) {
         verifyRazorpayPayment(response);
       },
       prefill: {
         name: selectedAddress ? selectedAddress.fullName : '',
-        email: userEmail, // Now uses user email
+        email: userEmail,
         contact: selectedAddress ? selectedAddress.phone : ''
       },
       theme: {
-        color: '#d4c5a9'
+        color: '#d4af37'
       },
       modal: {
         ondismiss: function() {
@@ -525,7 +1083,6 @@
     }
   }
 
-  // Verify Razorpay Payment (unchanged, but added catch)
   function verifyRazorpayPayment(response) {
     showPaymentStatus('Verifying payment...');
     fetch('/verifyPayment', {
@@ -553,7 +1110,6 @@
     });
   }
 
-  // Place Order After Payment (unchanged)
   function placeOrderAfterPayment(paymentMethod, paymentId, razorpayOrderId) {
     showPaymentStatus('Placing your order...');
     fetch('/checkout/placeOrder', {
@@ -565,7 +1121,7 @@
         paymentMethod: paymentMethod,
         razorpayPaymentId: paymentId,
         razorpayOrderId: razorpayOrderId,
-        couponCode: appliedCouponCode // Add coupon code to Razorpay order
+        couponCode: appliedCouponCode
       })
     })
     .then(res => res.json())
@@ -574,19 +1130,20 @@
         showPaymentStatus('Order placed successfully!');
         setTimeout(() => window.location.href = '/checkout/success', 2000);
       } else {
-        // specific coupon error handling
         if (data.message && data.message.toLowerCase().includes('coupon')) {
-             hidePaymentStatus();
-             Swal.fire({
-                icon: 'error',
-                title: 'Coupon Issue',
-                text: data.message,
-                confirmButtonColor: '#d4c5a9',
-                allowOutsideClick: false
-             }).then(() => {
-                location.reload(); 
-             });
-             return;
+          hidePaymentStatus();
+          Swal.fire({
+            icon: 'error',
+            title: 'Coupon Issue',
+            text: data.message,
+            confirmButtonColor: '#d4af37',
+            allowOutsideClick: false,
+            background: '#1a1a1a',
+            color: '#ffffff'
+          }).then(() => {
+            location.reload();
+          });
+          return;
         }
         throw new Error(data.message || 'Order placement failed after payment');
       }
@@ -599,21 +1156,20 @@
     });
   }
 
-  // Utility Functions
   function showErrorModal(message, title = "Action Required") {
     Swal.fire({
       icon: 'warning',
       title: title,
       text: message,
-      background: '#2a2a2a',
+      background: '#1a1a1a',
       color: '#ffffff',
-      confirmButtonColor: '#d4c5a9'
+      confirmButtonColor: '#d4af37'
     });
   }
 
   function closeErrorModal() {
-      const modal = document.getElementById('errorModal');
-      if(modal) modal.classList.remove('show');
+    const modal = document.getElementById('errorModal');
+    if(modal) modal.classList.remove('show');
   }
 
   function showPaymentStatus(message, isError = false) {
@@ -621,17 +1177,17 @@
     const msgEl = document.getElementById('paymentMessage');
     msgEl.textContent = message;
     if (isError) {
-      msgEl.style.color = '#ff6b6b';
+      msgEl.style.color = '#ef4444';
     } else {
       msgEl.style.color = '#4ade80';
     }
     overlay.classList.add('show');
   }
+  
   function hidePaymentStatus() {
     document.getElementById('paymentOverlay').classList.remove('show');
   }
 
-  // Handle payment selection (unchanged)
   document.addEventListener("DOMContentLoaded", function () {
     const paymentRadios = document.querySelectorAll(".payment-radio");
     paymentRadios.forEach((radio) => {
@@ -642,7 +1198,6 @@
     });
   });
 
-  // Modal functions (unchanged)
   function openViewModal(addressData) {
     document.getElementById("viewFullName").textContent = addressData.fullName || "";
     document.getElementById("viewPhone").textContent = addressData.phone || "";
@@ -661,9 +1216,11 @@
     document.getElementById("viewCountry").textContent = addressData.country || "";
     document.getElementById("viewModal").classList.add("show");
   }
+  
   function closeViewModal() {
     document.getElementById("viewModal").classList.remove("show");
   }
+  
   document.getElementById("viewModal").addEventListener("click", function (e) {
     if (e.target === this) {
       closeViewModal();
@@ -687,38 +1244,35 @@
     }
   }).catch(()=>{});
 
-  // Check COD availability on load and after updates
   function validateCOD() {
-      const codRadio = document.getElementById('codRadio');
-      const codOption = document.getElementById('codPaymentOption');
-      const codWarning = document.getElementById('codWarning');
-      const MAX_COD_AMOUNT = 1000;
+    const codRadio = document.getElementById('codRadio');
+    const codOption = document.getElementById('codPaymentOption');
+    const codWarning = document.getElementById('codWarning');
+    const MAX_COD_AMOUNT = 1000;
 
-      if (codRadio && codOption) {
-          if (currentTotal > MAX_COD_AMOUNT) {
-              if (codRadio.checked) {
-                  codRadio.checked = false;
-                  codOption.classList.remove('selected');
-                  document.querySelectorAll(".payment-option").forEach((opt) => opt.classList.remove("selected"));
-              }
-              codRadio.disabled = true;
-              codOption.style.opacity = '0.5';
-              codOption.style.cursor = 'not-allowed';
-              codOption.title = 'Order value exceeds Rs. 1000 limit for COD';
-              if(codWarning) codWarning.style.display = 'inline';
-          } else {
-              codRadio.disabled = false;
-              codOption.style.opacity = '1';
-              codOption.style.cursor = 'pointer';
-              codOption.title = '';
-              if(codWarning) codWarning.style.display = 'none';
-          }
+    if (codRadio && codOption) {
+      if (currentTotal > MAX_COD_AMOUNT) {
+        if (codRadio.checked) {
+          codRadio.checked = false;
+          codOption.classList.remove('selected');
+          document.querySelectorAll(".payment-option").forEach((opt) => opt.classList.remove("selected"));
+        }
+        codRadio.disabled = true;
+        codOption.style.opacity = '0.5';
+        codOption.style.cursor = 'not-allowed';
+        codOption.title = 'Order value exceeds Rs. 1000 limit for COD';
+        if(codWarning) codWarning.style.display = 'inline';
+      } else {
+        codRadio.disabled = false;
+        codOption.style.opacity = '1';
+        codOption.style.cursor = 'pointer';
+        codOption.title = '';
+        if(codWarning) codWarning.style.display = 'none';
       }
+    }
   }
 
-  // Initial check
   validateCOD();
-
 </script>
 </body>
 </html>

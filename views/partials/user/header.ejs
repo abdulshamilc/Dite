@@ -1,106 +1,498 @@
-<header class="header bg-black">
-  <nav class="nav flex items-center justify-between py-4">
-    
-    <!-- Logo -->
-    <div class="logo">
-      <img src="/images/logo/DiteLogo.png" alt="Dité Logo" class="h-10" />
-    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dité Header</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <!-- Hamburger Menu Button -->
-    <div class="hamburger" onclick="toggleMobileMenu()">
-      <span></span>
-      <span></span>
-      <span></span>
-    </div>
+        body {
+            font-family: 'Cormorant Garamond', 'Georgia', serif;
+            background: #0a0a0a;
+            padding-top: 85px;
+        }
 
-    <!-- Navigation Menu -->
-    <ul id="nav-menu" class="nav-menu flex space-x-6 text-white font-medium">
-      <li><a href="/" class="hover:text-gray-300">Home</a></li>
-      <li><a href="/shop" class="hover:text-gray-300">Shop</a></li>
-      <li><a href="/collections" class="hover:text-gray-300">Collections</a></li>
-    </ul>
+        /* Header Styles */
+        .header {
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
 
-    <!-- Icons -->
-    <div class="nav-icons flex space-x-4 text-white text-lg relative">
-      
-      <!-- Wishlist Icon (FIXED) -->
-      <% if (session && session.user) { %>
-        <a href="/wishlist">
-          <i class="fas fa-heart cursor-pointer hover:text-gray-300 text-white"></i>
-        </a>
-      <% } else { %>
-        <a href="/login">
-          <i class="fas fa-heart cursor-pointer hover:text-gray-300 text-white"></i>
-        </a>
-      <% } %>
+        .header.scrolled {
+            background: rgba(0, 0, 0, 0.98);
+            box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15);
+            border-bottom-color: rgba(212, 175, 55, 0.4);
+        }
 
-      <!-- Profile Dropdown or Login Redirect -->
-      <% if (session && session.user) { %>
-        <div class="relative group">
-          <a href="#" class="hover:text-gray-300 profile-icon">
-            <i class="fas fa-user"></i>
-          </a>
-          <ul class="absolute bg-black text-white rounded-md py-2 w-40 right-0">
-            <li><a href="/profile" class="block px-4 py-2 hover:bg-gray-800">Profile</a></li>
-            <li><a href="/orders" class="block px-4 py-2 hover:bg-gray-800">Orders</a></li>
-            <li><a href="/wishlist" class="block px-4 py-2 hover:bg-gray-800">Wishlist</a></li>
-            <li><a href="/logout" class="block px-4 py-2 hover:bg-gray-800">Logout</a></li>
-          </ul>
-        </div>
-      <% } else { %>
-        <a href="/login" class="hover:text-gray-300">
-          <i class="fas fa-user"></i>
-        </a>
-      <% } %>
+        .nav {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1.2rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
 
-      <!-- Cart Icon with Badge -->
-      <div class="relative">
-        <a href="/cart" class="hover:text-gray-300">
-          <i class="fas fa-shopping-bag"></i>
-        </a>
-        <% if (session && session.cart && session.cart.itemCount > 0) { %>
-          <span class="cart-count"><%= session.cart.itemCount %></span>
-        <% } else { %>
-          <span class="cart-count" style="display: none;">0</span>
-        <% } %>
-      </div>
+        /* Logo */
+        .logo {
+            position: relative;
+            z-index: 1001;
+            transition: transform 0.3s ease;
+        }
 
-    </div>
-  </nav>
-</header>
+        .logo:hover {
+            transform: scale(1.05);
+        }
 
-<!-- Profile Dropdown Script -->
-<% if (session && session.user) { %>
-<script>
-  const profileIcon = document.querySelector('.profile-icon');
-  const group = profileIcon.parentElement;
+        .logo img {
+            height: 45px;
+            width: auto;
+            filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+            transition: filter 0.3s ease;
+        }
 
-  profileIcon.addEventListener('click', (e) => {
-    e.preventDefault();
-    group.classList.toggle('active');
-  });
+        .logo:hover img {
+            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.6));
+        }
 
-  document.addEventListener('click', (e) => {
-    if (!group.contains(e.target)) {
-      group.classList.remove('active');
-    }
-  });
-</script>
-<% } %>
+        /* Navigation Menu */
+        .nav-menu {
+            display: flex;
+            list-style: none;
+            gap: 3rem;
+            align-items: center;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
 
-<!-- Mobile Menu Script -->
-<script>
-  function toggleMobileMenu() {
-    const navMenu = document.getElementById('nav-menu');
-    navMenu.classList.toggle('active');
-  }
+        .nav-menu li {
+            position: relative;
+        }
 
-  document.addEventListener('click', (e) => {
-    const navMenu = document.getElementById('nav-menu');
-    const hamburger = document.querySelector('.hamburger');
-    
-    if (!hamburger.contains(e.target) && !navMenu.contains(e.target)) {
-      navMenu.classList.remove('active');
-    }
-  });
-</script>
+        .nav-menu a {
+            color: #fff;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: 400;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 0.5rem 0;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-menu a::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #d4af37, #f4e5c3);
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .nav-menu a:hover {
+            color: #d4af37;
+        }
+
+        .nav-menu a:hover::before {
+            width: 100%;
+        }
+
+        /* Navigation Icons */
+        .nav-icons {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            position: relative;
+            z-index: 1001;
+        }
+
+        .nav-icons a,
+        .nav-icons .relative {
+            color: #fff;
+            font-size: 1.3rem;
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .nav-icons a:hover,
+        .nav-icons .relative:hover {
+            color: #d4af37;
+            transform: scale(1.1);
+        }
+
+        .nav-icons i {
+            transition: all 0.3s ease;
+        }
+
+        .nav-icons a:hover i {
+            filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.6));
+        }
+
+        /* Cart Badge */
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -10px;
+            background: linear-gradient(135deg, #d4af37, #f4e5c3);
+            color: #000;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 600;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        /* Profile Dropdown */
+        .profile-dropdown {
+            position: relative;
+        }
+
+        .profile-dropdown ul {
+            position: absolute;
+            top: calc(100% + 15px);
+            right: 0;
+            background: rgba(10, 10, 10, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 12px;
+            min-width: 200px;
+            list-style: none;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+        }
+
+        .profile-dropdown ul::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            right: 20px;
+            width: 15px;
+            height: 15px;
+            background: rgba(10, 10, 10, 0.98);
+            border-left: 1px solid rgba(212, 175, 55, 0.3);
+            border-top: 1px solid rgba(212, 175, 55, 0.3);
+            transform: rotate(45deg);
+        }
+
+        .profile-dropdown.active ul {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .profile-dropdown ul li {
+            border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .profile-dropdown ul li:last-child {
+            border-bottom: none;
+        }
+
+        .profile-dropdown ul li a {
+            display: block;
+            padding: 1rem 1.5rem;
+            color: #fff;
+            text-decoration: none;
+            font-size: 1rem;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .profile-dropdown ul li a::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 3px;
+            height: 100%;
+            background: linear-gradient(180deg, #d4af37, #f4e5c3);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .profile-dropdown ul li a:hover {
+            background: rgba(212, 175, 55, 0.1);
+            color: #d4af37;
+            padding-left: 2rem;
+        }
+
+        .profile-dropdown ul li a:hover::before {
+            transform: scaleY(1);
+        }
+
+        /* Hamburger Menu */
+        .hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            cursor: pointer;
+            z-index: 1001;
+            padding: 10px;
+            position: relative;
+        }
+
+        .hamburger span {
+            width: 28px;
+            height: 2px;
+            background: #d4af37;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 2px;
+        }
+
+        .hamburger:hover span {
+            background: #f4e5c3;
+        }
+
+        .hamburger.active span:nth-child(1) {
+            transform: rotate(45deg) translate(8px, 8px);
+        }
+
+        .hamburger.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(8px, -8px);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 1024px) {
+            .nav-menu {
+                position: fixed;
+                top: 0;
+                right: -100%;
+                width: 320px;
+                height: 100vh;
+                background: rgba(10, 10, 10, 0.98);
+                backdrop-filter: blur(20px);
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                gap: 2rem;
+                transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+                border-left: 1px solid rgba(212, 175, 55, 0.3);
+                box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8);
+            }
+
+            .nav-menu.active {
+                right: 0;
+            }
+
+            .hamburger {
+                display: flex;
+            }
+
+            .nav {
+                padding: 1rem 1.5rem;
+            }
+
+            .logo img {
+                height: 38px;
+            }
+
+            .nav-menu a {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-icons {
+                gap: 1rem;
+            }
+
+            .nav-icons a,
+            .nav-icons .relative {
+                font-size: 1.1rem;
+            }
+
+            .nav-menu {
+                width: 280px;
+            }
+        }
+
+        /* Mobile Menu Overlay */
+        .mobile-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+            z-index: 999;
+        }
+
+        .mobile-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
+</head>
+<body>
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleMobileMenu()"></div>
+
+    <header class="header">
+        <nav class="nav">
+            
+            <!-- Logo -->
+            <div class="logo">
+                <img src="/images/logo/DiteLogo.png" alt="Dité Logo" />
+            </div>
+
+            <!-- Hamburger Menu Button -->
+            <div class="hamburger" id="hamburger" onclick="toggleMobileMenu()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+
+            <!-- Navigation Menu -->
+            <ul id="nav-menu" class="nav-menu">
+                <li><a href="/">Home</a></li>
+                <li><a href="/shop">Shop</a></li>
+                <li><a href="/collections">Collections</a></li>
+            </ul>
+
+            <!-- Icons -->
+            <div class="nav-icons">
+                
+                <!-- Wishlist Icon -->
+                <a href="/wishlist">
+                    <i class="fas fa-heart"></i>
+                </a>
+
+                <!-- Profile Dropdown or Login -->
+                <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+                <div class="profile-dropdown" id="profileDropdown">
+                    <a href="#" class="profile-icon">
+                        <img src="<%= currentUser.image ? currentUser.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=3a2f25&color=d3a35b&size=128&bold=true` %>" 
+                             alt="Profile" 
+                             style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                    </a>
+                    <ul>
+                        <li><a href="/profile">Profile</a></li>
+                        <li><a href="/orders">Orders</a></li>
+                        <li><a href="/wishlist">Wishlist</a></li>
+                        <li><a href="/logout">Logout</a></li>
+                    </ul>
+                </div>
+                <% } else { %>
+                <a href="/login">
+                    <i class="fas fa-user"></i>
+                </a>
+                <% } %>
+
+                <!-- Cart Icon with Badge -->
+                <div class="relative">
+                    <a href="/cart">
+                        <i class="fas fa-shopping-bag"></i>
+                    </a>
+<% if (locals.cartLength > 0) { %>
+                        <span class="cart-count"><%= cartLength %></span>
+                    <% } %>
+                </div>
+
+            </div>
+        </nav>
+    </header>
+
+    <script>
+        // Scroll Effect
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('.header');
+            if (window.scrollY > 50) {
+                header.classList.add('scrolled');
+            } else {
+                header.classList.remove('scrolled');
+            }
+        });
+
+        // Profile Dropdown
+        const profileDropdown = document.getElementById('profileDropdown');
+        if (profileDropdown) {
+            const profileIcon = profileDropdown.querySelector('.profile-icon');
+
+            profileIcon.addEventListener('click', (e) => {
+                e.preventDefault();
+                profileDropdown.classList.toggle('active');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!profileDropdown.contains(e.target)) {
+                    profileDropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Mobile Menu Toggle
+        function toggleMobileMenu() {
+            const navMenu = document.getElementById('nav-menu');
+            const hamburger = document.getElementById('hamburger');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            
+            navMenu.classList.toggle('active');
+            hamburger.classList.toggle('active');
+            mobileOverlay.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            if (navMenu.classList.contains('active')) {
+                document.body.style.overflow = 'hidden';
+            } else {
+                document.body.style.overflow = '';
+            }
+        }
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            const navMenu = document.getElementById('nav-menu');
+            const hamburger = document.getElementById('hamburger');
+            const mobileOverlay = document.getElementById('mobileOverlay');
+            
+            if (!hamburger.contains(e.target) && !navMenu.contains(e.target) && navMenu.classList.contains('active')) {
+                navMenu.classList.remove('active');
+                hamburger.classList.remove('active');
+                mobileOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+    </script>
+</body>
+</html>

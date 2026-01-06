@@ -4,16 +4,581 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Checkout - Dité</title>
-    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" /> -->
-    <link rel="stylesheet" href="/style/user/checkout/selectAddress.css">
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Cormorant Garamond', 'Georgia', serif;
+        background: #050505;
+        color: #e0e0e0;
+        min-height: 100vh;
+        padding-top: 85px;
+      }
+
+      /* Price/Amount Standard Font */
+      .item-total, .price-value, .summary-amount {
+        font-family: Arial, sans-serif !important;
+      }
+
+      .checkout-container {
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 4rem 6rem;
+      }
+
+      @media (max-width: 1200px) {
+        .checkout-container {
+          padding: 3rem 4rem;
+        }
+      }
+
+      @media (max-width: 992px) {
+        .checkout-container {
+          padding: 2rem 3rem;
+        }
+      }
+
+      .back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: #d4af37;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 2rem;
+        font-size: 1rem;
+      }
+
+      .back-btn:hover {
+        background: rgba(212, 175, 55, 0.2);
+        transform: translateX(-5px);
+      }
+
+      .checkout-title {
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        font-weight: 300;
+        letter-spacing: 6px;
+        text-align: center;
+        margin-bottom: 3rem;
+        background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 50%, #d4af37 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInDown 0.8s ease-out;
+      }
+
+      @keyframes fadeInDown {
+        from {
+          opacity: 0;
+          transform: translateY(-30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .section {
+        background: #0d0d0d;
+        border: 1px solid rgba(212, 175, 55, 0.12);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: all 0.4s ease;
+        animation: fadeInUp 0.8s ease-out;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .section:hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        box-shadow: 0 10px 40px rgba(212, 175, 55, 0.15);
+      }
+
+      .section-title {
+        font-size: 1.8rem;
+        font-weight: 400;
+        letter-spacing: 2px;
+        color: #d4af37;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+      }
+
+      /* Cart Items */
+      .cart-item {
+        display: flex;
+        gap: 1.5rem;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.01);
+        border: 1px solid rgba(212, 175, 55, 0.08);
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .cart-item:hover {
+        border-color: rgba(212, 175, 55, 0.3);
+        transform: translateY(-2px);
+      }
+
+      .item-image {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border-radius: 10px;
+        border: 2px solid rgba(212, 175, 55, 0.2);
+      }
+
+      .item-details {
+        flex: 1;
+      }
+
+      .item-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+      }
+
+      .item-name {
+        font-size: 1.3rem;
+        font-weight: 500;
+        color: #d4af37;
+        letter-spacing: 0.5px;
+      }
+
+      .item-size, .quantity-display {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.6);
+        margin-top: 0.25rem;
+      }
+
+      .item-total {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #fff;
+      }
+
+      .item-footer {
+        display: flex;
+        justify-content: space-between;
+        padding-top: 0.75rem;
+        border-top: 1px solid rgba(212, 175, 55, 0.1);
+      }
+
+      .stock-status {
+        color: #4ade80;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .delivery-info {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.6);
+      }
+
+      .delivery-date {
+        color: #d4af37;
+      }
+
+      /* Address Selection */
+      .address-selection {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .saved-address {
+        display: flex;
+        align-items: center;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.01);
+        border: 2px solid rgba(212, 175, 55, 0.12);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .saved-address:hover {
+        border-color: rgba(212, 175, 55, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.1);
+      }
+
+      .saved-address.selected {
+        border-color: #d4af37;
+        background: rgba(212, 175, 55, 0.05);
+      }
+
+      .address-radio {
+        margin-right: 1rem;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+      }
+
+      .address-details {
+        flex: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .address-name {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #d4af37;
+        margin-bottom: 0.5rem;
+      }
+
+      .address-line {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.7);
+        margin-bottom: 0.25rem;
+      }
+
+      .view-btn {
+        padding: 0.6rem 1.5rem;
+        background: rgba(212, 175, 55, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: #d4af37;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+      }
+
+      .view-btn:hover {
+        background: rgba(212, 175, 55, 0.2);
+        border-color: #d4af37;
+      }
+
+      .add-new-address {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.75rem;
+        padding: 1.5rem;
+        background: rgba(212, 175, 55, 0.05);
+        border: 2px dashed rgba(212, 175, 55, 0.3);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 1.1rem;
+        color: #d4af37;
+        margin-top: 1rem;
+      }
+
+      .add-new-address:hover {
+        border-color: #d4af37;
+        background: rgba(212, 175, 55, 0.1);
+      }
+
+      .add-new-icon {
+        font-size: 1.5rem;
+        font-weight: 300;
+      }
+
+      /* New Address Form */
+      .new-address-form {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.5s ease;
+        margin-top: 1rem;
+      }
+
+      .new-address-form.show {
+        max-height: 1000px;
+      }
+
+      .address-form {
+        background: rgba(255, 255, 255, 0.01);
+        padding: 2rem;
+        border-radius: 12px;
+        border: 1px solid rgba(212, 175, 55, 0.12);
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1rem;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 1rem;
+      }
+
+      .form-label {
+        font-size: 0.95rem;
+        color: rgba(255, 255, 255, 0.8);
+        margin-bottom: 0.5rem;
+      }
+
+      .form-label.required::after {
+        content: ' *';
+        color: #ef4444;
+      }
+
+      .form-input {
+        padding: 0.9rem;
+        background: #0a0a0a;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .form-input:focus {
+        outline: none;
+        border-color: #d4af37;
+        box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+      }
+
+      .error {
+        color: #ef4444;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+        display: none;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 1.5rem;
+      }
+
+      .btn {
+        padding: 0.9rem 2rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #a08830, #c4b896);
+        color: #000;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: #d4af37;
+      }
+
+      .btn-secondary:hover {
+        background: rgba(212, 175, 55, 0.1);
+      }
+
+      /* Proceed Button */
+      .proceed-btn {
+        width: 100%;
+        padding: 1.2rem;
+        background: linear-gradient(135deg, #a08830, #c4b896);
+        border: none;
+        border-radius: 8px;
+        color: #000;
+        font-size: 1.1rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+      }
+
+      .proceed-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 30px rgba(212, 175, 55, 0.4);
+      }
+
+      /* Modal */
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+        opacity: 1;
+      }
+
+      .modal {
+        background: #1a1a1a;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 15px;
+        padding: 2rem;
+        max-width: 500px;
+        width: 90%;
+        position: relative;
+        transform: scale(0.9);
+        transition: transform 0.3s ease;
+      }
+
+      .modal-overlay.show .modal {
+        transform: scale(1);
+      }
+
+      .modal-close {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: none;
+        border: none;
+        color: #d4af37;
+        font-size: 2rem;
+        cursor: pointer;
+        line-height: 1;
+      }
+
+      .modal-title {
+        font-size: 1.8rem;
+        color: #d4af37;
+        margin-bottom: 1.5rem;
+        letter-spacing: 1px;
+      }
+
+      .address-detail {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid rgba(212, 175, 55, 0.1);
+      }
+
+      .address-detail-label {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 0.95rem;
+      }
+
+      .address-detail-value {
+        color: #fff;
+        font-weight: 500;
+      }
+
+      /* Map Container */
+      #map-container {
+        height: 300px;
+        margin: 1rem 0;
+        border-radius: 12px;
+        overflow: hidden;
+        display: none;
+        border: 1px solid rgba(212, 175, 55, 0.2);
+      }
+
+      .geo-location-btn {
+        display: none;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: rgba(212, 175, 55, 0.05);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        border-radius: 8px;
+        color: #d4af37;
+        text-decoration: none;
+        margin: 1rem 0;
+        transition: all 0.3s ease;
+      }
+
+      .geo-location-btn:hover {
+        background: rgba(212, 175, 55, 0.1);
+        border-color: #d4af37;
+      }
+
+      .remove-location-btn {
+        padding: 0.75rem 1.5rem;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #ef4444;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+      }
+
+      .remove-location-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+      }
+
+      .geo-location-note {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-align: center;
+        margin-top: -0.5rem;
+        margin-bottom: 1rem;
+      }
+
+      @media (max-width: 768px) {
+        .checkout-container {
+          padding: 2rem 1.5rem;
+        }
+
+        .form-row {
+          grid-template-columns: 1fr;
+        }
+
+        .cart-item {
+          flex-direction: column;
+        }
+
+        .item-image {
+          width: 100%;
+          height: 200px;
+        }
+
+        .checkout-title {
+          font-size: 2rem;
+          letter-spacing: 3px;
+        }
+      }
+    </style>
   </head>
   <body>
     <%- include("../../partials/user/header") %>
     
-    <!-- Main Content -->
     <main class="checkout-container">
       <button onclick="history.back()" class="back-btn">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
@@ -21,231 +586,145 @@
       </button>
       <h1 class="checkout-title">CHECKOUT</h1>
 
-      <div class="checkout-content">
-        <!-- Checkout Sections -->
-        <div class="checkout-sections">
-          <!-- Order Review (Product Summary First) -->
-          <div class="section">
-            <h2 class="section-title">Order Review</h2>
-            <div class="order-review">
-              <% if (cart && cart.items.length > 0) { %> <%
-              cart.items.forEach(item => { %>
+      <!-- Order Review -->
+      <div class="section">
+        <h2 class="section-title">Order Review</h2>
+        <div class="order-review">
+          <% if (cart && cart.items.length > 0) { %>
+            <% cart.items.forEach(item => { %>
               <div class="cart-item">
-                <img
-                  src="<%= item.image %>"
-                  alt="<%= item.name %>"
-                  class="item-image"
-                />
+                <img src="<%= item.image %>" alt="<%= item.name %>" class="item-image" />
                 <div class="item-details">
                   <div class="item-header">
                     <div>
                       <div class="item-name"><%= item.name %></div>
                       <% if (item.size) { %>
-                      <div class="item-size">Size: <%= item.size %></div>
+                        <div class="item-size">Size: <%= item.size %></div>
                       <% } %>
-                      <div class="quantity-display">
-                        Qty: <%= item.quantity %>
-                      </div>
+                      <div class="quantity-display">Qty: <%= item.quantity %></div>
                     </div>
-                    <div class="item-total">
-                      Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %>
-                    </div>
+                    <div class="item-total">Rs.<%= (item.discountedPrice * item.quantity).toFixed(2) %></div>
                   </div>
                   <div class="item-footer">
                     <div>
                       <div class="stock-status"><%= item.stockStatus %></div>
                       <div class="delivery-info">
-                        Arrives by Tuesday,
-                        <span class="delivery-date">Oct 07 @ 10:00</span>
+                        Arrives by <span class="delivery-date"><%= new Date(item.deliveryDate).toLocaleDateString() %></span>
                       </div>
                     </div>
-                    <div class="free-delivery"></div>
                   </div>
                 </div>
               </div>
-              <% }); %> <% } else { %>
-              <p style="text-align: center; padding: 2rem; color: #999">
-                No items in cart.
-              </p>
-              <% } %>
-            </div>
-          </div>
+            <% }); %>
+          <% } else { %>
+            <p style="text-align: center; padding: 2rem; color: #999">No items in cart.</p>
+          <% } %>
+        </div>
+      </div>
 
-          <!-- Address Selection -->
-          <div class="section">
-            <h2 class="section-title">Select Address</h2>
-            <div class="address-selection">
-              <% if (addresses && addresses.length > 0) { %> <%
-              addresses.forEach((address, index) => { %>
-              <label
-                class="saved-address <%= address.isDefault ? 'selected' : '' %>"
-                data-address-index="<%= index %>"
-                data-address="<%= JSON.stringify(address) %>"
-              >
-                <input
-                  type="radio"
-                  class="address-radio"
-                  name="address"
-                  value="<%= address._id %>"
-                  <%= address.isDefault ? 'checked' : '' %>
-                />
+      <!-- Address Selection -->
+      <div class="section">
+        <h2 class="section-title">Select Address</h2>
+        <div class="address-selection">
+          <% if (addresses && addresses.length > 0) { %>
+            <% addresses.forEach((address, index) => { %>
+              <label class="saved-address <%= address.isDefault ? 'selected' : '' %>" data-address-index="<%= index %>" data-address="<%= JSON.stringify(address) %>">
+                <input type="radio" class="address-radio" name="address" value="<%= address._id %>" <%= address.isDefault ? 'checked' : '' %> />
                 <div class="address-details">
                   <div class="address-info">
                     <div class="address-name"><%= address.fullName %></div>
-                    <div class="address-line"><%= address.hoNo %>,</div>
-                    <div class="address-line"><%= address.pin %></div>
+                    <div class="address-line"><%= address.hoNo %>, <%= address.street %></div>
+                    <div class="address-line"><%= address.city %>, <%= address.state %> - <%= address.pin %></div>
                     <div class="address-line">Phone: <%= address.phone %></div>
                   </div>
-                  <button
-                    type="button"
-                    class="view-btn"
-                    onclick="openViewModal(event, <%= index %>)"
-                  >
-                    View
-                  </button>
+                  <button type="button" class="view-btn" onclick="openViewModal(event, <%= index %>)">View</button>
                 </div>
               </label>
-              <% }); %> <% } else { %>
-              <p style="color: #999; text-align: center; padding: 1rem">
-                No saved addresses. Add a new one below.
-              </p>
-              <% } %>
-              <a href="#" class="geo-location-btn" onclick="getLocation(event)" style="display: none;">
-                <span class="geo-location-icon">📍</span>
-                <span>Use My Current Location (Optional)</span>
-              </a>
-              <div class="geo-location-note">
-                For better delivery estimates
+            <% }); %>
+          <% } else { %>
+            <p style="color: #999; text-align: center; padding: 1rem">No saved addresses. Add a new one below.</p>
+          <% } %>
+          
+          <a href="#" class="geo-location-btn" onclick="getLocation(event)" style="display: none;">
+            <span class="geo-location-icon">📍</span>
+            <span>Use My Current Location (Optional)</span>
+          </a>
+          <div class="geo-location-note">For better delivery estimates</div>
+          <div id="map-container"></div>
+          <button id="remove-location" class="remove-location-btn" style="display: none;" onclick="removeLocation()">Remove Location</button>
+          
+          <label class="add-new-address" onclick="toggleNewAddressForm()">
+            <span class="add-new-icon">+</span>
+            <span>Add New Address</span>
+          </label>
+          
+          <form class="new-address-form" id="newAddressForm" novalidate>
+            <div class="address-form">
+              <div class="form-group">
+                <label class="form-label required" for="newFullName">Full Name</label>
+                <input type="text" id="newFullName" class="form-input" />
+                <span class="error" id="error-newFullName"></span>
               </div>
-              <div id="map-container"></div>
-              <button id="remove-location" class="remove-location-btn" style="display: none;" onclick="removeLocation()">
-                Remove Location
-              </button>
-              <label class="add-new-address" onclick="toggleNewAddressForm()">
-                <span class="add-new-icon">+</span>
-                <span>Add New Address</span>
-              </label>
-              <form class="new-address-form" id="newAddressForm" novalidate>
-                <div class="address-form">
-                  <div class="form-group">
-                    <label class="form-label required" for="newFullName"
-                      >Full Name</label
-                    >
-                    <input
-                      type="text"
-                      id="newFullName"
-                      class="form-input"
-                    />
-                    <span class="error" id="error-newFullName"></span>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label required" for="newPhone">Phone</label>
-                      <input
-                        type="tel"
-                        id="newPhone"
-                        class="form-input"
-                      />
-                      <span class="error" id="error-newPhone"></span>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label" for="newAltPhone"
-                        >Alternate Phone (Optional)</label
-                      >
-                      <input type="tel" id="newAltPhone" class="form-input" />
-                      <span class="error" id="error-newAltPhone"></span>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label required" for="newHoNo">House No.</label>
-                      <input
-                        type="text"
-                        id="newHoNo"
-                        class="form-input"
-                      />
-                      <span class="error" id="error-newHoNo"></span>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label required" for="newStreet">Street</label>
-                      <input
-                        type="text"
-                        id="newStreet"
-                        class="form-input"
-                      />
-                      <span class="error" id="error-newStreet"></span>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label required" for="newPin">Pin Code</label>
-                      <input
-                        type="text"
-                        id="newPin"
-                        class="form-input"
-                      />
-                      <span class="error" id="error-newPin"></span>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label required" for="newCity">City</label>
-                      <input
-                        type="text"
-                        id="newCity"
-                        class="form-input"
-                        placeholder="Auto-filled from pincode"
-                        readonly
-                      />
-                      <span class="error" id="error-newCity"></span>
-                    </div>
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label required" for="newState">State</label>
-                      <input
-                        type="text"
-                        id="newState"
-                        class="form-input"
-                        placeholder="Auto-filled from pincode"
-                        readonly
-                      />
-                      <span class="error" id="error-newState"></span>
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label required" for="newCountry">Country</label>
-                      <input
-                        type="text"
-                        id="newCountry"
-                        class="form-input"
-                        placeholder="Auto-filled from pincode"
-                        readonly
-                      />
-                      <span class="error" id="error-newCountry"></span>
-                    </div>
-                  </div>
-                  <div class="form-actions">
-                    <button
-                      type="button"
-                      class="btn btn-secondary"
-                      onclick="toggleNewAddressForm()"
-                    >
-                      Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                      Save Address
-                    </button>
-                  </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label required" for="newPhone">Phone</label>
+                  <input type="tel" id="newPhone" class="form-input" />
+                  <span class="error" id="error-newPhone"></span>
                 </div>
-              </form>
+                <div class="form-group">
+                  <label class="form-label" for="newAltPhone">Alternate Phone (Optional)</label>
+                  <input type="tel" id="newAltPhone" class="form-input" />
+                  <span class="error" id="error-newAltPhone"></span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label required" for="newHoNo">House No.</label>
+                  <input type="text" id="newHoNo" class="form-input" />
+                  <span class="error" id="error-newHoNo"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label required" for="newStreet">Street</label>
+                  <input type="text" id="newStreet" class="form-input" />
+                  <span class="error" id="error-newStreet"></span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label required" for="newPin">Pin Code</label>
+                  <input type="text" id="newPin" class="form-input" />
+                  <span class="error" id="error-newPin"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label required" for="newCity">City</label>
+                  <input type="text" id="newCity" class="form-input" placeholder="Auto-filled from pincode" readonly />
+                  <span class="error" id="error-newCity"></span>
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label required" for="newState">State</label>
+                  <input type="text" id="newState" class="form-input" placeholder="Auto-filled from pincode" readonly />
+                  <span class="error" id="error-newState"></span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label required" for="newCountry">Country</label>
+                  <input type="text" id="newCountry" class="form-input" placeholder="Auto-filled from pincode" readonly />
+                  <span class="error" id="error-newCountry"></span>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="toggleNewAddressForm()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Address</button>
+              </div>
             </div>
-          </div>
-
-          <!-- Proceed Button Section -->
-          <div class="section">
-            <button class="proceed-btn" onclick="proceedToPayment()">
-              PROCEED TO PAYMENT
-            </button>
-          </div>
+          </form>
         </div>
+      </div>
+
+      <!-- Proceed Button -->
+      <div class="section">
+        <button class="proceed-btn" onclick="proceedToPayment()">PROCEED TO PAYMENT</button>
       </div>
     </main>
 
@@ -263,11 +742,7 @@
             <span class="address-detail-label">Phone:</span>
             <span class="address-detail-value" id="viewPhone"></span>
           </div>
-          <div
-            class="address-detail"
-            id="viewAltPhoneContainer"
-            style="display: none"
-          >
+          <div class="address-detail" id="viewAltPhoneContainer" style="display: none">
             <span class="address-detail-label">Alternate Phone:</span>
             <span class="address-detail-value" id="viewAltPhone"></span>
           </div>
@@ -299,10 +774,8 @@
       </div>
     </div>
 
-    <!-- Footer -->
     <%- include("../../partials/user/footer") %>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
 
@@ -319,7 +792,6 @@
               document.getElementById('newState').value = postOffice.State || '';
               document.getElementById('newCountry').value = postOffice.Country || 'India';
               
-              // Clear any errors
               document.getElementById('error-newCity').style.display = 'none';
               document.getElementById('error-newState').style.display = 'none';
               document.getElementById('error-newPin').style.display = 'none';
@@ -343,7 +815,6 @@
         }
       });
 
-      // Validation functions
       function clearNewErrors() {
         const errorEls = document.querySelectorAll('.new-address-form .error');
         errorEls.forEach(el => {
@@ -370,7 +841,6 @@
             errorEl.style.display = 'block';
           }
         });
-        // Country
         const country = document.getElementById('newCountry').value;
         const countryError = document.getElementById('error-newCountry');
         if (!country) {
@@ -378,7 +848,6 @@
           countryError.textContent = 'Please select a country';
           countryError.style.display = 'block';
         }
-        // Alt Phone (optional but validate if filled)
         const altPhoneValue = document.getElementById('newAltPhone').value.trim();
         const altError = document.getElementById('error-newAltPhone');
         if (altPhoneValue && !phoneRegex.test(altPhoneValue)) {
@@ -389,7 +858,6 @@
         return !hasError;
       }
 
-      // Toggle new address form
       function toggleNewAddressForm() {
         const form = document.getElementById("newAddressForm");
         form.classList.toggle("show");
@@ -399,67 +867,62 @@
         }
       }
 
-      // Handle new address save
-      document
-        .getElementById("newAddressForm")
-        .addEventListener("submit", async function (e) {
-          e.preventDefault();
-          if (!validateNewAddressForm()) {
-            return;
-          }
-          // Collect form data
-          const formData = {
-            fullName: document.getElementById("newFullName").value.trim(),
-            phone: document.getElementById("newPhone").value.trim(),
-            altPhone: document.getElementById("newAltPhone").value.trim() || null,
-            hoNo: document.getElementById("newHoNo").value.trim(),
-            street: document.getElementById("newStreet").value.trim(),
-            city: document.getElementById("newCity").value.trim(),
-            state: document.getElementById("newState").value.trim(),
-            pin: document.getElementById("newPin").value.trim(),
-            country: document.getElementById("newCountry").value,
-          };
-          try {
-            const response = await fetch('/checkout/address/add-newaddress', {
-              method: 'POST',
-              body: JSON.stringify(formData),
-              headers: { 'Content-Type': 'application/json' }
+      document.getElementById("newAddressForm").addEventListener("submit", async function (e) {
+        e.preventDefault();
+        if (!validateNewAddressForm()) {
+          return;
+        }
+        const formData = {
+          fullName: document.getElementById("newFullName").value.trim(),
+          phone: document.getElementById("newPhone").value.trim(),
+          altPhone: document.getElementById("newAltPhone").value.trim() || null,
+          hoNo: document.getElementById("newHoNo").value.trim(),
+          street: document.getElementById("newStreet").value.trim(),
+          city: document.getElementById("newCity").value.trim(),
+          state: document.getElementById("newState").value.trim(),
+          pin: document.getElementById("newPin").value.trim(),
+          country: document.getElementById("newCountry").value,
+        };
+        try {
+          const response = await fetch('/checkout/address/add-newaddress', {
+            method: 'POST',
+            body: JSON.stringify(formData),
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (response.ok) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Success',
+              text: 'Address added successfully!',
+              background: '#1a1a1a',
+              color: '#ffffff',
+              confirmButtonColor: '#d4af37'
+            }).then(() => {
+              location.reload();
             });
-            if (response.ok) {
-              Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: 'Address added successfully!',
-                background: '#2a2a2a',
-                color: '#ffffff',
-                confirmButtonColor: '#d4c5a9'
-              }).then(() => {
-                location.reload();
-              });
-            } else {
-              const errorText = await response.text();
-              Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error adding address: ' + errorText,
-                background: '#2a2a2a',
-                color: '#ffffff',
-                confirmButtonColor: '#d4c5a9'
-              });
-            }
-          } catch (err) {
+          } else {
+            const errorText = await response.text();
             Swal.fire({
               icon: 'error',
-              title: 'Network Error',
-              text: 'Network error: ' + err.message,
-              background: '#2a2a2a',
+              title: 'Error',
+              text: 'Error adding address: ' + errorText,
+              background: '#1a1a1a',
               color: '#ffffff',
-              confirmButtonColor: '#d4c5a9'
+              confirmButtonColor: '#d4af37'
             });
           }
-        });
+        } catch (err) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Network Error',
+            text: 'Network error: ' + err.message,
+            background: '#1a1a1a',
+            color: '#ffffff',
+            confirmButtonColor: '#d4af37'
+          });
+        }
+      });
 
-      
       function proceedToPayment() {
         const selectedAddress = document.querySelector('input[name="address"]:checked');
         if (!selectedAddress) {
@@ -467,73 +930,47 @@
             icon: 'warning',
             title: 'No Address Selected',
             text: 'Please select an address before proceeding to payment.',
-            background: '#2a2a2a',
+            background: '#1a1a1a',
             color: '#ffffff',
-            confirmButtonColor: '#d4c5a9'
+            confirmButtonColor: '#d4af37'
           });
         }
-        
-
-        const addressId = selectedAddress.value; // this is address._id from EJS
-        console.log("Selected Address ID:", addressId);
-
+        const addressId = selectedAddress.value;
         window.location.href = `/checkout/payment/${addressId}`;
-         
       }
 
-
-      
-
-      // Optional: Select saved address
       document.addEventListener("DOMContentLoaded", function () {
         const addressRadios = document.querySelectorAll(".address-radio");
         addressRadios.forEach((radio) => {
           radio.addEventListener("change", function () {
-            document
-              .querySelectorAll(".saved-address")
-              .forEach((addr) => addr.classList.remove("selected"));
+            document.querySelectorAll(".saved-address").forEach((addr) => addr.classList.remove("selected"));
             this.closest(".saved-address").classList.add("selected");
-            // Enable geo location when an address is selected
             document.querySelector('.geo-location-btn').style.display = 'flex';
           });
         });
-        // Initially hide geo location if no address selected
         document.querySelector('.geo-location-btn').style.display = 'none';
       });
 
-      // Modal functions
       function openViewModal(event, index) {
         event.preventDefault();
         event.stopPropagation();
-        const savedAddress = document.querySelector(
-          `[data-address-index="${index}"]`
-        );
+        const savedAddress = document.querySelector(`[data-address-index="${index}"]`);
         const addressData = JSON.parse(savedAddress.dataset.address);
-        document.getElementById("viewFullName").textContent =
-          addressData.fullName || "";
-        document.getElementById("viewPhone").textContent =
-          addressData.phone || "";
-        const altPhoneContainer = document.getElementById(
-          "viewAltPhoneContainer"
-        );
+        document.getElementById("viewFullName").textContent = addressData.fullName || "";
+        document.getElementById("viewPhone").textContent = addressData.phone || "";
+        const altPhoneContainer = document.getElementById("viewAltPhoneContainer");
         if (addressData.altPhone) {
-          document.getElementById("viewAltPhone").textContent =
-            addressData.altPhone;
+          document.getElementById("viewAltPhone").textContent = addressData.altPhone;
           altPhoneContainer.style.display = "flex";
         } else {
           altPhoneContainer.style.display = "none";
         }
-        document.getElementById("viewHoNo").textContent =
-          addressData.hoNo || "";
-        document.getElementById("viewStreet").textContent =
-          addressData.street || "";
-        document.getElementById("viewCity").textContent =
-          addressData.city || "";
-        document.getElementById("viewState").textContent =
-          addressData.state || "";
+        document.getElementById("viewHoNo").textContent = addressData.hoNo || "";
+        document.getElementById("viewStreet").textContent = addressData.street || "";
+        document.getElementById("viewCity").textContent = addressData.city || "";
+        document.getElementById("viewState").textContent = addressData.state || "";
         document.getElementById("viewPin").textContent = addressData.pin || "";
-        document.getElementById("viewCountry").textContent =
-          addressData.country || "";
+        document.getElementById("viewCountry").textContent = addressData.country || "";
         document.getElementById("viewModal").classList.add("show");
       }
 
@@ -541,14 +978,11 @@
         document.getElementById("viewModal").classList.remove("show");
       }
 
-      // Close modal on overlay click
-      document
-        .getElementById("viewModal")
-        .addEventListener("click", function (e) {
-          if (e.target === this) {
-            closeViewModal();
-          }
-        });
+      document.getElementById("viewModal").addEventListener("click", function (e) {
+        if (e.target === this) {
+          closeViewModal();
+        }
+      });
 
       function getLocation(event) {
         event.preventDefault();
@@ -563,9 +997,9 @@
             icon: 'error',
             title: 'Not Supported',
             text: 'Geolocation is not supported by this browser.',
-            background: '#2a2a2a',
+            background: '#1a1a1a',
             color: '#ffffff',
-            confirmButtonColor: '#d4c5a9'
+            confirmButtonColor: '#d4af37'
           });
         }
       }
@@ -573,57 +1007,35 @@
       function success(position) {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
-
-        // Create a Google Maps link
         const link = `https://www.google.com/maps?q=${lat},${lon}`;
-
-        // Show map
         const mapContainer = document.getElementById('map-container');
         mapContainer.style.display = 'block';
-
-        // Initialize Leaflet map
         const map = L.map('map-container').setView([lat, lon], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(map);
-
-        L.marker([lat, lon]).addTo(map)
-          .bindPopup('Your Current Location')
-          .openPopup();
-
-        // Show remove button
+        L.marker([lat, lon]).addTo(map).bindPopup('Your Current Location').openPopup();
         document.getElementById('remove-location').style.display = 'block';
-        // get selected addressId (for example from a checked radio)
         const selectedRadio = document.querySelector(".address-radio:checked");
         if (!selectedRadio) {
           Swal.fire({
             icon: 'warning',
             title: 'No address selected',
             text: 'Please select an address first to save the location.',
-            background: '#2a2a2a',
+            background: '#1a1a1a',
             color: '#ffffff',
-            confirmButtonColor: '#d4c5a9'
+            confirmButtonColor: '#d4af37'
           });
           return;
         }
         const addressId = selectedRadio.value;
-
-        // Send to backend for saving in DB (associate with current session/user)
         fetch(`/checkout/address/save-location/${addressId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            latitude: lat, 
-            longitude: lon, 
-            link: link,
-            accuracy: position.coords.accuracy
-          }),
+          body: JSON.stringify({ latitude: lat, longitude: lon, link: link, accuracy: position.coords.accuracy }),
         })
         .then(response => response.json())
-        .then(data => {
-          console.log('Location saved:', data);
-          // Optionally, reload addresses or update UI
-        })
+        .then(data => console.log('Location saved:', data))
         .catch(err => console.error('Error saving location:', err));
       }
 
@@ -632,36 +1044,29 @@
         const removeBtn = document.getElementById('remove-location');
         mapContainer.style.display = 'none';
         removeBtn.style.display = 'none';
-        // Clear the map instance if needed (optional, for memory)
         if (window.currentMap) {
           window.currentMap.remove();
           window.currentMap = null;
         }
-         document.getElementById('remove-location').style.display = 'block';
-        // get selected addressId (for example from a checked radio)
         const selectedRadio = document.querySelector(".address-radio:checked");
         if (!selectedRadio) {
           Swal.fire({
             icon: 'warning',
             title: 'No address selected',
             text: 'Please select an address first to remove the location.',
-            background: '#2a2a2a',
+            background: '#1a1a1a',
             color: '#ffffff',
-            confirmButtonColor: '#d4c5a9'
+            confirmButtonColor: '#d4af37'
           });
           return;
         }
         const addressId = selectedRadio.value;
-
-        // Send to backend to clear location (stub)
         fetch(`/checkout/address/clear-location/${addressId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
         })
         .then(response => response.json())
-        .then(data => {
-          console.log('Location cleared:', data);
-        })
+        .then(data => console.log('Location cleared:', data))
         .catch(err => console.error('Error clearing location:', err));
       }
 
@@ -685,9 +1090,9 @@
             icon: 'error',
             title: 'Location Error',
             text: message,
-            background: '#2a2a2a',
+            background: '#1a1a1a',
             color: '#ffffff',
-            confirmButtonColor: '#d4c5a9'
+            confirmButtonColor: '#d4af37'
         });
       }
     </script>

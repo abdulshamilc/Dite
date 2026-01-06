@@ -24,7 +24,7 @@
         
 
         <div class="avatar-container">
-          <img src="<%= user.image || '/images/default-avatar.jpg' %>" alt="Profile Picture" class="avatar-lg" id="avatarLg">
+          <img src="<%= user.image ? user.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3a2f25&color=d3a35b&size=128&bold=true` %>" alt="Profile Picture" class="avatar-lg" id="avatarLg">
           <button type="button" class="image-overlay" onclick="document.getElementById('imageUploadForm').click()" title="Change Photo">📷</button>
         </div>
 
@@ -200,7 +200,11 @@
       newVerified = false;
       document.getElementById('submitBtn').disabled = false;
       // Reset image state
-      document.getElementById('avatarLg').src = '<%= user.image || '/images/default-avatar.jpg' %>';
+      const avatarEl = document.getElementById('avatarLg');
+      const initialImage = '<%= user.image || "" %>';
+      const defaultAvatar = `https://ui-avatars.com/api/?name=<%= encodeURIComponent(user.name) %>&background=3a2f25&color=d3a35b&size=128&bold=true`;
+      
+      avatarEl.src = initialImage || defaultAvatar;      
       document.getElementById('imageUploadForm').value = '';
     }
 

@@ -10,11 +10,9 @@ import jwt from "jsonwebtoken";
 import Cart from '../../models/cartModel.js' ;
 import Wallet from '../../models/walletModel.js';
 // Not logged in home
+// Not logged in home
 const notLogginedHome = (req, res) => {
-  const cartLength = 0 ;
-  
-
-  res.render("user/home" , {cartLength});
+  res.render("user/home");
 };
 // Get signup
 const getSignup = (req, res) => {
@@ -589,6 +587,31 @@ const userBloked = (req, res) => {
   }
 };
 
+// Get About Us
+const getAbout = (req, res) => {
+  res.render("user/about");
+};
+
+// Get Contact Us
+const getContact = (req, res) => {
+  res.render("user/contact");
+};
+
+// Get Privacy Policy
+const getPrivacy = (req, res) => {
+  res.render("user/privacy");
+};
+
+// Get Terms & Conditions
+const getTerms = (req, res) => {
+  res.render("user/terms");
+};
+
+// Get FAQ
+const getFaq = (req, res) => {
+  res.render("user/faq");
+};
+
 export {
   notLogginedHome,
   getSignup,
@@ -608,4 +631,9 @@ export {
   postResetPassword,
   restPassword,
   userBloked,
+  getAbout,
+  getContact,
+  getPrivacy,
+  getTerms,
+  getFaq,
 };

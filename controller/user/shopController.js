@@ -115,7 +115,15 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
                     $map: {
                       input: { $ifNull: ["$variants", []] },
                       as: "v",
-                      in: { $lt: ["$$v.discountedPrice", "$$v.basePrice"] },
+                      in: { 
+                    $and: [
+                        { $gt: [ { $toDouble: { $ifNull: ["$$v.discountedPrice", 0] } }, 0 ] },
+                        { $lt: [
+                          { $toDouble: { $ifNull: ["$$v.discountedPrice", 0] } }, 
+                          { $toDouble: { $ifNull: ["$$v.basePrice", 0] } } 
+                        ] }
+                    ]
+                  },
                     },
                   },
                 },
@@ -229,6 +237,7 @@ const getShop = async (req, res) => {
       concentrations: concentrationsQuery,
     } = req.query;
 
+    const pageTitle = "Shop";
 
     const [brandStats, uniqueConcentrations, priceStats] = await Promise.all([
       Products.aggregate([
@@ -253,7 +262,6 @@ const getShop = async (req, res) => {
     const overallMinPrice = priceStats[0]?.minPrice || 0;
     const overallMaxPrice = priceStats[0]?.maxPrice || 10000;
 
-
     const maxPriceOptions = [overallMinPrice, 1000, 3000, 5000, 10000, overallMaxPrice];
     const minPriceOptions = [5000, 10000, 15000, 30000, 50000, overallMaxPrice];
 
@@ -266,7 +274,6 @@ const getShop = async (req, res) => {
     const selectedBrands = brands ? brands.split(",").map((b) => b.trim().toLowerCase()).filter(Boolean) : [];
     const selectedConcentrations = concentrationsQuery ? concentrationsQuery.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [];
     const effectiveSort = sort || "newest";
-
 
     let query = {
       isDeleted: false,
@@ -319,33 +326,33 @@ const getShop = async (req, res) => {
       query.createdAt = { $gte: thirtyDaysAgo };
     }
 
+    // Pipeline for Sale filter (robust check)
     let aggregatePipeline = [];
     if (filter === "sale") {
-      aggregatePipeline = [
-        {
-          $addFields: {
-            hasDiscount: {
-              $anyElementTrue: {
-                $map: {
-                  input: { $ifNull: ["$variants", []] },
-                  as: "v",
-                  in: { $lt: ["$$v.discountedPrice", "$$v.basePrice"] },
+         aggregatePipeline = [
+            {
+              $addFields: {
+                hasDiscount: {
+                  $anyElementTrue: {
+                    $map: {
+                      input: { $ifNull: ["$variants", []] },
+                      as: "v",
+                      in: { 
+                        $and: [
+                            { $gt: [ { $toDouble: { $ifNull: ["$$v.discountedPrice", 0] } }, 0 ] },
+                            { $lt: [
+                              { $toDouble: { $ifNull: ["$$v.discountedPrice", 0] } }, 
+                              { $toDouble: { $ifNull: ["$$v.basePrice", 0] } } 
+                            ] }
+                        ]
+                      },
+                    },
+                  },
                 },
               },
             },
-          },
-        },
-        { $match: { hasDiscount: true } },
-      ];
-
-
-      query = { isDeleted: false, isListed: true };
-      if (searchMatch) {
-        aggregatePipeline.unshift({ $match: searchMatch });
-      }
-      if (gender !== "ALL") {
-        aggregatePipeline.unshift({ $match: { gender } });
-      }
+            { $match: { hasDiscount: true } },
+          ];
     }
 
 
@@ -434,6 +441,7 @@ const getShop = async (req, res) => {
       concentrations: uniqueConcentrations,
       selectedBrands,
       selectedConcentrations,
+      pageTitle,
     });
   } catch (error) {
     console.error(error);
@@ -461,7 +469,54 @@ const getShop = async (req, res) => {
       total: 0,
       queryMinPrice: "",
       queryMaxPrice: "",
+      pageTitle: "Shop",
     });
+  }
+};
+
+// Get offers
+const getOffers = async (req, res) => {
+  try {
+      const currentDate = new Date();
+      const activeOffers = await Offer.find({
+        isActive: true,
+        isDeleted: false,
+        startDate: { $lte: currentDate },
+        endDate: { $gte: currentDate }
+      });
+
+      let targetProductIds = [];
+      let targetCategoryIds = [];
+
+      activeOffers.forEach(offer => {
+        if (offer.appliesTo === 'product' || offer.targetModel === 'Product') {
+           if (offer.targetId && Array.isArray(offer.targetId)) {
+               targetProductIds.push(...offer.targetId);
+           }
+        } else if (offer.appliesTo === 'category' || offer.targetModel === 'Categories') {
+           if (offer.targetId && Array.isArray(offer.targetId)) {
+               targetCategoryIds.push(...offer.targetId);
+           }
+        }
+      });
+      
+      const baseQuery = {
+            $or: [
+              { _id: { $in: targetProductIds } },
+              { category: { $in: targetCategoryIds } }
+            ]
+      };
+      
+      // Override filter to 'sale' to ensure helper applies price validation if needed
+      // Or we can rely on baseQuery filtering active offers.
+      // But keeping 'sale' adds the Strict Price Check which is good.
+      req.query.filter = "sale";
+
+      await getCategoryShopHelper(req, res, baseQuery, "Exclusive Offers");
+
+  } catch (error) {
+      console.error(error);
+      res.status(500).send("Server Error");
   }
 };
 
@@ -668,6 +723,7 @@ const getProductAPI = async (req, res) => {
 
 export {
   getShop,
+  getOffers,
   productDetail,
   getCollections,
   getMenShop,

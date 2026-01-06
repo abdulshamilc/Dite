@@ -1,9 +1,9 @@
 <!-- Sidebar -->
-<aside class="w-64 bg-black">
+<aside class="w-64 bg-black sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
   <nav class="space-y-3 p-5">
     <a
       href="/admin/dashboard"
-      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center bg-brand text-black "
+      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
     >
       <i data-lucide="bar-chart-3" class="mr-3 h-5 w-5"></i>
       Dashboard
@@ -64,13 +64,6 @@
       <i data-lucide="percent" class="mr-3 h-5 w-5"></i>
       Offers
     </a>
-    <a
-      href="/admin/theme"
-      class="nav-btn w-full justify-start text-left px-4 py-3 rounded-lg flex items-center text-white hover:bg-gray-800"
-    >
-      <i data-lucide="palette" class="mr-3 h-5 w-5"></i>
-      Theme
-    </a>
 
     <div class="pt-5 mt-5 border-t border-brand/20">
       <a
@@ -87,10 +80,21 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const navBtns = document.querySelectorAll(".nav-btn");
+    const currentPath = window.location.pathname;
 
     navBtns.forEach((btn) => {
       const btnPath = new URL(btn.href, window.location.origin).pathname;
-      if (btnPath === window.location.pathname) {
+      
+      // Check for exact match or if the current path starts with the button path (excluding dashboard to avoid false positives)
+      // Special case: exact match for dashboard, startswith for others
+      let isActive = false;
+      if (btnPath === '/admin/dashboard') {
+         isActive = currentPath === btnPath;
+      } else {
+         isActive = currentPath.startsWith(btnPath);
+      }
+
+      if (isActive) {
         btn.classList.add("bg-brand", "text-black");
         btn.classList.remove("text-white");
       } else {

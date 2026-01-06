@@ -13,207 +13,196 @@
     <!-- Header -->
     <%- include("../../partials/user/header") %>
 
-    <!-- Categories Section -->
+    <!-- Categories Header Section -->
     <section class="categories-section">
       <div class="container">
-        <h1 class="categories-title">Categories</h1>
+        <h1 class="categories-title">Collections</h1>
         <p class="categories-subtitle">
-          Browse our premium products, organized by gender and category for your
-          style and preference.
+          Explore our curated selections by gender or category.
         </p>
       </div>
     </section>
 
     <!-- Main Content -->
     <main class="container">
-      <!-- Men Category -->
-      <% if (products.some(product => product.gender === 'MEN')) { %>
-      <section class="category-section">
-        <a href="/shop/men">
-          <h2 class="category-heading">Men</h2>
-        </a>
-        <div class="product-list">
-          <% let menProducts = products.filter(product => product.gender ===
-          'MEN').slice(0, 5); %> <% menProducts.forEach(product => { %>
-          <a href="shop/<%=product._id%>">
-            <div class="product-item">
-              <button
-                class="wishlist-btn"
-                title="Add to Wishlist"
-                onclick="toggleWishlist(this)"
-              >
-                <i class="far fa-heart"></i>
-              </button>
-              <img
-                src="<%= product.images[0] %>"
-                alt="<%= product.name %>"
-                class="product-image"
-              />
-              <div class="product-info">
-                <h3 class="product-name"><%= product.name %></h3>
-              </div>
+      
+
+
+      <!-- Exclusive Offers Section (Carousel) -->
+      <% 
+         let offerProducts = [];
+         if (products) {
+            offerProducts = products.filter(p => p.variants && p.variants.some(v => v.discountedPrice < v.basePrice));
+            
+            // Sort by highest discount percentage descending
+            offerProducts.sort((a, b) => {
+                const getMaxDiscount = (p) => {
+                    if (!p.variants || p.variants.length === 0) return 0;
+                    return p.variants.reduce((max, v) => {
+                         if (!v.basePrice || v.basePrice <= 0) return max;
+                         const discount = ((v.basePrice - v.discountedPrice) / v.basePrice) * 100;
+                         return discount > max ? discount : max;
+                    }, 0);
+                };
+                return getMaxDiscount(b) - getMaxDiscount(a);
+            });
+         }
+         
+         if (offerProducts.length > 0) {
+      %>
+      <section class="offers-section" style="margin-bottom: 80px; padding: 40px 0; background: linear-gradient(135deg, rgba(212, 175, 55, 0.05) 0%, rgba(0, 0, 0, 0) 100%); border-top: 1px solid rgba(212, 175, 55, 0.2); border-bottom: 1px solid rgba(212, 175, 55, 0.2); position: relative;">
+        
+        <h2 class="category-heading" style="text-align: center; margin-bottom: 40px; color: #f0c14b; text-shadow: 0 0 10px rgba(212, 175, 55, 0.5);">Exclusive Offers</h2>
+        
+        <div class="offers-carousel-container">
+            <% if (offerProducts.length > 3) { %>
+            <div class="carousel-btn prev" onclick="moveOfferSlide(-1)">&#10094;</div>
+            <div class="carousel-btn next" onclick="moveOfferSlide(1)">&#10095;</div>
+            <% } %>
+
+            <div class="offers-carousel-track-viewport">
+                <div class="offers-carousel-track" id="offersTrack">
+                    <% offerProducts.forEach(product => { %>
+                    <div class="offers-carousel-item">
+                        <a href="/shop/<%=product._id%>">
+                            <div class="product-item">
+                                <!-- Discount Badge -->
+                                <% 
+                                    const variant = product.variants[0];
+                                    const discountPercent = Math.round(((variant.basePrice - variant.discountedPrice) / variant.basePrice) * 100);
+                                %>
+                                <% if (discountPercent > 0) { %>
+                                <div style="position: absolute; top: 10px; left: 10px; background: #d4af37; color: #000; padding: 4px 8px; font-weight: bold; font-size: 12px; border-radius: 4px; z-index: 2;">
+                                    -<%= discountPercent %>%
+                                </div>
+                                <% } %>
+                                
+                                <img
+                                    src="<%= product.images[0] %>"
+                                    alt="<%= product.name %>"
+                                    class="product-image"
+                                />
+                                <div class="product-info">
+                                    <h3 class="product-name" style="color: #f0c14b; font-size: 1.1rem;"><%= product.name %></h3>
+                                    <div class="product-price">
+                                    <span class="base-price" style="text-decoration: line-through; color: #ff0000; margin-right: 8px;">₹<%= variant.basePrice %></span>
+                                    <span class="discounted-price" style="font-size: 1.2rem;">₹<%= variant.discountedPrice %></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <% }); %>
+                </div>
             </div>
-          </a>
-          <% }); %> 
-          <!-- "More" only shows if >5 men products exist -->
-          <% if (products.filter(product => product.gender ===
-          'MEN').length > 5) { %>
-          <a href="/shop/men">
-            <div class="more-item">
-              <div class="more-content">
-                <p class="more-text">More</p>
-              </div>
-            </div>
-          </a>
-          <% } %>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px;">
+           <a href="/offers" style="display: inline-block; padding: 12px 30px; background: transparent; border: 1px solid #d4af37; color: #d4af37; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; transition: all 0.3s ease;" onmouseover="this.style.background='#d4af37'; this.style.color='#000'" onmouseout="this.style.background='transparent'; this.style.color='#d4af37'">
+             View All Offers
+           </a>
         </div>
       </section>
+
+      <script>
+          let currentOfferIndex = 0;
+          const track = document.getElementById('offersTrack');
+          const maxItems = <%= offerProducts.length %>;
+          
+          function getVisibleItems() {
+              if (window.innerWidth <= 600) return 1;
+              if (window.innerWidth <= 992) return 2;
+              return 3;
+          }
+
+          function moveOfferSlide(direction) {
+              const visibleItems = getVisibleItems();
+              const maxIndex = Math.max(0, maxItems - visibleItems);
+              
+              currentOfferIndex += direction;
+              
+              if (currentOfferIndex < 0) currentOfferIndex = 0;
+              if (currentOfferIndex > maxIndex) currentOfferIndex = maxIndex;
+              
+              const percentage = -(currentOfferIndex * (100 / visibleItems));
+              track.style.transform = `translateX(${percentage}%)`;
+          }
+          
+          window.addEventListener('resize', () => {
+              moveOfferSlide(0); // Reset position on resize
+          });
+      </script>
+      <% } %>
+      
+      <!-- Shop By Gender -->
+      <section class="gender-section" style="margin-bottom: 60px;">
+        <h2 class="category-heading" style="text-align: center; margin-bottom: 40px;">Shop by Gender</h2>
+        <div class="collections-grid">
+          <div class="collection-item">
+            <a href="/shop/men">
+            <img
+              src="/images/user/outSideHome/mencatogoryimage.webp"
+              alt="Men's Collection"
+            />
+            <div class="collection-overlay">
+              <h3>Men</h3>
+            </div>
+            </a>
+          </div>
+          <div class="collection-item">
+            <a href="/shop/women">
+            <img
+              src="/images/user/outSideHome/womenholdingperfume.jpg"
+              alt="Women's Collection"
+            />
+            <div class="collection-overlay">
+              <h3>Women</h3>
+            </div>
+            </a>
+          </div>
+          <div class="collection-item">
+            <a href="/shop/unisex">
+            <img
+              src="/images/user/outSideHome/Unisexholdingperfume.jpg"
+              alt="Unisex Collection"
+            />
+            <div class="collection-overlay">
+              <h3>Unisex</h3>
+            </div>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dynamic Categories Section -->
+      <% if (typeof categories !== 'undefined' && categories.length > 0) { %>
+        <section class="other-categories-section">
+          <h2 class="category-heading" style="text-align: center; margin-bottom: 40px;">Our Categories</h2>
+          <div class="collections-grid">
+             <% categories.forEach(cat => { 
+                // Check if this category has any active products in our 'products' list
+                // Note: products fetched in controller are all active/listed.
+                const hasProducts = products.some(p => p.category && (p.category._id || p.category).toString() === cat._id.toString());
+                
+                if (hasProducts && !['Men', 'Women', 'Unisex'].includes(cat.name)) { 
+             %>
+                 <div class="collection-item">
+                   <a href="/categories/<%= cat.name %>" style="text-decoration: none; color: inherit; display: block; height: 100%;">
+                     <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: linear-gradient(145deg, #1a1a1a, #0d0d0d); color: #d4af37; text-transform: uppercase; letter-spacing: 3px; border: 1px solid #333; position: relative; overflow: hidden; transition: all 0.3s ease;">
+                       <span style="font-size: 2rem; font-weight: bold; z-index: 2;"><%= cat.name %></span>
+                       <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at center, rgba(212, 175, 55, 0.1), transparent 70%); z-index: 1;"></div>
+                     </div>
+                   </a>
+                 </div>
+               <% } %>
+             <% }) %>
+          </div>
+        </section>
       <% } %>
 
-      <!-- Women Category -->
-      <% if (products.some(product => product.gender === 'WOMEN')) { %>
-      <section class="category-section">
-        <a href="/shop/women">
-          <h2 class="category-heading">Women</h2>
-        </a>
-        <div class="product-list">
-          <% let womenProducts = products.filter(product => product.gender ===
-          'WOMEN').slice(0, 5); %> <% womenProducts.forEach(product => { %>
-          <a href="shop/<%=product._id%>">
-            <div class="product-item">
-              <button
-                class="wishlist-btn"
-                title="Add to Wishlist"
-                onclick="toggleWishlist(this)"
-              >
-                <i class="far fa-heart"></i>
-              </button>
-              <img
-                src="<%= product.images[0] %>"
-                alt="<%= product.name %>"
-                class="product-image"
-              />
-              <div class="product-info">
-                <h3 class="product-name"><%= product.name %></h3>
-              </div>
-            </div>
-          </a>
-          <% }); %> 
-          <!-- "More" only shows if >5 women products exist -->
-          <% if (products.filter(product => product.gender ===
-          'WOMEN').length > 5) { %>
-          <a href="/shop/women">
-            <div class="more-item">
-              <div class="more-content">
-                <p class="more-text">More</p>
-              </div>
-            </div>
-          </a>
-          <% } %>
-        </div>
-      </section>
-      <% } %>
-
-      <!-- Unisex Category -->
-      <% if (products.some(product => product.gender === 'UNISEX')) { %>
-      <section class="category-section">
-        <a href="/shop/unisex">
-          <h2 class="category-heading">Unisex</h2>
-        </a>
-        <div class="product-list">
-          <% let unisexProducts = products.filter(product => product.gender ===
-          'UNISEX').slice(0, 5); %> <% unisexProducts.forEach(product => { %>
-          <a href="shop/<%=product._id%>">
-            <div class="product-item">
-              <button
-                class="wishlist-btn"
-                title="Add to Wishlist"
-                onclick="toggleWishlist(this)"
-              >
-                <i class="far fa-heart"></i>
-              </button>
-              <img
-                src="<%= product.images[0] %>"
-                alt="<%= product.name %>"
-                class="product-image"
-              />
-              <div class="product-info">
-                <h3 class="product-name"><%= product.name %></h3>
-              </div>
-            </div>
-          </a>
-          <% }); %> 
-          <!-- "More" only shows if >5 unisex products exist -->
-          <% if (products.filter(product => product.gender ===
-          'UNISEX').length > 5) { %>
-          <a href="/shop/unisex">
-            <div class="more-item">
-              <div class="more-content">
-                <p class="more-text">More</p>
-              </div>
-            </div>
-          </a>
-          <% } %>
-        </div>
-      </section>
-      <% } %>
-
-      <!-- Dynamic Category Sections -->
-      <% categories.forEach(category => { %> <% let validCategoryProducts =
-      products.filter(product => category.products.includes(product._id)); %> <%
-      if (validCategoryProducts.length > 0) { %>
-      <section class="category-section">
-        <a href="/categories/<%= category.name %>">
-          <h2 class="category-heading"><%= category.name %></h2>
-        </a>
-        <div class="product-list">
-          <% let categoryProducts = validCategoryProducts.slice(0, 5); %> <%
-          categoryProducts.forEach(product => { %>
-          <a href="shop/<%=product._id%>">
-            <div class="product-item">
-              <button
-                class="wishlist-btn"
-                title="Add to Wishlist"
-                onclick="toggleWishlist(this)"
-              >
-                <i class="far fa-heart"></i>
-              </button>
-              <img
-                src="<%= product.images[0] %>"
-                alt="<%= product.name %>"
-                class="product-image"
-              />
-              <div class="product-info">
-                <h3 class="product-name"><%= product.name %></h3>
-              </div>
-            </div>
-          </a>
-          <% }); %> 
-          <!-- "More" only shows if >5 products in this category exist -->
-          <% if (validCategoryProducts.length > 5) { %>
-          <a href="/categories/<%=category.name%>">
-            <div class="more-item">
-              <div class="more-content">
-                <p class="more-text">More</p>
-              </div>
-            </div>
-          </a>
-          <% } %>
-        </div>
-      </section>
-      <% } %> <% }); %>
     </main>
 
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
-
-    <script>
-      function toggleWishlist(button) {
-        button.classList.toggle("active");
-        const icon = button.querySelector("i");
-        icon.classList.toggle("far");
-        icon.classList.toggle("fas");
-      }
-    </script>
   </body>
 </html>

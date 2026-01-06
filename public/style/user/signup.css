@@ -16,17 +16,26 @@
       font: 16px/1.55 "Inter", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       line-height: 1.6;
       min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
     }
 
     .signup-container {
       display: flex;
-      min-height: 95vh;
-      gap: 0;
+      width: 100%;
+      max-width: 1000px;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      min-height: 600px;
     }
 
     .signup-image {
       flex: 1;
-      min-height: 85vh;
+      /* Remove min-height: 85vh */
       background-image: url('/images/Stock colections/OIP.webp');
       background-size: cover;
       background-position: center;
@@ -55,11 +64,10 @@
 
     .signup-form {
       flex: 1;
-      min-height: 85vh;
+      padding: 40px;
       display: flex;
       flex-direction: column;
       justify-content: center;
-      padding: 15px;
       background: var(--surface);
       color: #1a1a1a;
     }
@@ -222,26 +230,18 @@
     }
     .signup-form { animation: fadeInUp 0.6s ease-out; }
 
-    @media (max-width: 768px) {
+    @media (max-width: 850px) {
       .signup-container {
         flex-direction: column;
+        max-width: 500px;
+        height: auto;
       }
-
-      .signup-image,
+      .signup-image {
+        min-height: 200px;
+        padding: 20px;
+      }
       .signup-form {
-        min-height: 50vh;
-        padding: 15px;
+        padding: 30px 20px;
       }
-
       .back-link { display: none; }
-
-      .social-icons {
-        flex-direction: column;
-        align-items: center;
-      }
-
-      .social-icon {
-        width: 100%;
-        max-width: 150px;
-      }
     }

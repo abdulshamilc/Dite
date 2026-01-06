@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Us - Dité</title>
+    <%- include("../partials/user/headerHead") %>
+    <%- include("../partials/user/footerHead") %>
+    <link rel="stylesheet" href="/style/user/staticPages.css">
+  </head>
+  <body>
+    <%- include("../partials/user/header") %>
+
+    <section class="static-page-section">
+      <div class="static-container">
+        <h1 class="static-title">Contact Us</h1>
+        <p class="static-subtitle">We are here to assist you with your luxury experience.</p>
+
+        <div class="contact-grid">
+            <div class="contact-info">
+                 <div class="content-block">
+                    <h2>Get in Touch</h2>
+                    <p>Have a question about our collections or your order? Our dedicated concierge team is ready to assist you.</p>
+                    
+                    <div class="contact-info-item">
+                        <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                        <div class="contact-text">
+                            <h4>Email Us</h4>
+                            <p>support@dite.com</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-info-item">
+                        <div class="contact-icon"><i class="fas fa-phone-alt"></i></div>
+                        <div class="contact-text">
+                            <h4>Call Us</h4>
+                            <p>+91 98765 43210</p>
+                        </div>
+                    </div>
+
+                    <div class="contact-info-item">
+                        <div class="contact-icon"><i class="fas fa-map-marker-alt"></i></div>
+                        <div class="contact-text">
+                            <h4>Visit Us</h4>
+                            <p>Dité Boutique, 123 Luxury Lane, Prestige Tower, Mumbai, India</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-form-container">
+                 <div class="content-block">
+                    <h2>Send a Message</h2>
+                    <form action="#" method="POST">
+                        <!-- Placeholder form -->
+                        <div style="margin-bottom: 20px;">
+                            <input type="text" placeholder="Your Name" style="width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px;">
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <input type="email" placeholder="Your Email" style="width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px;">
+                        </div>
+                        <div style="margin-bottom: 20px;">
+                            <textarea placeholder="Your Message" rows="5" style="width: 100%; padding: 15px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 8px;"></textarea>
+                        </div>
+                        <button type="button" style="padding: 15px 30px; background: #d4af37; border: none; color: #000; font-weight: 600; cursor: pointer; text-transform: uppercase;">Send Message</button>
+                    </form>
+                 </div>
+            </div>
+        </div>
+      </div>
+    </section>
+
+    <%- include("../partials/user/footer") %>
+  </body>
+</html>

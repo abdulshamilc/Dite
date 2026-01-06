@@ -67,8 +67,20 @@ app.use(nocache());
 
 
 // To accesss the session over all the ejs file 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.session = req.session;
+  res.locals.currentUser = null;
+  if (req.session.user) {
+    try {
+      const email = typeof req.session.user === 'string' ? req.session.user : req.session.user.email;
+      if (email) {
+         const user = await User.findOne({ email });
+         if (user) res.locals.currentUser = user;
+      }
+    } catch (error) {
+      console.error("Middleware user fetch error:", error);
+    }
+  }
   next();
 });
 

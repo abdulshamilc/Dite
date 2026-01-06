@@ -46,7 +46,7 @@
 
 <aside class="sidebar" aria-label="Profile navigation">
   <div class="greeting">
-    <div class="avatar-sm"><%= user.name ? user.name.charAt(0).toUpperCase() : "U" %></div>
+    <img src="<%= user.image ? user.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3a2f25&color=d3a35b&size=128&bold=true` %>" class="avatar-sm" style="object-fit: cover; display: block;" alt="<%= user.name %>">
     <div>Hello, <strong><%= user.name %></strong></div>
   </div>
 

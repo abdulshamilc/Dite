@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frequently Asked Questions - Dité</title>
+    <%- include("../partials/user/headerHead") %>
+    <%- include("../partials/user/footerHead") %>
+    <link rel="stylesheet" href="/style/user/staticPages.css">
+  </head>
+  <body>
+    <%- include("../partials/user/header") %>
+
+    <section class="static-page-section">
+      <div class="static-container">
+        <h1 class="static-title">FAQ</h1>
+        <p class="static-subtitle">Your questions answered. Find out everything you need to know about Dité.</p>
+
+        <div class="faq-list">
+             <!-- FAQ 1 -->
+             <div class="faq-item">
+                 <div class="faq-question">
+                     <h3>What payment methods do you accept?</h3>
+                     <span class="faq-icon">+</span>
+                 </div>
+                 <div class="faq-answer">
+                     <p>We accept all major credit/debit cards, net banking, UPI, and Cash on Delivery (available on select pincodes).</p>
+                 </div>
+             </div>
+
+             <!-- FAQ 2 -->
+             <div class="faq-item">
+                 <div class="faq-question">
+                     <h3>Do you offer international shipping?</h3>
+                     <span class="faq-icon">+</span>
+                 </div>
+                 <div class="faq-answer">
+                     <p>Currently, we only ship within India. We are working on expanding our reach globally soon.</p>
+                 </div>
+             </div>
+
+             <!-- FAQ 3 -->
+             <div class="faq-item">
+                 <div class="faq-question">
+                     <h3>How can I track my order?</h3>
+                     <span class="faq-icon">+</span>
+                 </div>
+                 <div class="faq-answer">
+                     <p>Once your order is shipped, you can track your order status directly from the 'My Orders' section of your profile.</p>
+                 </div>
+             </div>
+
+             <!-- FAQ 4 -->
+             <div class="faq-item">
+                 <div class="faq-question">
+                     <h3>What is your return policy?</h3>
+                     <span class="faq-icon">+</span>
+                 </div>
+                 <div class="faq-answer">
+                     <p>You can request a return within 7 days of delivery if the product is damaged or incorrect. Please ensure the product is unused and in its original packaging.</p>
+                 </div>
+             </div>
+
+             <!-- FAQ (Added) -->
+             <div class="faq-item">
+                 <div class="faq-question">
+                     <h3>When will I get my refund?</h3>
+                     <span class="faq-icon">+</span>
+                 </div>
+                 <div class="faq-answer">
+                     <p>For returned items, the refund will be processed and credited to your wallet only after our team has received and verified the return (Admin Approval). If a payment was made but the order failed, the amount will be automatically refunded to your source account.</p>
+                 </div>
+             </div>
+             
+             <!-- FAQ 5 -->
+             <div class="faq-item">
+                 <div class="faq-question">
+                     <h3>Are your fragrances authentic?</h3>
+                     <span class="faq-icon">+</span>
+                 </div>
+                 <div class="faq-answer">
+                     <p>Absolutely. Dité prides itself on using only premium, authentically sourced ingredients and original formulations.</p>
+                 </div>
+             </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Chatbot Demo Widget -->
+    <div class="chatbot-widget" id="chatbotWidget" title="Chat with us">
+        <i class="fas fa-robot"></i>
+        <div class="chatbot-message">Chat bot coming soon!</div>
+    </div>
+
+    <%- include("../partials/user/footer") %>
+    
+    <script>
+        // Toggle Chatbot Message
+        const chatbotWidget = document.getElementById('chatbotWidget');
+        chatbotWidget.addEventListener('click', () => {
+             chatbotWidget.classList.toggle('active');
+             setTimeout(() => {
+                 if(chatbotWidget.classList.contains('active')){
+                     chatbotWidget.classList.remove('active');
+                 }
+             }, 3000); // Auto hide after 3 seconds
+        });
+
+        document.querySelectorAll('.faq-question').forEach(item => {
+            item.addEventListener('click', event => {
+                const parent = item.parentNode;
+                
+                // Close other open items (optional, remove if you want multiple open)
+                document.querySelectorAll('.faq-item').forEach(other => {
+                    if (other !== parent) {
+                        other.classList.remove('active');
+                        other.querySelector('.faq-icon').textContent = '+';
+                    }
+                });
+
+                parent.classList.toggle('active');
+                const icon = parent.querySelector('.faq-icon');
+                if (parent.classList.contains('active')) {
+                    icon.textContent = '×'; // Change to close icon/text
+                } else {
+                    icon.textContent = '+';
+                }
+            })
+        })
+    </script>
+  </body>
+</html>

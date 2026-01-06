@@ -15,6 +15,11 @@ const getCategories = async (req, res) => {
 
     // Fetch categories according to pagination
     const categories = await Categories.find({ isDeleted: false })
+      .populate({
+        path: "products",
+        match: { isDeleted: false },
+        select: "_id" // Only fetch _id for counting
+      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);

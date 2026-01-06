@@ -21,6 +21,11 @@ import {
   postResetPassword,
   restPassword,
   userBloked,
+  getAbout,
+  getContact,
+  getPrivacy,
+  getTerms,
+  getFaq,
 } from "../controller/user/userController.js";
 
 import {
@@ -62,6 +67,7 @@ import {
 
 import {
   getShop,
+  getOffers,
   productDetail,
   getCollections,
   getMenShop,
@@ -106,11 +112,15 @@ import {
   getWalletBalanceAPI
 } from "../controller/user/walletController.js"; 
 
+import getCartCount from "../middlewares/cartMiddleware.js";
+
 import { isAuthenticatedUser } from "../middlewares/authMiddleware.js";
 
 import isBlocked from "../middlewares/checkBlokedMiddleware.js";
 
 const router = express.Router();
+
+router.use(getCartCount);
 
 // Google auth
 router.get(
@@ -153,9 +163,18 @@ router.post("/reset-password/:token", postResetPassword);
 
 router.post("/reset-password", restPassword);
 
+// Static Pages
+router.get("/about", getAbout);
+router.get("/contact", getContact);
+router.get("/privacy", getPrivacy);
+router.get("/terms", getTerms);
+router.get("/faq", getFaq);
+
 router.get("/userBloked", userBloked);
 
+// Shop routes
 router.get("/shop", getShop);
+router.get("/offers", getOffers);
 router.get("/shop/men", getMenShop);
 router.get("/shop/women", getWomenShop);
 router.get("/shop/unisex", getUnisexShop);

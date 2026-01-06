@@ -1,194 +1,721 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dité - Luxury Fragrances</title>
-    <%- include("../partials/user/headerHead") %>
-    <%- include("../partials/user/footerHead") %>
-    <link rel="stylesheet" href="/style/user/home.css">
-  </head>
-  <body>
-    <!-- Header -->
-    <%- include("../partials/user/header") %>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Cormorant Garamond', 'Georgia', serif;
+            background: #0a0a0a;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .section-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 300;
+            letter-spacing: 4px;
+            text-align: center;
+            margin-bottom: 4rem;
+            background: linear-gradient(135deg, #d4af37 0%, #f4e5c3 50%, #d4af37 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            position: relative;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease;
+        }
+
+        .section-title.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
+        }
+
+        /* Carousel Section */
+        .carousel {
+            position: relative;
+            width: 100%;
+            height: 90vh;
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+
+        .carousel-inner {
+            display: flex;
+            width: 300%;
+            height: 100%;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .carousel-inner img {
+            width: 33.333%;
+            height: 100%;
+            object-fit: cover;
+            filter: brightness(0.7);
+            transition: filter 0.8s ease;
+        }
+
+        .carousel-inner img:hover {
+            filter: brightness(0.85);
+        }
+
+        /* Carousel Overlay Text */
+        .carousel::before {
+            content: 'Luxury in Every Drop';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: clamp(3rem, 8vw, 6rem);
+            font-weight: 300;
+            letter-spacing: 8px;
+            color: #fff;
+            text-shadow: 0 0 40px rgba(212, 175, 55, 0.5);
+            z-index: 10;
+            text-align: center;
+            animation: fadeInScale 1.5s ease-out;
+        }
+
+        @keyframes fadeInScale {
+            from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .carousel-dots {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            border: 2px solid rgba(212, 175, 55, 0.6);
+            cursor: pointer;
+            transition: all 0.4s ease;
+        }
+
+        .dot.active {
+            background: #d4af37;
+            width: 40px;
+            border-radius: 6px;
+            box-shadow: 0 0 20px rgba(212, 175, 55, 0.6);
+        }
+
+        .dot:hover {
+            background: #d4af37;
+            transform: scale(1.2);
+        }
+
+        /* Collections Section */
+        .collections {
+            padding: 8rem 0;
+            background: linear-gradient(180deg, #0a0a0a 0%, #0e0e14 100%);
+            position: relative;
+        }
+
+        .collections-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+
+        .collection-item {
+            position: relative;
+            height: 500px;
+            overflow: hidden;
+            border-radius: 20px;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(50px) scale(0.9);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .collection-item.visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .collection-item:nth-child(1).visible { transition-delay: 0.1s; }
+        .collection-item:nth-child(2).visible { transition-delay: 0.2s; }
+        .collection-item:nth-child(3).visible { transition-delay: 0.3s; }
+
+        .collection-item a {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .collection-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .collection-item:hover img {
+            transform: scale(1.15);
+        }
+
+        .collection-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+            padding: 3rem 2rem;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+
+        .collection-item:hover .collection-overlay {
+            transform: translateY(0);
+            background: linear-gradient(to top, rgba(212, 175, 55, 0.3), transparent);
+        }
+
+        .collection-overlay h3 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: #d4af37;
+            text-transform: uppercase;
+            position: relative;
+            display: inline-block;
+        }
+
+        .collection-overlay h3::after {
+            content: '→';
+            position: absolute;
+            right: -40px;
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .collection-item:hover .collection-overlay h3::after {
+            opacity: 1;
+            right: -50px;
+        }
+
+        /* Story Section */
+        .story {
+            padding: 8rem 0;
+            background: #0a0a0a;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .story::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -50%;
+            width: 200%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+            animation: rotate 30s linear infinite;
+        }
+
+        /* Brand Story Section (Alternate Background) */
+        .brand-story {
+            padding: 8rem 0;
+            background: linear-gradient(180deg, #0a0a0a 0%, #0e0e14 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-story::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -50%;
+            width: 200%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+            animation: rotateReverse 30s linear infinite;
+        }
+
+        @keyframes rotateReverse {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(-360deg); }
+        }
+
+        .story-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5rem;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Reversed Layout for Brand Story */
+        .story-content-reverse {
+            direction: ltr;
+        }
+
+        .story-content-reverse .story-text {
+            order: 2;
+            transform: translateX(50px);
+        }
+
+        .story-content-reverse .story-text.visible {
+            transform: translateX(0);
+        }
+
+        .story-content-reverse .story-image {
+            order: 1;
+            transform: translateX(-50px);
+        }
+
+        .story-content-reverse .story-image.visible {
+            transform: translateX(0);
+        }
+
+        .story-content-reverse .story-image::before {
+            left: -20px;
+            right: auto;
+        }
+
+        .story-content-reverse .story-image:hover::before {
+            left: -30px;
+        }
+
+        .story-text {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: all 0.8s ease;
+        }
+
+        .story-text.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .story-text h2 {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 300;
+            letter-spacing: 3px;
+            color: #d4af37;
+            margin-bottom: 2rem;
+            line-height: 1.3;
+        }
+
+        .story-text p {
+            font-size: 1.2rem;
+            line-height: 2;
+            color: rgba(255, 255, 255, 0.8);
+            margin-bottom: 1.5rem;
+            letter-spacing: 0.5px;
+        }
+
+        .story-image {
+            position: relative;
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 0.8s ease 0.3s;
+        }
+
+        .story-image.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .story-image::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            width: 100%;
+            height: 100%;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 20px;
+            z-index: -1;
+            transition: all 0.4s ease;
+        }
+
+        .story-image:hover::before {
+            top: -30px;
+            right: -30px;
+            border-color: rgba(212, 175, 55, 0.6);
+        }
+
+        .story-image img {
+            width: 100%;
+            height: 600px;
+            object-fit: cover;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            transition: transform 0.4s ease;
+        }
+
+        .story-image:hover img {
+            transform: scale(1.05);
+        }
+
+        /* Trending Section */
+        .trending {
+            padding: 8rem 0;
+            background: linear-gradient(180deg, #0a0a0a 0%, #0e0e14 100%);
+        }
+
+        .trending-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3rem;
+            margin-top: 4rem;
+        }
+
+        .trending-item {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 0;
+            transform: translateY(50px);
+        }
+
+        .trending-item.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .trending-item:nth-child(1).visible { transition-delay: 0.1s; }
+        .trending-item:nth-child(2).visible { transition-delay: 0.2s; }
+        .trending-item:nth-child(3).visible { transition-delay: 0.3s; }
+
+        .trending-item:hover {
+            border-color: rgba(212, 175, 55, 0.6);
+            transform: translateY(-15px);
+            box-shadow: 0 25px 60px rgba(212, 175, 55, 0.2);
+        }
+
+        .trending-item a {
+            display: block;
+        }
+
+        .trending-item img {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            transition: transform 0.6s ease;
+        }
+
+        .trending-item:hover img {
+            transform: scale(1.1);
+        }
+
+        .trending-info {
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+
+        .trending-info h4 {
+            font-size: 1.8rem;
+            font-weight: 400;
+            letter-spacing: 2px;
+            color: #d4af37;
+            margin-bottom: 0.5rem;
+        }
+
+        .trending-info p {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 0.5px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .collections-grid,
+            .trending-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2rem;
+            }
+
+            .story-content {
+                grid-template-columns: 1fr;
+                gap: 3rem;
+            }
+
+            .story-text,
+            .story-image {
+                transform: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .carousel {
+                height: 60vh;
+            }
+
+            .collections-grid,
+            .trending-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .collection-item {
+                height: 400px;
+            }
+
+            .collections,
+            .story,
+            .trending {
+                padding: 5rem 0;
+            }
+
+            .story-image img {
+                height: 400px;
+            }
+
+            .trending-item img {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include("../partials/user/header") %>
     <!-- Carousel Section -->
     <section class="carousel" id="home">
-      <div class="carousel-inner" id="carouselInner">
-        <img
-          src="/images/Carosal/2.jpg"
-          alt="Carousel Image 1"
-        />
-        <img
-          src="/images/Carosal/3.jpg"
-          alt="Carousel Image 2"
-        />
-        <img
-          src="/images/Carosal/dior-black-sauvage-024molas2h6aptt5.jpg"
-          alt="Carousel Image 3"
-        />
-      </div>
-      <div class="carousel-dots">
-        <span class="dot active" onclick="showSlide(0)"></span>
-        <span class="dot" onclick="showSlide(1)"></span>
-        <span class="dot" onclick="showSlide(2)"></span>
-      </div>
+        <div class="carousel-inner" id="carouselInner">
+            <img src="/images/Carosal/2.jpg" alt="Luxury Fragrance 1">
+            <img src="/images/Carosal/3.jpg" alt="Luxury Fragrance 2">
+            <img src="/images/Carosal/dior-black-sauvage-024molas2h6aptt5.jpg" alt="Luxury Fragrance 3">
+        </div>
+        <div class="carousel-dots">
+            <span class="dot active" onclick="showSlide(0)"></span>
+            <span class="dot" onclick="showSlide(1)"></span>
+            <span class="dot" onclick="showSlide(2)"></span>
+        </div>
     </section>
 
     <!-- Collections Section -->
     <section class="collections" id="collections">
-      <div class="container">
-        <h2 class="section-title">Our Fragrance Collections</h2>
-        <div class="collections-grid">
-          <div class="collection-item">
-            <a href="/shop/men">
-            <img
-              src="/images/user/outSideHome/Login.jpg"
-              alt="Men's Collection"
-            />
-            <div class="collection-overlay">
-              <h3>Men</h3>
+        <div class="container">
+            <h2 class="section-title">Our Fragrance Collections</h2>
+            <div class="collections-grid">
+                <div class="collection-item">
+                    <a href="/shop/men">
+                        <img src="/images/user/outSideHome/Login.jpg" alt="Men's Collection">
+                        <div class="collection-overlay">
+                            <h3>Men</h3>
+                        </div>
+                    </a>
+                </div>
+                <div class="collection-item">
+                    <a href="/shop/women">
+                        <img src="/images/user/outSideHome/2ef8839c79f8732773808a3500adaa9a.jpg" alt="Women's Collection">
+                        <div class="collection-overlay">
+                            <h3>Women</h3>
+                        </div>
+                    </a>
+                </div>
+                <div class="collection-item">
+                    <a href="/shop/unisex">
+                        <img src="/images/user/outSideHome/Unisex.jpg" alt="Unisex Collection">
+                        <div class="collection-overlay">
+                            <h3>Unisex</h3>
+                        </div>
+                    </a>
+                </div>
             </div>
-            </a>
-          </div>
-          <div class="collection-item">
-            <a href="/shop/women">
-            <img
-              src="/images/user/outSideHome/2ef8839c79f8732773808a3500adaa9a.jpg"
-              alt="Women's Collection"
-            />
-            <div class="collection-overlay">
-              <h3>Women</h3>
-            </div>
-            </a>
-          </div>
-          <div class="collection-item">
-            <a href="/shop/unisex">
-            <img
-              src="/images/user/outSideHome/Unisex.jpg"
-              alt="Unisex Collection"
-            />
-            <div class="collection-overlay">
-              <h3>Unisex</h3>
-            </div>
-            </a>
-          </div>
         </div>
-      </div>
     </section>
 
     <!-- Story Section -->
     <section class="story">
-      <div class="container">
-        <div class="story-content">
-          <div class="story-text">
-            <h2>Where Scent Becomes Story</h2>
-            <p>
-              Each fragrance tells a unique story, crafted with the finest
-              ingredients and decades of expertise. Our perfumes are more than
-              just scents - they are memories waiting to be made.
-            </p>
-            <p>
-              Discover the perfect fragrance that speaks to your soul and
-              becomes part of your personal narrative.
-            </p>
-          </div>
-          <div class="story-image">
-            <img
-              src="/images/user/home/SentBecomeStory.jpg"
-              alt="Luxury Perfume"
-            />
-          </div>
+        <div class="container">
+            <div class="story-content">
+                <div class="story-text">
+                    <h2>Where Scent Becomes Story</h2>
+                    <p>
+                        Each fragrance tells a unique story, crafted with the finest
+                        ingredients and decades of expertise. Our perfumes are more than
+                        just scents - they are memories waiting to be made.
+                    </p>
+                    <p>
+                        Discover the perfect fragrance that speaks to your soul and
+                        becomes part of your personal narrative.
+                    </p>
+                </div>
+                <div class="story-image">
+                    <img src="/images/user/home/SentBecomeStory.jpg" alt="Luxury Perfume">
+                </div>
+            </div>
         </div>
-      </div>
+    </section>
+
+    <!-- Brand Story Section (Reversed Layout) -->
+    <section class="brand-story">
+        <div class="container">
+            <div class="story-content story-content-reverse">
+                <div class="story-image">
+                    <img src="/images/user/home/secondboximage.jpg" alt="Dité Excellence">
+                </div>
+                <div class="story-text">
+                    <h2>The Dité Experience</h2>
+                    <p>
+                        At Dité, we believe luxury is not just a product—it's an experience. 
+                        Our curated collection brings together the world's most prestigious 
+                        fragrances, offering you an unparalleled journey through scent.
+                    </p>
+                    <p>
+                        From timeless classics to contemporary masterpieces, each bottle in 
+                        our collection has been carefully selected to meet the highest standards 
+                        of quality and artistry. We partner with renowned perfume houses to 
+                        deliver authenticity, elegance, and excellence with every purchase.
+                    </p>
+                    <p>
+                        Experience seamless shopping, expert recommendations, and a commitment 
+                        to making luxury accessible. Welcome to Dité—where every scent tells 
+                        your story.
+                    </p>
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- Trending Collections -->
     <section class="trending">
-      <div class="container">
-        <h2 class="section-title">Trending Collections</h2>
-        <div class="trending-grid">
-          <div class="trending-item">
-           <a href="/shop">
-            <img
-              src="/images/Stock colections/Dior homme.jpg"
-              alt="Best Seller"
-            />
-            </a>
-            <div class="trending-info">
-              <h4>Best Seller</h4>
-              <p>Our most popular fragrance</p>
+        <div class="container">
+            <h2 class="section-title">Trending Collections</h2>
+            <div class="trending-grid">
+                <div class="trending-item">
+                    <a href="/shop">
+                        <img src="/images/Stock colections/Dior homme.jpg" alt="Best Seller">
+                    </a>
+                    <div class="trending-info">
+                        <h4>Best Seller</h4>
+                        <p>Our most popular fragrance</p>
+                    </div>
+                </div>
+                <div class="trending-item">
+                    <a href="/shop">
+                        <img src="/images/Stock colections/Absolu-Aventus-Creed.jpg" alt="Limited Edition">
+                    </a>
+                    <div class="trending-info">
+                        <h4>Limited Edition</h4>
+                        <p>Exclusive seasonal collection</p>
+                    </div>
+                </div>
+                <div class="trending-item">
+                    <a href="/shop">
+                        <img src="/images/Stock colections/Dior homme instense.jpg" alt="New Arrival">
+                    </a>
+                    <div class="trending-info">
+                        <h4>New Arrival</h4>
+                        <p>Fresh from our laboratory</p>
+                    </div>
+                </div>
             </div>
-          </div>
-          <div class="trending-item">
-            <a href="/shop">
-            <img
-              src="/images/Stock colections/Absolu-Aventus-Creed.jpg"
-              alt="Limited Edition"
-            />
-            </a>
-            <div class="trending-info">
-              <h4>Limited Edition</h4>
-              <p>Exclusive seasonal collection</p>
-            </div>
-          </div>
-          <div class="trending-item">
-            <a href="/shop">
-            <img
-              src="/images/Stock colections/Dior homme instense.jpg"
-              alt="New Arrival"
-            />
-            </a>
-            <div class="trending-info">
-              <h4>New Arrival</h4>
-              <p>Fresh from our laboratory</p>
-            </div>
-          </div>
         </div>
-      </div>
     </section>
 
-    <!-- Footer -->
     <%- include("../partials/user/footer") %>
 
     <script>
-      let currentSlide = 0;
-      const totalSlides = 3;
-      const dots = document.querySelectorAll(".carousel-dots .dot");
-      const carouselInner = document.getElementById("carouselInner");
-      let autoSlideInterval;
+        // Carousel Functionality
+        let currentSlide = 0;
+        const totalSlides = 3;
+        const dots = document.querySelectorAll(".carousel-dots .dot");
+        const carouselInner = document.getElementById("carouselInner");
+        let autoSlideInterval;
 
-      function updateDots() {
-        dots.forEach((dot, index) => {
-          dot.classList.toggle("active", index === currentSlide);
-        });
-      }
-
-      function showSlide(index) {
-        stopAutoSlide();
-        carouselInner.style.transform = `translateX(-${index * (100 / totalSlides)}%)`;
-        currentSlide = index;
-        updateDots();
-        startAutoSlide();
-      }
-
-      function startAutoSlide() {
-        autoSlideInterval = setInterval(() => {
-          currentSlide = (currentSlide + 1) % totalSlides;
-          showSlide(currentSlide);
-        }, 4000); // 4 seconds per slide to match original 12s cycle
-      }
-
-      function stopAutoSlide() {
-        if (autoSlideInterval) {
-          clearInterval(autoSlideInterval);
+        function updateDots() {
+            dots.forEach((dot, index) => {
+                dot.classList.toggle("active", index === currentSlide);
+            });
         }
-      }
 
-      // Initialize
-      updateDots();
-      showSlide(0);
-      startAutoSlide();
+        function showSlide(index) {
+            stopAutoSlide();
+            carouselInner.style.transform = `translateX(-${index * (100 / totalSlides)}%)`;
+            currentSlide = index;
+            updateDots();
+            startAutoSlide();
+        }
+
+        function startAutoSlide() {
+            autoSlideInterval = setInterval(() => {
+                currentSlide = (currentSlide + 1) % totalSlides;
+                showSlide(currentSlide);
+            }, 4000);
+        }
+
+        function stopAutoSlide() {
+            if (autoSlideInterval) {
+                clearInterval(autoSlideInterval);
+            }
+        }
+
+        updateDots();
+        showSlide(0);
+        startAutoSlide();
+
+        // Scroll Animation Observer
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all animated elements including brand story section
+        document.querySelectorAll('.section-title, .collection-item, .story-text, .story-image, .trending-item').forEach(el => {
+            observer.observe(el);
+        });
     </script>
-  </body>
+</body>
 </html>

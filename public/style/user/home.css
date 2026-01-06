@@ -25,7 +25,7 @@
       /* Carousel */
       .carousel {
         position: relative;
-        margin-top: 100px; /* Increased to add more space and prevent header overlap */
+        margin-top: 0; /* Updated to remove over space */
         height: 600px; /* Keep as is */
         width: 100vw; /* Full viewport width */
         max-width: none; /* Override any max-width */

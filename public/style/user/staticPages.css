@@ -1,0 +1,247 @@
+/* Static Pages Styling (About, Contact, Privacy, Terms) */
+body {
+    background-color: #0b0b0b; /* Dark theme based on Dité */
+    color: #f5f5f5;
+    font-family: 'Inter', sans-serif;
+    line-height: 1.6;
+}
+
+.static-page-section {
+    padding: 80px 20px;
+    background: linear-gradient(180deg, #0b0b0b 0%, #1a1a1a 100%);
+    min-height: 80vh;
+}
+
+.static-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.static-title {
+    font-family: 'Cinzel', serif; /* Assuming this is the premium font used */
+    font-size: 3rem;
+    text-align: center;
+    margin-bottom: 20px;
+    background: linear-gradient(45deg, #d4af37, #f2d06b, #d4af37);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0px 4px 10px rgba(212, 175, 55, 0.2);
+}
+
+.static-subtitle {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #a0a0a0;
+    margin-bottom: 60px;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.content-block {
+    margin-bottom: 40px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.content-block:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+    border-color: rgba(212, 175, 55, 0.3);
+}
+
+.content-block h2 {
+    font-size: 1.8rem;
+    color: #d4af37;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.content-block p {
+    color: #ccc;
+    font-size: 1rem;
+    margin-bottom: 15px;
+}
+
+.content-block ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.content-block ul li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 10px;
+    color: #ccc;
+}
+
+.content-block ul li::before {
+    content: '•';
+    color: #d4af37;
+    font-size: 1.5em;
+    position: absolute;
+    left: 0;
+    top: -5px;
+}
+
+/* Contact Specific */
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+}
+
+@media (max-width: 768px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.contact-info-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.contact-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(212, 175, 55, 0.1);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #d4af37;
+    font-size: 1.2rem;
+    margin-right: 20px;
+}
+
+.contact-text h4 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.1rem;
+}
+
+.contact-text p {
+    margin: 0;
+    color: #aaa;
+    font-size: 0.95rem;
+}
+
+/* FAQ Accordion Styles */
+.faq-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(212, 175, 55, 0.1);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.faq-item:hover {
+    border-color: rgba(212, 175, 55, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.faq-question {
+    padding: 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: #e0e0e0;
+}
+
+.faq-question h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #d4af37;
+}
+
+.faq-icon {
+    font-size: 1.2rem;
+    color: #d4af37;
+    transition: transform 0.3s ease;
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 20px;
+    transition: all 0.3s ease;
+    color: #aaa;
+    line-height: 1.6;
+}
+
+.faq-item.active .faq-answer {
+    max-height: 200px; /* Adjust based on content */
+    padding: 0 20px 20px 20px;
+}
+
+.faq-item.active .faq-icon {
+    transform: rotate(45deg); /* To simulate an 'X' or closing rotation */
+}
+
+/* Chatbot Widget */
+.chatbot-widget {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(45deg, #d4af37, #f2d06b);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #0b0b0b;
+    font-size: 1.8rem;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    z-index: 1000;
+}
+
+.chatbot-widget:hover {
+    transform: scale(1.1) rotate(10deg);
+    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+}
+
+.chatbot-message {
+    position: absolute;
+    right: 80px; /* Position to the left of the widget */
+    bottom: 10px;
+    background: #fff;
+    color: #0b0b0b;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(20px);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.chatbot-message::after {
+    content: '';
+    position: absolute;
+    right: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 0 6px 6px;
+    border-style: solid;
+    border-color: transparent transparent transparent #fff;
+}
+
+.chatbot-widget:hover .chatbot-message,
+.chatbot-widget.active .chatbot-message {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+}
