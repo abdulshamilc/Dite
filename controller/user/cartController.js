@@ -43,8 +43,8 @@ const getCart = async (req, res) => {
       const product = item.productId;
       // Check if product is available
       if (!product || product.isDeleted || !product.isListed) {
-        if (item.stockStatus !== "Out of Stock") {
-          item.stockStatus = "Out of Stock";
+        if (item.stockStatus !== "Unavailable") {
+          item.stockStatus = "Unavailable";
           cartUpdated = true;
         }
         continue;
@@ -184,6 +184,12 @@ const addToCart = async (req, res) => {
     }
 
     const product = await Products.findById(productId);
+    
+    if (!product || !product.isListed || product.isDeleted) {
+        if (isAjax) return res.status(404).json({ success: false, message: "Product is currently unavailable" });
+        return res.redirect("/shop?error=Product Unavailable");
+    }
+
     const selectedVarient = product.variants.find(
       (variant) => variant.mlSize === Number(variantSize)
     );
@@ -376,17 +382,22 @@ const updateQuantity = async (req, res) => {
       if (currentTotalQuantity >= 10) {
         return res
           .status(400)
-          .json({ message: "Cart limit is 10 items total." });
+          .json({ message: "Cart cannot exceed 10 items total." });
       }
 
       if (item.quantity >= 10) {
         return res
           .status(400)
-          .json({ message: "Maximum quantity of 10 reached for this item" });
+          .json({ message: "You can only buy up to 10 units of this item." });
       }
+      
+      // Stock Check
       if (selectedVariant.stock < item.quantity + 1) {
-        return res.status(400).json({ message: "The product is out of stock" });
+         return res.status(400).json({ 
+             message: `Sorry, only ${selectedVariant.stock} items available in stock.` 
+         });
       }
+      
       item.quantity += 1;
       updated = true;
     } else if (action === "dec") {

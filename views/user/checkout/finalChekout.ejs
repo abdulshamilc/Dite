@@ -429,6 +429,121 @@
         color: #4ade80;
       }
 
+      /* Coupon List Styles */
+      .available-coupons {
+        margin-top: 1.5rem;
+        border-top: 1px solid rgba(212, 175, 55, 0.1);
+        padding-top: 1.5rem;
+      }
+
+      .coupon-list-title {
+        font-size: 0.9rem;
+        color: rgba(255, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 1rem;
+      }
+
+      .coupon-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        max-height: 300px;
+        overflow-y: auto;
+        padding-right: 5px;
+      }
+      
+      .coupon-list::-webkit-scrollbar {
+        width: 4px;
+      }
+      
+      .coupon-list::-webkit-scrollbar-thumb {
+        background: rgba(212, 175, 55, 0.2); 
+        border-radius: 4px;
+      }
+
+      .coupon-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(212, 175, 55, 0.15);
+        border-radius: 8px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .coupon-card:hover {
+        background: rgba(212, 175, 55, 0.08);
+        border-color: rgba(212, 175, 55, 0.3);
+      }
+
+      .coupon-card.selected {
+        background: rgba(74, 222, 128, 0.1);
+        border-color: #4ade80;
+      }
+
+      .coupon-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.4rem;
+      }
+
+      .coupon-code {
+        font-family: monospace;
+        font-size: 1.1rem;
+        color: #d4af37;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+
+      .coupon-offer {
+        color: #4ade80;
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .coupon-desc {
+        font-size: 0.85rem;
+        color: rgba(255, 255, 255, 0.6);
+        line-height: 1.4;
+      }
+
+      .view-coupons-link {
+        display: inline-block;
+        margin-left: 0.5rem;
+        font-size: 0.9rem;
+        color: #d4af37; /* Gold color matching theme */
+        text-decoration: underline;
+        cursor: pointer;
+        transition: color 0.3s;
+      }
+      
+      .view-coupons-link:hover {
+        color: #f4e5c3;
+      }
+
+      .remove-coupon-btn {
+        padding: 0.9rem 1.2rem;
+        background: rgba(239, 68, 68, 0.1); 
+        color: #ef4444; 
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: none; /* Hidden by default */
+        align-items: center;
+        justify-content: center;
+      }
+
+      .remove-coupon-btn:hover {
+        background: rgba(239, 68, 68, 0.2);
+        border-color: #ef4444;
+      }
+
+
       /* Confirm Button */
       .confirm-btn {
         width: 100%;
@@ -708,10 +823,16 @@
 
           <!-- Coupon Section -->
           <div class="coupon-section">
-            <h3 class="summary-title">Have a Coupon?</h3>
+            <h3 class="summary-title" style="display: flex; align-items: baseline; justify-content: space-between;">
+               <span>Have a Coupon?</span>
+               <a class="view-coupons-link" onclick="openCouponModal()">View Available Coupons</a>
+            </h3>
             <div style="display: flex; gap: 0.5rem;">
               <input type="text" id="couponInput" placeholder="Enter code">
               <button id="applyCouponBtn" onclick="applyCoupon()">APPLY</button>
+              <button id="removeCouponBtn" class="remove-coupon-btn" onclick="removeCoupon()" title="Remove Coupon">
+                <i class="fas fa-times"></i> X
+              </button>
             </div>
             <p id="couponMessage"></p>
           </div>
@@ -809,6 +930,36 @@
         <button onclick="closeErrorModal()" style="padding: 0.6rem 2rem; background: rgba(212, 175, 55, 0.1); color: #d4af37; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='rgba(212, 175, 55, 0.2)'" onmouseout="this.style.background='rgba(212, 175, 55, 0.1)'">OK</button>
       </div>
     </div>
+    
+    <!-- Coupon Modal -->
+    <div class="modal-overlay" id="couponModal" style="z-index: 1500;">
+      <div class="modal" style="max-width: 500px;">
+        <button class="modal-close" onclick="closeCouponModal()">&times;</button>
+        <h2 class="modal-title">Available Coupons</h2>
+        <% if (typeof coupons !== 'undefined' && coupons.length > 0) { %>
+            <div class="coupon-list" style="margin-top: 2rem;"> <!-- Reusing existing list styles -->
+              <% coupons.forEach(coupon => { %>
+                <div class="coupon-card" onclick="selectCoupon('<%= coupon.code %>')">
+                  <div class="coupon-header">
+                    <div class="coupon-code"><%= coupon.code %></div>
+                    <div class="coupon-offer">
+                       <%= coupon.discountType === 'percentage' ? coupon.discountValue + '% OFF' : 'Rs. ' + coupon.discountValue + ' OFF' %>
+                    </div>
+                  </div>
+                  <div class="coupon-desc">
+                     <%= coupon.description || 'Save on your order' %>
+                     <% if(coupon.minCartValue > 0) { %>
+                       (Min purchase: Rs. <%= coupon.minCartValue %>)
+                     <% } %>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+        <% } else { %>
+            <p style="text-align: center; color: #999; padding: 2rem;">No coupons available at the moment.</p>
+        <% } %>
+      </div>
+    </div>
 
     <%- include("../../partials/user/footer") %>
 
@@ -868,8 +1019,12 @@
         
         validateCOD();
 
+        // UI Updates for Success
         couponInput.disabled = true;
-        applyBtn.textContent = 'APPLIED';
+        applyBtn.style.display = 'none'; // Hide Apply
+        const removeBtn = document.getElementById('removeCouponBtn');
+        if(removeBtn) removeBtn.style.display = 'inline-flex'; // Show X
+        
       } else {
         messageEl.textContent = data.message;
         messageEl.style.color = '#ef4444';
@@ -931,8 +1086,12 @@
         if (data.success) {
           window.location.href = '/checkout/success';
         } else {
+          hidePaymentStatus();
+          if (data.redirect) {
+             window.location.href = data.redirect;
+             return;
+          }
           if (data.message && data.message.toLowerCase().includes('coupon')) {
-            hidePaymentStatus();
             Swal.fire({
               icon: 'error',
               title: 'Coupon Issue',
@@ -1034,6 +1193,10 @@
         showPaymentStatus('Opening payment modal...');
         openRazorpayCheckout(data.order);
       } else {
+        if (data.redirect) {
+            window.location.href = data.redirect;
+            return; 
+        }
         throw new Error(data.message || 'Order creation failed');
       }
     })
@@ -1130,8 +1293,12 @@
         showPaymentStatus('Order placed successfully!');
         setTimeout(() => window.location.href = '/checkout/success', 2000);
       } else {
+        hidePaymentStatus();
+        if (data.redirect) {
+           window.location.href = data.redirect;
+           return;
+        }
         if (data.message && data.message.toLowerCase().includes('coupon')) {
-          hidePaymentStatus();
           Swal.fire({
             icon: 'error',
             title: 'Coupon Issue',
@@ -1271,6 +1438,91 @@
       }
     }
   }
+
+  function selectCoupon(code) {
+    // Populate the input
+    const input = document.getElementById('couponInput');
+    if (input) {
+      input.value = code;
+      closeCouponModal();
+      // Auto apply
+      applyCoupon();
+    }
+  }
+
+  function removeCoupon() {
+      // 1. Clear Input
+      const input = document.getElementById('couponInput');
+      if(input) {
+          input.value = '';
+          input.disabled = false; // Re-enable input
+      }
+      
+      // 2. Clear Applied State
+      appliedCouponCode = null;
+      
+      // 3. Reset Total (remove discount)
+      const discountRow = document.getElementById('discountRow');
+      if(discountRow) discountRow.style.display = 'none';
+      
+      // Reset total to subtotal + delivery
+      // Note: subtotal is global base subtotal. 
+      // currentTotal tracks final amount.
+      currentTotal = subtotal + 40; 
+      
+      document.getElementById('checkoutTotal').textContent = `Rs. ${currentTotal.toFixed(2)}`;
+      
+      // 4. Update UI Buttons
+      document.getElementById('applyCouponBtn').style.display = 'block';
+      document.getElementById('applyCouponBtn').disabled = false;
+      document.getElementById('applyCouponBtn').textContent = 'APPLY';
+      
+      document.getElementById('removeCouponBtn').style.display = 'none';
+      
+      // 5. Message
+      const messageEl = document.getElementById('couponMessage');
+      if(messageEl) {
+          messageEl.textContent = 'Coupon removed.';
+          messageEl.style.color = '#9ca3af';
+          setTimeout(() => { messageEl.textContent = ''; }, 2000);
+      }
+      
+      // Re-validate COD availability based on new total
+      validateCOD();
+  }
+  
+  function openCouponModal() {
+      document.getElementById('couponModal').classList.add('show');
+  }
+  
+  function closeCouponModal() {
+      document.getElementById('couponModal').classList.remove('show');
+  }
+  
+  // Close modal when clicking outside
+  document.getElementById("couponModal").addEventListener("click", function (e) {
+    if (e.target === this) {
+      closeCouponModal();
+    }
+  });
+
+
+  // Slight Modification to applyCoupon to handle UI Toggle
+  const originalApplyCoupon = applyCoupon; // Backup if needed, but we redefine key parts below
+  
+  // Let's override applyCoupon logic within the script tag context (since we are replacing the bottom part of file)
+  // Actually, I can just rewrite applyCoupon here if I replace the top part, but I am replacing the bottom part.
+  // Wait, I didn't replace the top `applyCoupon`.
+  // I need to make sure `applyCoupon` updates the UI correctly for the new buttons.
+  // The `applyCoupon` function is defined above line 1275 (where I am replacing the selectCoupon).
+  // I should probably redefine applyCoupon entirely or modify the existing one if I can access it.
+  // Ideally, I should search/replace the existing applyCoupon.
+  // BUT, I'll use the fact that functions in JS can be overwritten if defined again, OR I'll modify the previous response to include applyCoupon update.
+  // No, let's look at `applyCoupon` in the file. It is around line 833.
+  // I will submit a separate chunk to update `applyCoupon` or just update it here if I am updating the block containing it? No, I'm updating `selectCoupon` down at 1275.
+  // Better to include `applyCoupon` re-write in the JS replacement chunk if possible, OR separate chunk.
+  // Let's add a separate chunk for `applyCoupon` at line 833.
+
 
   validateCOD();
 </script>

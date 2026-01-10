@@ -86,6 +86,8 @@ import {
     deleteCoupon
 } from '../controller/admin/couponsController.js';
 
+import notificationController from '../controller/admin/notificationController.js';
+
 const router = express.Router() ;
 
 // Auth
@@ -166,6 +168,13 @@ router.post('/offers/update-end-date/:id',isAuthenticatedAdmin,updateOfferEndDat
 router.post('/offers/delete/:id',isAuthenticatedAdmin,deleteOffer)  
 
 
+
+
+// Notifications
+router.get('/notifications', isAuthenticatedAdmin, notificationController.getNotifications);
+router.patch('/notifications/:id/read', isAuthenticatedAdmin, notificationController.markAsRead);
+router.patch('/notifications/read-all', isAuthenticatedAdmin, notificationController.markAllAsRead);
+router.delete('/notifications/clear-read', isAuthenticatedAdmin, notificationController.clearReadNotifications);
 
 // Logout
 router.get('/logout',logOut)

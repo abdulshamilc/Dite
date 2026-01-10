@@ -627,12 +627,20 @@
         <h2 class="section-title">Select Address</h2>
         <div class="address-selection">
           <% if (addresses && addresses.length > 0) { %>
+            <% 
+               // Determine which address is initially selected (default or first)
+               let selectedIndex = addresses.findIndex(a => a.isDefault);
+               if (selectedIndex === -1) selectedIndex = 0;
+            %>
             <% addresses.forEach((address, index) => { %>
-              <label class="saved-address <%= address.isDefault ? 'selected' : '' %>" data-address-index="<%= index %>" data-address="<%= JSON.stringify(address) %>">
-                <input type="radio" class="address-radio" name="address" value="<%= address._id %>" <%= address.isDefault ? 'checked' : '' %> />
+              <label class="saved-address <%= index === selectedIndex ? 'selected' : '' %>" 
+                     data-address-index="<%= index %>" 
+                     style="<%= index === selectedIndex ? '' : 'display: none;' %>"
+                     data-address="<%= JSON.stringify(address) %>">
+                <input type="radio" class="address-radio" name="address" value="<%= address._id %>" <%= index === selectedIndex ? 'checked' : '' %> />
                 <div class="address-details">
                   <div class="address-info">
-                    <div class="address-name"><%= address.fullName %></div>
+                    <div class="address-name"><%= address.fullName %> <%= address.isDefault ? '(Default)' : '' %></div>
                     <div class="address-line"><%= address.hoNo %>, <%= address.street %></div>
                     <div class="address-line"><%= address.city %>, <%= address.state %> - <%= address.pin %></div>
                     <div class="address-line">Phone: <%= address.phone %></div>
@@ -641,11 +649,18 @@
                 </div>
               </label>
             <% }); %>
+
+            <% if (addresses.length > 1) { %>
+              <div class="show-all-addresses-btn" onclick="toggleAddresses()" style="text-align: center; cursor: pointer; color: #d4af37; padding: 1rem; border: 1px dashed rgba(212, 175, 55, 0.3); border-radius: 8px; margin-top: 1rem;">
+                Show All Addresses
+              </div>
+            <% } %>
+
           <% } else { %>
             <p style="color: #999; text-align: center; padding: 1rem">No saved addresses. Add a new one below.</p>
           <% } %>
           
-          <a href="#" class="geo-location-btn" onclick="getLocation(event)" style="display: none;">
+          <a href="#" class="geo-location-btn" onclick="getLocation(event)" style="display: flex;">
             <span class="geo-location-icon">📍</span>
             <span>Use My Current Location (Optional)</span>
           </a>
@@ -777,6 +792,32 @@
     <%- include("../../partials/user/footer") %>
 
     <script>
+      function toggleAddresses() {
+        const addresses = document.querySelectorAll('.saved-address');
+        const btn = document.querySelector('.show-all-addresses-btn');
+        // Check current state based on button text
+        const isExpanded = btn.textContent.toLowerCase().includes("hide");
+
+        if (isExpanded) {
+          // Collapse: Show only checked, hide others
+          addresses.forEach(addr => {
+            const radio = addr.querySelector('input[type="radio"]');
+            if (radio && radio.checked) {
+              addr.style.display = 'flex';
+            } else {
+              addr.style.display = 'none';
+            }
+          });
+          btn.textContent = "Show All Addresses";
+        } else {
+          // Expand: Show all
+          addresses.forEach(addr => {
+            addr.style.display = 'flex';
+          });
+          btn.textContent = "Hide Addresses";
+        }
+      }
+
       const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
 
       // Pincode auto-fill
@@ -945,10 +986,8 @@
           radio.addEventListener("change", function () {
             document.querySelectorAll(".saved-address").forEach((addr) => addr.classList.remove("selected"));
             this.closest(".saved-address").classList.add("selected");
-            document.querySelector('.geo-location-btn').style.display = 'flex';
           });
         });
-        document.querySelector('.geo-location-btn').style.display = 'none';
       });
 
       function openViewModal(event, index) {

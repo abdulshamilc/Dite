@@ -112,6 +112,8 @@ import {
   getWalletBalanceAPI
 } from "../controller/user/walletController.js"; 
 
+import { addReview } from "../controller/user/reviewController.js";
+
 import getCartCount from "../middlewares/cartMiddleware.js";
 
 import { isAuthenticatedUser } from "../middlewares/authMiddleware.js";
@@ -173,7 +175,7 @@ router.get("/faq", getFaq);
 router.get("/userBloked", userBloked);
 
 // Shop routes
-router.get("/shop", getShop);
+router.get("/shop",getShop);
 router.get("/offers", getOffers);
 router.get("/shop/men", getMenShop);
 router.get("/shop/women", getWomenShop);
@@ -369,6 +371,8 @@ router.get('/wallet/history',isAuthenticatedUser, isBlocked, getWalletHistory)
 router.post('/wallet/add-funds', isAuthenticatedUser, isBlocked, addFundsToWallet);
 router.get('/wallet/api/balance', getWalletBalanceAPI); // For checkout wallet fetch
 
+
+router.post('/rate-product', isAuthenticatedUser, isBlocked, addReview);
 
 router.get("/logout", userlogOut);
 export default router;

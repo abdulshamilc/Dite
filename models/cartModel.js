@@ -34,7 +34,7 @@ const cartItemSchema = new mongoose.Schema(
     },
     stockStatus: {
       type: String,
-      enum: ["In Stock", "Out of Stock", "Limited Stock"],
+      enum: ["In Stock", "Out of Stock", "Limited Stock", "Unavailable"],
       required: true,
     },
     deliveryDate: {

@@ -4,10 +4,10 @@ import { User } from "../../models/userModels.js";
 import Order from "../../models/ordersModel.js";
 import { nanoid } from "nanoid";
 import Products from "../../models/productsModels.js";
-// import Wallet from '../../models/walletModel.js'; (Removed)
 import { processWalletPayment } from './walletController.js';
 import Coupon from "../../models/couponModel.js";
 import Offer from "../../models/offerModel.js";
+import Notification from "../../models/notificationModel.js";
 
 // Get checkout
 const getCheckout = async (req, res) => {
@@ -24,17 +24,21 @@ const getCheckout = async (req, res) => {
     return res.redirect("/cart");
   } 
 
-  // Validate Stock before proceeding
+  // Validate Stock & Availability
   for (const item of cart.items) {
     const product = item.productId;
     if (!product || product.isDeleted || !product.isListed) {
-       req.session.error = `Item ${item.name} is currently unavailable.`;
-       return res.redirect("/cart");
+       req.session.error = `Product ${item.name} is currently unavailable. Please remove it to proceed.`;
+       return req.session.save(() => res.redirect("/cart"));
     }
     const variant = product.variants.find(v => v.mlSize === Number(item.size));
-    if (!variant || variant.stock < item.quantity) {
-       req.session.error = `Item ${item.name} (Size: ${item.size}) is out of stock.`;
-       return res.redirect("/cart");
+    if (!variant) {
+        req.session.error = `Variant for ${item.name} (Size: ${item.size}) is unavailable.`;
+        return req.session.save(() => res.redirect("/cart"));
+    }
+    if (variant.stock < item.quantity) {
+       req.session.error = `Product ${item.name} (Size: ${item.size}) is out of stock.`;
+       return req.session.save(() => res.redirect("/cart"));
     }
   }
 
@@ -89,10 +93,16 @@ const getCheckout = async (req, res) => {
                    });
                    price = Math.max(0, price - bestOfferDiscount);
                }
+               
+               // Apply manual variant discount if lower (e.g. Sale Price)
+               const manualPrice = variant.discountedPrice || variant.basePrice;
+               price = Math.min(price, manualPrice);
           }
           
+          item.discountedPrice = price;
           subtotal += price * item.quantity;
       }
+      await cart.save();
       total = subtotal + 40; // Add fixed delivery charge
   }
 
@@ -206,25 +216,93 @@ const getPaymentpage = async (req, res) => {
         return res.redirect("/cart");
     }
 
-    // Validate Stock before proceeding
+    // Validate Stock & Availability
     for (const item of cart.items) {
         const product = item.productId;
         if (!product || product.isDeleted || !product.isListed) {
-            req.session.error = `Item ${item.name} is currently unavailable.`;
-            return res.redirect("/cart");
+            req.session.error = `Product ${item.name} is currently unavailable. Please remove it to proceed.`;
+            return req.session.save(() => res.redirect("/cart"));
         }
         const variant = product.variants.find(v => v.mlSize === Number(item.size));
-        if (!variant || variant.stock < item.quantity) {
-            req.session.error = `Item ${item.name} (Size: ${item.size}) is out of stock.`;
-            return res.redirect("/cart");
+        if (!variant) {
+            req.session.error = `Variant for ${item.name} (Size: ${item.size}) is unavailable.`;
+            return req.session.save(() => res.redirect("/cart"));
+        }
+        if (variant.stock < item.quantity) {
+            req.session.error = `Product ${item.name} (Size: ${item.size}) is out of stock.`;
+            return req.session.save(() => res.redirect("/cart"));
         }
     }
+
+    // Recalculate Prices & Update Cart before rendering (Fix for Admin price changes not reflecting)
+    if (cart && cart.items.length > 0) {
+        const currentDate = new Date();
+        const productIds = cart.items.map(item => item.productId._id);
+        const categoryIds = cart.items.map(item => item.productId.category);
+        
+        const offers = await Offer.find({
+            $or: [
+            { targetModel: 'Product', targetId: { $in: productIds } },
+            { targetModel: 'Categories', targetId: { $in: categoryIds } }
+            ],
+            isActive: true,
+            isDeleted: false,
+            startDate: { $lte: currentDate },
+            endDate: { $gte: currentDate }
+        });
+
+        for (const item of cart.items) {
+            const product = item.productId;
+            const size = Number(item.size);
+            const variant = product.variants.find(v => v.mlSize === size);
+            
+            let price = item.discountedPrice; 
+            if (variant) {
+                price = variant.basePrice; 
+                
+                let bestOfferDiscount = 0;
+                const applicableOffers = offers.filter(offer => 
+                    (offer.targetModel === 'Product' && offer.targetId.toString() === product._id.toString()) ||
+                    (offer.targetModel === 'Categories' && offer.targetId.toString() === product.category.toString())
+                );
+                
+                applicableOffers.forEach(offer => {
+                        let discount = 0;
+                        if (offer.discountType === 'flat') {
+                            discount = offer.discountValue;
+                        } else {
+                            discount = (price * offer.discountValue) / 100;
+                        }
+                        if (discount > bestOfferDiscount) {
+                            bestOfferDiscount = discount;
+                        }
+                });
+                price = Math.max(0, price - bestOfferDiscount);
+
+                // Apply manual variant discount if lower (e.g. Sale Price)
+                const manualPrice = variant.discountedPrice || variant.basePrice;
+                price = Math.min(price, manualPrice);
+            }
+            item.discountedPrice = price; 
+        }
+        await cart.save();
+    }
+
+    // Fetch available coupons
+    const currentDate = new Date();
+    const coupons = await Coupon.find({
+      isActive: true,
+      isDeleted: false,
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate }
+    });
 
     res.render("user/checkout/finalChekout", { 
       user, 
       cart, 
       selectedAddress,
-      razorpayKey: process.env.RAZORPAY_KEY_ID 
+      razorpayKey: process.env.RAZORPAY_KEY_ID,
+      coupons 
     });
   } catch (error) {
     console.error(error);
@@ -356,13 +434,24 @@ const placeOrder = async (req, res) => {
        
        const product = productMap.get(productIdStr);
        
-       if (!product || product.isDeleted || !product.isListed) {
-           return res.status(400).json({ success: false, message: `Product ${product ? product.name : 'Unknown'} is no longer available.` });
+        if (!product || product.isDeleted || !product.isListed) {
+           req.session.error = `Product ${product ? product.name : 'Unknown'} is currently unavailable. Please remove it to proceed.`;
+           await req.session.save(); // Just in case
+           return res.status(400).json({ success: false, redirect: '/cart', message: `Product ${product ? product.name : 'Unknown'} is currently unavailable.` });
        }
        const size = Number(item.mlSize || item.size);
        const variant = product.variants.find(v => v.mlSize === size);
-       if (!variant || variant.stock < item.quantity) {
-           return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name} (Size: ${size}).` });
+       
+       if (!variant) {
+           req.session.error = `Variant (Size: ${size}) for ${product.name} is no longer available.`;
+           await req.session.save();
+           return res.status(400).json({ success: false, redirect: '/cart', message: `Variant (Size: ${size}) for ${product.name} is no longer available.` });
+       }
+
+       if (variant.stock < item.quantity) {
+           req.session.error = `Sorry, only ${variant.stock} units of ${product.name} (Size: ${size}) are left in stock.`;
+           await req.session.save();
+           return res.status(400).json({ success: false, redirect: '/cart', message: `Sorry, only ${variant.stock} units of ${product.name} (Size: ${size}) are left in stock.` });
        }
 
        // Calculate Best Offer for this Item
@@ -399,8 +488,8 @@ const placeOrder = async (req, res) => {
            mlSize: size,
            quantity: (item.quantity),
            basePrice: variant.basePrice,
-           discountedPrice: finalProductPrice, // For calculation
-           discoundedPrice: finalProductPrice, // For Schema (typo fix)
+           discountedPrice: finalProductPrice, // Store Effective Offer Price
+           discoundedPrice: finalProductPrice, // Legacy support
            image: item.image || product.images[0] || "",
            productStatus: "Placed"
        });
@@ -453,17 +542,18 @@ const placeOrder = async (req, res) => {
     const currentSubtotal = validatedItems.reduce((acc, i) => acc + (i.discountedPrice * i.quantity), 0);
 
     const mappedItems = validatedItems.map((item) => {
-      let itemCouponDiscount = 0;
-       if (currentSubtotal > 0 && finalDiscountAmount > 0) {
-          itemCouponDiscount = (item.discountedPrice / currentSubtotal) * finalDiscountAmount;
-       }
+      // Calculate per-unit coupon discount
+      // Using ratio of (Item Total / Order Subtotal) * Total Discount
+      // Then divide by Quantity to get per-unit
+      let itemTotal = item.discountedPrice * item.quantity;
+      let itemShare = 0;
+      if (currentSubtotal > 0 && finalDiscountAmount > 0) {
+         itemShare = (itemTotal / currentSubtotal) * finalDiscountAmount;
+      }
+      const itemCouponDiscount = item.quantity > 0 ? (itemShare / item.quantity) : 0;
       
-      const distinctPaidPrice = Math.max(0, item.discountedPrice - itemCouponDiscount);
-
       return {
         ...item,
-        discountedPrice: distinctPaidPrice,
-        discoundedPrice: distinctPaidPrice, // Update legacy typo field too
         couponDiscount: itemCouponDiscount
       };
     });
@@ -481,7 +571,7 @@ const placeOrder = async (req, res) => {
         return res.status(400).json({ success: false, message: "Missing payment details for online payment" });
       }
       paymentInfo.razorpayPaymentId = razorpayPaymentId;
-      paymentInfo.razorpayOrderId = razorpayOrderId; // Requires schema field: razorpayOrderId: { type: String }
+      paymentInfo.razorpayOrderId = razorpayOrderId; 
     }
     // Generate Order ID early
     const orderID = `ORD-${nanoid(8)}`;
@@ -505,24 +595,24 @@ const placeOrder = async (req, res) => {
         }
     }
 
-    // Create order (use schema defaults; orderStatus always starts as "Placed")
+    // Create order 
     const newOrder = new Order({
       orderID: orderID,
       userId: user._id,
-      address, // Embedded object
+      address, 
       items: mappedItems,
-      paymentMethod: normalizedPaymentMethod, // "online", "cod", or "Wallet"
-      paymentInfo, // Structured as per schema
+      paymentMethod: normalizedPaymentMethod, 
+      paymentInfo, 
       totalAmount,
       discountAmount: finalDiscountAmount,
       deliveryCharge,
       couponCode: appliedCouponCode,
-      orderStatus: "Placed", // Schema default; separate from paymentStatus
+      orderStatus: "Placed", 
       tracking: [
         {
           status: "Placed",
           message: `Your order has been placed successfully`,
-          date: new Date() // Add date as per schema
+          date: new Date() 
         }
       ],
       placedAt: new Date()
@@ -541,8 +631,7 @@ const placeOrder = async (req, res) => {
       }
     );
 
-    // Decrease stock immediately (for both COD and Online; assumes Products model with variants)
-    // Decrease stock immediately using atomic update
+    // Decrease stock immediately 
     await Promise.all(
       mappedItems.map(async (item) => {
         const mlSizeNum = parseInt(item.mlSize) || 0;
@@ -553,7 +642,26 @@ const placeOrder = async (req, res) => {
       })
     );
 
-    // Clear user's cart (use findOneAndUpdate for safety; assumes single cart per user)
+    // Check for Out of Stock and Notify Admin
+    try {
+        for (const item of mappedItems) {
+            const product = await Products.findById(item.productId);
+            if (product) {
+                const variant = product.variants.find(v => v.mlSize === Number(item.mlSize));
+                if (variant && variant.stock <= 0) {
+                     await Notification.create({
+                         type: 'stock',
+                         message: `Product "${product.name}" (Size: ${item.mlSize}) is now Out of Stock.`,
+                         metadata: { productId: product._id, variantSize: item.mlSize }
+                     });
+                }
+            }
+        }
+    } catch (notifError) {
+        console.error("Error creating stock notification:", notifError);
+    }
+
+    // Clear user's cart
     await Cart.findOneAndUpdate(
       { userId: user._id },
       { $set: { items: [] } },
@@ -562,12 +670,12 @@ const placeOrder = async (req, res) => {
 
     // Set session flag for success page
     req.session.orderplaced = true;
-    req.session.orderId = newOrder.orderID; // Optional: Pass order ID for success page
+    req.session.orderId = newOrder.orderID; 
 
     res.json({ 
       success: true, 
       message: "Order placed successfully", 
-      orderId: newOrder.orderID // Return for frontend redirect if needed
+      orderId: newOrder.orderID 
     });
 
   } catch (error) {
@@ -584,8 +692,7 @@ const getSuccessPage = async (req, res) => {
 
     if (!req.session.orderplaced) return res.redirect("/cart");
 
-    // Decrease stock for the latest placed order
-    // Stock deduction is handled in placeOrder. Removing duplicate logic here.
+    // Stock deduction is handled in placeOrder. 
 
     await Cart.deleteMany({ userId: user._id });
 
@@ -605,7 +712,7 @@ const getFailedPage = async (req, res) => {
   const deleteCart = req.query.deleteCart === 'true';
   const addressId = req.query.addressId || null;
 
-  if (!errorMessage && !req.session.orderplaced) {  // Fallback: require one or the other
+  if (!errorMessage && !req.session.orderplaced) { 
     return res.redirect("/cart");
   }
 
@@ -614,7 +721,6 @@ const getFailedPage = async (req, res) => {
     await Cart.deleteMany({ userId: user._id });
   }
 
-  // Clear any lingering session flags to avoid stale state
   // Clear any lingering session flags to avoid stale state
   req.session.orderplaced = false;
 
@@ -627,7 +733,6 @@ export {
   clearGeolocation,
   addNewAddress,
   getPaymentpage,
-  // getWalletBalanceAPI, (Removed)
   placeOrder,
   getSuccessPage,
   getFailedPage,

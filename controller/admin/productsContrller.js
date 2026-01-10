@@ -1,5 +1,7 @@
 import Products from "../../models/productsModels.js";
 import Categories from "../../models/categories.js";
+import Offer from "../../models/offerModel.js";
+import Review from "../../models/reviewModel.js";
 
 const toNumber = (val) => {
   const n = parseInt(val, 10);
@@ -584,6 +586,49 @@ const getProductDetails = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
+    const currentDate = new Date();
+    const offers = await Offer.find({
+      targetId: id,
+      appliesTo: "product",
+      isActive: true,
+      isDeleted: false,
+      startDate: { $lte: currentDate },
+      endDate: { $gte: currentDate }
+    });
+
+    product.offers = offers;
+
+    // Fetch reviews
+    const reviews = await Review.find({ productId: id, isDeleted: false }).sort({ createdAt: -1 });
+
+    // Calculate Review Stats
+    let totalReviews = reviews.length;
+    let averageRating = 0;
+    let starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+
+    if (totalReviews > 0) {
+        const sum = reviews.reduce((acc, curr) => {
+            if (curr.rating >= 1 && curr.rating <= 5) {
+                starCounts[curr.rating]++;
+            }
+            return acc + curr.rating;
+        }, 0);
+        averageRating = (sum / totalReviews).toFixed(1);
+    }
+
+    const reviewStats = {
+        totalReviews,
+        averageRating,
+        starCounts,
+        percentages: {
+            5: totalReviews ? Math.round((starCounts[5] / totalReviews) * 100) : 0,
+            4: totalReviews ? Math.round((starCounts[4] / totalReviews) * 100) : 0,
+            3: totalReviews ? Math.round((starCounts[3] / totalReviews) * 100) : 0,
+            2: totalReviews ? Math.round((starCounts[2] / totalReviews) * 100) : 0,
+            1: totalReviews ? Math.round((starCounts[1] / totalReviews) * 100) : 0,
+        }
+    };
+
     // You can add more data processing here if needed, e.g., calculate totals
 
     // Verify messages from session
@@ -596,9 +641,10 @@ const getProductDetails = async (req, res) => {
     res.render("admin/products/productDetails", {
       title: "Product Details - Admin",
       product,
+      reviews,
+      reviewStats,
       successMessage,
       errorMessage,
-      // Add other locals if needed, e.g., categories: await Category.find()
     });
   } catch (error) {
     console.error("Error fetching product details:", error);

@@ -3,6 +3,8 @@ import razorpay from '../../config/razorpay.js';
 import {User} from '../../models/userModels.js'
 import Wallet from "../../models/walletModel.js";
 import Order from "../../models/ordersModel.js";
+import Cart from "../../models/cartModel.js";
+import Products from "../../models/productsModels.js";
 
 // Create Razorpay Order (for /createOrder)
 const createRazorpayOrder = async (req, res) => {
@@ -18,6 +20,34 @@ const createRazorpayOrder = async (req, res) => {
       console.error(`Payment Error [User: ${user._id}]: Invalid amount ${amount}`);
       return res.status(400).json({ success: false, message: "Order amount too low (min Rs. 1)." });
     }
+
+    // Pre-Payment Stock Validation
+    const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
+    if (cart && cart.items.length > 0) {
+        for (const item of cart.items) {
+            const product = await Products.findById(item.productId._id);
+            if (!product || product.isDeleted || !product.isListed) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Product ${product ? product.name : 'Unknown'} is currently unavailable.` 
+                });
+            }
+            const variant = product.variants.find(v => v.mlSize === Number(item.size));
+            if (!variant) {
+                 return res.status(400).json({ 
+                    success: false, 
+                    message: `Variant (Size: ${item.size}) for ${product.name} is no longer available.` 
+                });
+            }
+            if (variant.stock < item.quantity) {
+                 return res.status(400).json({ 
+                    success: false, 
+                    message: `Sorry, only ${variant.stock} units of ${product.name} (Size: ${item.size}) are left in stock.` 
+                });
+            }
+        }
+    }
+    
     // Create Razorpay order (amount in paise)
     const order = await razorpay.orders.create({
       amount: amount * 100, // Convert rupees to paise

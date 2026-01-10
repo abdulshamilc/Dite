@@ -545,7 +545,7 @@
                 <!-- Cart Items -->
                 <div class="cart-items">
                     <% cart.items.forEach(item => { %>
-                        <div class="cart-item <%= item.stockStatus === 'Out of Stock' ? 'out-of-stock-dim' : '' %>">
+                        <div class="cart-item <%= (item.stockStatus === 'Out of Stock' || item.stockStatus === 'Unavailable') ? 'out-of-stock-dim' : '' %>">
                             <a href="/shop/<%= item.productId._id %>">
                                 <img src="<%= item.image %>" alt="<%= item.name %>" class="item-image">
                             </a>
@@ -575,7 +575,7 @@
 
                                 <div class="item-footer">
                                     <div>
-                                        <div class="stock-status <%= item.stockStatus === 'Out of Stock' ? 'text-red-500' : '' %>"><%= item.stockStatus %></div>
+                                        <div class="stock-status <%= (item.stockStatus === 'Out of Stock' || item.stockStatus === 'Unavailable') ? 'text-red-500' : '' %>"><%= item.stockStatus %></div>
                                         <div class="delivery-info">
                                             Arrives by <%= new Date(item.deliveryDate).toLocaleDateString() %>
                                         </div>
@@ -610,12 +610,7 @@
 
                     <hr class="summary-divider">
 
-                    <div class="promo-section" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
-                        <input type="text" class="promo-input" id="coupon-code" placeholder="Promo Code" style="flex: 1; padding: 0.9rem 1.2rem; background: #0a0a0a; border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 8px; color: #fff;">
-                        <button class="apply-btn" onclick="applyCoupon()" style="padding: 0.9rem 1.8rem; background: linear-gradient(135deg, #d4af37, #f4e5c3); border: none; border-radius: 8px; color: #000; font-weight: 600; cursor: pointer;">Apply</button>
-                        <button class="apply-btn" id="remove-coupon-btn" onclick="removeCoupon()" style="display: none; padding: 0.9rem 1.8rem; background: #ef4444; border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer;">Remove</button>
-                    </div>
-                    <div id="coupon-message" style="margin-bottom: 1rem; font-size: 0.9rem; min-height: 20px;"></div>
+                    
 
                     <div class="total-section">
                         <div class="total-label">TOTAL</div>
@@ -636,6 +631,19 @@
     </main>
 
     <%- include("../../partials/user/footer") %>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+        <script>
+            Swal.fire({
+                icon: 'error',
+                title: 'Action Required',
+                text: `<%- error %>`,
+                background: '#1a1a1a',
+                color: '#ffffff',
+                confirmButtonColor: '#d4af37'
+            });
+        </script>
+    <% } %>
 
     <script>
         let currentSubtotal = <%= subtotal %>;
@@ -661,6 +669,14 @@
         }
 
         async function updateQuantity(itemId, action) {
+            const qtyElement = document.getElementById(`qty-${itemId}`);
+            const currentQty = parseInt(qtyElement.innerText);
+
+            if (action === 'dec' && currentQty <= 1) {
+                confirmDelete(itemId);
+                return;
+            }
+
             try {
                 const response = await fetch(`/cart/quantity/${itemId}`, {
                     method: 'POST',

@@ -4,6 +4,7 @@ import Wishlist from '../../models/wishlistModel.js' ;
 import {User} from '../../models/userModels.js';
 import Offer from "../../models/offerModel.js";
 import Cart from "../../models/cartModel.js";
+import Review from "../../models/reviewModel.js";
 import mongoose from "mongoose";
 
 const escapeRegex = (string) => {
@@ -625,11 +626,43 @@ const productDetail = async (req, res) => {
         }
     }
 
+    const reviews = await Review.find({ productId: product._id, isDeleted: false }).sort({ createdAt: -1 });
+    
+    // Calculate Review Stats
+    let totalReviews = reviews.length;
+    let averageRating = 0;
+    let starCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    
+    if (totalReviews > 0) {
+        const sum = reviews.reduce((acc, curr) => {
+            if (curr.rating >= 1 && curr.rating <= 5) {
+                starCounts[curr.rating]++;
+            }
+            return acc + curr.rating;
+        }, 0);
+        averageRating = (sum / totalReviews).toFixed(1);
+    }
+
+    const reviewStats = {
+        totalReviews,
+        averageRating,
+        starCounts,
+        percentages: {
+            5: totalReviews ? Math.round((starCounts[5] / totalReviews) * 100) : 0,
+            4: totalReviews ? Math.round((starCounts[4] / totalReviews) * 100) : 0,
+            3: totalReviews ? Math.round((starCounts[3] / totalReviews) * 100) : 0,
+            2: totalReviews ? Math.round((starCounts[2] / totalReviews) * 100) : 0,
+            1: totalReviews ? Math.round((starCounts[1] / totalReviews) * 100) : 0,
+        }
+    };
+
     res.render("user/shop/productDetail", {
       product,
       suggestions,
       activeOffers: bestOffer ? [bestOffer] : [],
       totalCartQty,
+      reviews,
+      reviewStats,
       error: req.query.error || null,
     });
   } catch (error) {

@@ -29,9 +29,7 @@ const getDashboard = async (req, res) => {
       case 'year':
         startDate = new Date(now.getFullYear(), 0, 1);
         break;
-      case 'custom':
-        // Placeholder for custom logic
-        break;
+
     }
 
     // Common Match Stage for Aggregations

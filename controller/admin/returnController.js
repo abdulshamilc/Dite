@@ -281,31 +281,22 @@ const returnApprove = async (req, res) => {
 
     await order.save();
 
-    // Refund logic for wallet - only on approved returns:
-    // returnItem.discountedPrice now holds the per-unit effective price (after coupon) as stored in profileController
+    // Refund to wallet using the net-per-unit price stored during request creation
+    const refundPerUnit = Math.max(0, returnItem.discountedPrice || 0);
+    const totalRefundAmount = refundPerUnit * (returnItem.returndQuantity || 0);
     if (
+      totalRefundAmount > 0 &&
       (order.paymentMethod === "online" ||
         order.paymentMethod === "Wallet" ||
         order.paymentMethod === "wallet" ||
-        order.paymentMethod === "cod") &&
-      returnItem.returndQuantity > 0 &&
-      returnItem.discountedPrice > 0
+        order.paymentMethod === "cod")
     ) {
-      const itemRefundAmount =
-        returnItem.discountedPrice * returnItem.returndQuantity;
-      
-      // Deduct delivery charge (40) from return refund
-      const deliveryDeduction = 40;
-      const totalRefundAmount = Math.max(0, itemRefundAmount - deliveryDeduction);
-      
-      if (totalRefundAmount > 0) {
-        await Wallet.refundToWallet(
-          order.userId,
-          totalRefundAmount,
-          `Refund (Return) for order ${order.orderID}: ${returnItem.name} (${returnItem.mlSize}ml) [Delivery Deducted]`,
-          order._id.toString()
-        );
-      }
+      await Wallet.refundToWallet(
+        order.userId,
+        totalRefundAmount,
+        `Refund (Return) for order ${order.orderID}: ${returnItem.name} (${returnItem.mlSize}ml)`,
+        order._id.toString()
+      );
     }
 
     req.session.success =

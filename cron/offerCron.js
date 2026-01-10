@@ -2,6 +2,7 @@ import cron from "node-cron";
 import Offer from "../models/offerModel.js";
 import Products from "../models/productsModels.js";
 import Categories from "../models/categories.js";
+import Notification from "../models/notificationModel.js";
 
 const recalculatePrices = async (targetIds, type) => {
   try {
@@ -87,6 +88,13 @@ const offerCronJob = () => {
           // Deactivate the offer
           offer.isActive = false;
           await offer.save();
+
+          // Create Notification
+            await Notification.create({
+                type: 'offer',
+                message: `Offer "${offer.name}" has expired and been deactivated.`,
+                metadata: { offerId: offer._id }
+            });
 
           // Recalculate prices for the affected products/categories
           await recalculatePrices(offer.targetId, offer.targetModel);

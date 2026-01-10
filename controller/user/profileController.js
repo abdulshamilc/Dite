@@ -7,6 +7,8 @@ import { generateOTP } from "../../utils/genarateOtp.js";
 import generateInvoice from "../../services/OrderPdfGenarator.js";
 import Wallet from "../../models/walletModel.js";
 import mongoose from "mongoose";
+import Review from "../../models/reviewModel.js";
+import Notification from "../../models/notificationModel.js";
 
 // Get profile
 const getProfile = async (req, res) => {
@@ -475,12 +477,15 @@ const getOrderDetails = async (req, res) => {
 
   const hasActiveItems = order.items.some((item) => item.quantity > 0);
 
+  const reviews = await Review.find({ orderId: orderId, userId: user._id }).lean();
+
   res.render("user/profile/orders/orderDetails", {
     order,
     subTotal,
     discount,
     totalAmount,
     hasActiveItems,
+    reviews,
   });
 };
 
@@ -503,7 +508,12 @@ const getCancelOrder = async (req, res) => {
     cancelledItems.forEach((itemCancel) => {
       const item = itemCancel.item;
       const cancelQty = itemCancel.cancelQty;
-      const itemTotal = (item.discountedPrice || item.basePrice || 0) * cancelQty;
+      // Fix: Subtract coupon
+      const price = item.discountedPrice || item.basePrice || 0;
+      const perUnitCoupon = item.couponDiscount || 0;
+      const netPerUnit = Math.max(0, price - perUnitCoupon);
+      
+      const itemTotal = netPerUnit * cancelQty;
       cancelSubtotal += itemTotal;
     });
 
@@ -624,9 +634,59 @@ const confirmCancel = async (req, res) => {
       let cancelSubtotal = 0;
 
       fullCancelledItems.forEach(({ item, cancelQty }) => {
-        const price = item.discountedPrice || item.discoundedPrice || item.basePrice || 0;
-        // Adjusted for coupon discount per unit - Now natively stored in discountedPrice
-        const effectivePrice = price;
+        // Use the discounted price (which already includes offer discounts)
+        let  price = item.discountedPrice || item.basePrice || 0;
+        
+        // Deduct the proportional coupon discount for this item *per unit*
+        // item.couponDiscount is the total discount for the *line item* (all qty)
+        // So per unit discount is item.couponDiscount / item.quantity (original qty placed)
+        // Wait, current schema logic in checkoutController: 
+        // mappedItems... couponDiscount = itemCouponDiscount (total for line item? No, let's check checkoutController)
+        // In checkoutController: itemCouponDiscount = (item.discountedPrice / currentSubtotal) * finalDiscountAmount;
+        // The loop is `validatedItems.map`, where `validatedItems` has `quantity` property.
+        // And `item.discountedPrice` there is unit price * quantity? 
+        // No. `item.discountedPrice` in validatedItems is the UNIT price after offers.
+        // In `validatedItems.push`, `discountedPrice: finalProductPrice` (unit price).
+        // BUT `subtotal += price * item.quantity` implies subtotal is full amount.
+        // `currentSubtotal` in checkout is sum of (unit_price * qty).
+        // So `itemCouponDiscount` calculated there is the share for the ENTIRE line item (all units).
+        
+        // Let's re-verify checkoutController logic.
+        // `itemCouponDiscount = (item.discountedPrice * item.quantity / currentSubtotal) * finalDiscountAmount` ??
+        // In checkoutController snippet around line 539: 
+        // `itemCouponDiscount = (item.discountedPrice / currentSubtotal) * finalDiscountAmount;`
+        // Wait, if item.discountedPrice is unit price, then this logic gives a tiny fraction if quantity > 1?
+        // Ah, checkoutController line 534: `currentSubtotal = validatedItems.reduce((acc, i) => acc + (i.discountedPrice * i.quantity), 0);`
+        // So currentSubtotal is Total.
+        // But line 539: `itemCouponDiscount = (item.discountedPrice / currentSubtotal) * finalDiscountAmount;`
+        // This looks like a BUG in checkoutController if discountedPrice is unit price. 
+        // It SHOULD be `(item.discountedPrice * item.quantity / currentSubtotal)`.
+        // However, assume we are working with what's stored in DB.
+        
+        // In the Order schema, `items` array objects have `couponDiscount`.
+        // If that field stores the discount for the *entire quantity* of that item,
+        // then per-unit coupon discount is `item.couponDiscount / (original quantity + canceled quantity??)`.
+        // Actually, item.quantity is decremented on cancel. We need the original quantity to calculate per-unit.
+        // But we don't store original quantity easily unless we sum active + canceled + returned.
+        
+        // ALTERNATIVE: Calculate per-unit coupon discount based on global `order.discountAmount` (total coupon val)
+        // and re-distribute? That's complex.
+        
+        // Let's look at how `couponDiscount` is stored. 
+        // If checkoutController stored it as per-unit or per-line?
+        // Line 548 checkoutController: `couponDiscount: itemCouponDiscount`.
+        // And `itemCouponDiscount` calculation used `item.discountedPrice` (Unit Price).
+        // So `itemCouponDiscount` is likely VERY small if quantity > 1. 
+        // OR it's intended to be Per-Unit?
+        // If `item.discountedPrice` is unit price, and `currentSubtotal` is total order value...
+        // Then `(Unit Price / Total Order) * Total Discount` = Discount portion for ONE unit.
+        // YES! It seems `couponDiscount` in DB is PER UNIT.
+        
+        // So: Effective Refund Price = (Unit Price - Per-Unit Coupon Discount) * Cancel Qty.
+        
+        const perUnitCouponDiscount = item.couponDiscount || 0;
+        const effectivePrice = Math.max(0, price - perUnitCouponDiscount);
+        
         const itemTotal = effectivePrice * cancelQty;
         cancelSubtotal += itemTotal;
 
@@ -705,7 +765,11 @@ const confirmCancel = async (req, res) => {
             .reduce((sum, rp) => sum + (rp.returndQuantity || 0), 0);
         }
         let effQty = Math.max(0, (item.quantity || 0) - approvedReturnForThis);
-        remainingSubtotal += ((item.discountedPrice || item.basePrice || 0) * effQty);
+        // Subtract per-unit coupon discount for remaining items too
+        const perUnitCouponDiscount = item.couponDiscount || 0;
+        const effectivePrice = Math.max(0, (item.discountedPrice || item.basePrice || 0) - perUnitCouponDiscount);
+        
+        remainingSubtotal += (effectivePrice * effQty);
       });
       order.subTotal = remainingSubtotal;  // Set subTotal for consistency
       order.totalAmount = remainingSubtotal + (order.deliveryCharge || 0) + (order.tax || 0);
@@ -904,8 +968,12 @@ const getReturn = async (req, res) => {
     returnItems.forEach((itemReturn) => {
       const item = itemReturn.item;
       const returnQty = itemReturn.returnQty;
-      // Use discountedPrice (which includes coupon discount) for accurate refund estimation
-      const itemTotal = (item.discountedPrice || item.basePrice || 0) * returnQty;
+      // Fix: Subtract coupon
+      const price = item.discountedPrice || item.basePrice || 0;
+      const perUnitCoupon = item.couponDiscount || 0;
+      const netPerUnit = Math.max(0, price - perUnitCoupon);
+      
+      const itemTotal = netPerUnit * returnQty;
       returnSubtotal += itemTotal;
     });
 
@@ -1131,25 +1199,14 @@ const confirmReturn = async (req, res) => {
         return res.redirect(`/return/${orderId}/return-select?error=reason`);
       }
 
-      // Proportional Refund Calculation:
-      // We calculate the ratio of (Total Paid Amount / Sum of Item Prices).
-      // This implicitly handles coupons, offers, and legacy data where stored prices might be Gross vs Net.
-      // Refund = Item Price * Ratio.
-      const totalStoredItemPrice = order.items.reduce((acc, i) => acc + ((i.discountedPrice || i.basePrice || 0) * i.quantity), 0);
-      
-      // Avoid division by zero
-      const paidRatio = totalStoredItemPrice > 0 ? (order.totalAmount / totalStoredItemPrice) : 0;
-      
       let returnSubtotal = 0;
 
       fullReturnItems.forEach(({ item, returnQty }) => {
         const price = item.discountedPrice || item.basePrice || 0;
-        
-        // Effective Refund Price = Price * Ratio
-        // This ensures the user gets back exactly the proportion of what they paid.
-        let effectivePrice = price * paidRatio;
+        const perUnitCouponDiscount = item.couponDiscount || 0; // stored per-unit in checkout
+        const netPerUnit = Math.max(0, price - perUnitCouponDiscount);
 
-        const itemTotal = effectivePrice * returnQty;
+        const itemTotal = netPerUnit * returnQty;
         returnSubtotal += itemTotal;
 
         // Create new return request (Always create new entry to keep requests distinct)
@@ -1159,7 +1216,7 @@ const confirmReturn = async (req, res) => {
           mlSize: item.mlSize,
           basePrice: item.basePrice,
           // Store the effective price (paid amount after coupon) here so admin refunds this exact amount
-          discountedPrice: effectivePrice, 
+          discountedPrice: netPerUnit, 
           returndQuantity: returnQty,
           image: item.image,
           reason: returnReason,
@@ -1173,8 +1230,22 @@ const confirmReturn = async (req, res) => {
       order.tracking.push({
         status: "Return Requested",
         date: new Date(),
-        message: `Return request submitted for ${fullReturnItems.length} item(s). Reason: ${returnReason}. Estimated subtotal: ₹${returnSubtotal.toFixed(2)}. Awaiting admin approval.`,
       });
+
+      // Create Notification for Admin
+      try {
+        await Notification.create({
+            type: 'return',
+            message: `New Return Request for Order ${order.orderID} by ${user.name || user.email}.`,
+            metadata: { 
+                orderId: order._id, 
+                userId: user._id, 
+                returnCount: fullReturnItems.length 
+            }
+        });
+      } catch (notifErr) {
+          console.error("Error creating return notification:", notifErr);
+      }
 
       await order.save();
 

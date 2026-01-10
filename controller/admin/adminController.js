@@ -267,14 +267,13 @@ const postResetPassword = async (req, res) => {
 
 // Logout
 const logOut = (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      console.error(err);
-      res.send("Error logging out");
-    } else {
-      res.redirect("/admin");
-    }
-  });
+  try {
+    delete req.session.admin;
+    return res.redirect("/admin");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("Internal server error");
+  }
 };
 
 export {

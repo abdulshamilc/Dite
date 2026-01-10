@@ -63,6 +63,13 @@
                                                     <p class="font-semibold"><%= item.name || 'Unknown Product' %></p>
                                                     <p class="text-sm text-gray-500"><%= (item.mlSize || 0) + ' ml' %></p>
                                                     <p class="text-sm text-gray-400">Available to cancel: <%= item.quantity || 1 %></p>
+                                                    <% 
+                                                       // Show Effective Price per unit for clarity
+                                                       const price = item.discountedPrice || item.basePrice || 0;
+                                                       const perUnitCouponDiscount = item.couponDiscount || 0;
+                                                       const effectivePrice = Math.max(0, price - perUnitCouponDiscount);
+                                                    %>
+                                                    <p class="text-xs text-green-400">Refundable: ₹<%= effectivePrice.toFixed(2) %>/unit</p>
                                                 </div>
                                             </div>
                                         </label>

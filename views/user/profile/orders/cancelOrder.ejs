@@ -15,7 +15,7 @@
         <div class="max-w-4xl mx-auto w-full">
             <!-- Header -->
             <div class="mb-8">
-                <a href="/orders/<%= order._id %>" class="text-sm accent-text hover:underline mb-4 inline-block">← Back to Order Details</a>
+                <a href="/order/<%= order._id %>" class="text-sm accent-text hover:underline mb-4 inline-block">← Back to Order Details</a>
                 <div class="flex items-start">
                     <div class="flex-1 text-center">
                         <h1 class="text-4xl font-bold mb-2">Confirm Cancellation</h1>
@@ -29,6 +29,30 @@
 
             <!-- Main Content -->
             <div class="space-y-6">
+                <!-- Global Calculation Block -->
+                <% 
+                    // Accumulators (Available globally in this template)
+                    let totalPaid = 0; 
+                    let totalCouponDed = 0;
+                    let calculatedCancelSubtotal = 0; 
+
+                    if (cancelledItems && cancelledItems.length > 0) {
+                        cancelledItems.forEach(itemCancel => {
+                            const item = itemCancel.item;
+                            const cancelQty = itemCancel.cancelQty;
+                            
+                            const price = item.discountedPrice || item.discoundedPrice || item.basePrice || 0;
+                            const perUnitCouponDiscount = item.couponDiscount || 0;
+                            const effectivePrice = Math.max(0, price - perUnitCouponDiscount); 
+                            const itemTotal = effectivePrice * cancelQty; 
+                            
+                            totalPaid += (price * cancelQty);
+                            totalCouponDed += (perUnitCouponDiscount * cancelQty);
+                            calculatedCancelSubtotal += itemTotal;
+                        });
+                    }
+                %>
+
                 <!-- Items to Cancel -->
                 <div class="card p-6 rounded-lg">
                     <div class="flex justify-between items-center mb-4">
@@ -37,12 +61,14 @@
                     </div>
                     <div class="space-y-4">
                         <% if (cancelledItems && cancelledItems.length > 0) { %>
-                            <% let cancelSubtotal = 0; %>
                             <% cancelledItems.forEach(itemCancel => { %>
                                 <% const item = itemCancel.item; %>
                                 <% const cancelQty = itemCancel.cancelQty; %>
-                                <% const itemTotal = (item.basePrice || 0) * cancelQty; %>
-                                <% cancelSubtotal += itemTotal; %>
+                                <% 
+                                    // Local vars for display (Show pre-coupon details per row)
+                                    const price = item.discountedPrice || item.discoundedPrice || item.basePrice || 0;
+                                    const itemTotal = price * cancelQty; 
+                                %>
                                 <div class="item-cancel">
                                     <% if (item.image) { %>
                                         <img src="<%= item.image %>" alt="<%= item.name %>" class="w-16 h-16 object-cover rounded-lg flex-shrink-0">
@@ -56,16 +82,24 @@
                                         <p class="text-gray-500 text-sm">
                                             <%= (item.mlSize || 0) + ' ml' %> • Qty: <%= cancelQty %>
                                         </p>
+                                        <% 
+                                            // Show Effective Price per unit for clarity
+                                            // The price and effectivePrice variables are already calculated above
+                                        %>
+                                        <% 
+                                            // Show Detailed Breakdown
+                                        %>
+                                        <div class="text-xs space-y-1 mt-1">
+                                            <p class="text-gray-400">Paid: ₹<%= price.toFixed(2) %>/unit</p>
+                                        </div>
                                     </div>
                                     <div class="text-right flex-shrink-0">
                                         <p class="font-semibold text-red-400">₹<%= itemTotal.toFixed(2) %></p>
                                     </div>
                                 </div>
                             <% }); %>
-                            <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600 mt-4">
-                                <span>Cancel Subtotal</span>
-                                <span>₹<%= cancelSubtotal.toFixed(2) %></span>
-                            </div>
+
+                            <!-- Summary Removed from here -->
                             <p class="text-sm text-gray-400 mt-2">Note: Refund amount may be adjusted based on shipping and tax prorations. Full details will be provided post-cancellation.</p>
                         <% } else { %>
                             <p class="text-gray-400 text-center py-4">No items selected for cancellation.</p>
@@ -104,17 +138,19 @@
                 <div class="refund-section card p-6 rounded-lg <%= order.paymentMethod === 'cod' ? 'cod-hidden' : '' %>">
                     <h2 class="text-xl font-bold mb-4 accent-text">Refund Estimate</h2>
                     <div class="space-y-2 text-gray-300">
-                        <div class="flex justify-between">
-                            <span>Cancel Subtotal</span>
-                            <span>₹<%= cancelSubtotal || 0 %></span>
+                        <div class="flex justify-between text-sm text-gray-400">
+                            <span>Total Value (Paid)</span>
+                            <span>₹<%= totalPaid ? totalPaid.toFixed(2) : '0.00' %></span>
                         </div>
-                        <div class="flex justify-between text-red-400">
-                            <span>Prorated Shipping/Tax Adjustment</span>
-                            <span>-₹0.00</span> <!-- TODO: Calculate prorated if needed -->
-                        </div>
+                        <% if (totalCouponDed > 0) { %>
+                            <div class="flex justify-between text-sm text-red-400">
+                                <span>Coupon Deduction</span>
+                                <span>-₹<%= totalCouponDed.toFixed(2) %></span>
+                            </div>
+                        <% } %>
                         <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600">
                             <span>Estimated Refund</span>
-                            <span class="estimated-refund">₹<%= cancelSubtotal || 0 %></span>
+                            <span class="estimated-refund">₹<%= calculatedCancelSubtotal ? calculatedCancelSubtotal.toFixed(2) : '0.00' %></span>
                         </div>
                     </div>
                 </div>
