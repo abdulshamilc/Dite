@@ -18,6 +18,8 @@ import { User } from "./models/userModels.js";
 import bcrypt from "bcryptjs";
 import offerCronJob from "./cron/offerCron.js";
 import couponCronJob from "./cron/coupenCron.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
+
 const app = express();
 
 //Setting limit for the requst
@@ -147,5 +149,7 @@ app.use("/admin",(req, res) => {
 app.use((req, res) => {
   res.status(404).render('pageNotFound'); 
 });
+
+app.use(errorHandler);
 
 app.listen(port, () => console.log(`Server is Running on http://localhost:${port}`));
