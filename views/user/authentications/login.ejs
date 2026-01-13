@@ -88,5 +88,16 @@
         <img src="/images/user/outSideHome/Login.jpg" alt="Login Side Image" />
       </div>
     </div>
+    <script>
+      const inputs = document.querySelectorAll('.form-input');
+      const errorBox = document.querySelector('.error-box');
+      if(errorBox) {
+        inputs.forEach(input => {
+          input.addEventListener('input', () => {
+             errorBox.style.display = 'none';
+          });
+        });
+      }
+    </script>
   </body>
 </html>

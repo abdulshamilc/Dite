@@ -48,7 +48,7 @@
               placeholder="Search products..."
               value="<%= search %>"
             />
-            <i class="fas fa-search search-icon" onclick="performSearch();"></i>
+            <i class="fas <%= (search && search.trim() !== '') ? 'fa-times' : 'fa-search' %> search-icon" id="searchActionBtn"></i>
           </div>
         </form>
       </div>
@@ -56,7 +56,7 @@
       <!-- Filter Section -->
       <div class="filter-section">
         <form id="filterForm" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%;">
-          <!-- Gender Filter -->
+          <!-- Gender Filter - Always show as dropdown or active filter -->
           <% if (gender && gender !== 'ALL') { %>
             <button type="button" class="filter-btn" onclick="clearGender()" style="display: flex; align-items: center; justify-content: space-between;">
               <%= gender %> <i class="fas fa-times ml-2"></i>
@@ -70,7 +70,7 @@
             </select>
           <% } %>
 
-          <!-- Sort Filter -->
+          <!-- Sort Filter - Always show as dropdown or active filter -->
           <% if (sort && sort !== '') { 
                let sortLabel = 'SORT BY';
                if(sort === 'price_asc') sortLabel = 'Price: Low to High';
@@ -90,6 +90,7 @@
               <option value="popular" <%= sort === 'popular' ? 'selected' : '' %>>Most Popular</option>
             </select>
           <% } %>
+          
           <!-- Filter Button to Open Modal -->
           <button type="button" class="filter-btn" id="filterButton">FILTER</button>
         </form>
@@ -265,11 +266,42 @@
         window.location.search = buildQuery(newParams);
       }
 
+      function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        const newParams = { search: '' };
+        window.location.search = buildQuery(newParams);
+      }
+
+      // Dynamic Icon Logic
+      const searchInput = document.getElementById('searchInput');
+      const searchActionBtn = document.getElementById('searchActionBtn');
+      
+      if (searchInput && searchActionBtn) {
+          searchInput.addEventListener('input', function() {
+              if (this.value.trim().length > 0) {
+                  searchActionBtn.classList.remove('fa-search');
+                  searchActionBtn.classList.add('fa-times');
+              } else {
+                  searchActionBtn.classList.remove('fa-times');
+                  searchActionBtn.classList.add('fa-search');
+              }
+              debounceSearch();
+          });
+          
+          searchActionBtn.addEventListener('click', function() {
+              if (this.classList.contains('fa-times')) {
+                  clearSearch();
+              } else {
+                  performSearch();
+              }
+          });
+      }
+
       function debounceSearch() {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
           performSearch();
-        }, 500); // 500ms delay
+        }, 500);
       }
 
       function updatePage(newPage) {
@@ -278,29 +310,35 @@
         window.location.search = params.toString();
       }
 
-      // Search input events
-      document.getElementById('searchInput').addEventListener('input', debounceSearch);
+      // Search input events handled in dynamic logic block above
+      // document.getElementById('searchInput').addEventListener('input', debounceSearch);
       
       document.getElementById('searchInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
-          e.preventDefault(); // Prevent form submission
+          e.preventDefault();
           performSearch();
         }
       });
 
-      // Filter changes
-      document.getElementById('genderFilter').addEventListener('change', function() {
-        const newParams = { gender: this.value };
-        window.location.search = buildQuery(newParams);
-      });
+      // Filter changes - only change if dropdown exists
+      const genderFilter = document.getElementById('genderFilter');
+      if (genderFilter) {
+        genderFilter.addEventListener('change', function() {
+          const newParams = { gender: this.value };
+          window.location.search = buildQuery(newParams);
+        });
+      }
 
-      document.getElementById('sortFilter').addEventListener('change', function() {
-        const newParams = { sort: this.value };
-        window.location.search = buildQuery(newParams);
-      });
+      const sortFilter = document.getElementById('sortFilter');
+      if (sortFilter) {
+        sortFilter.addEventListener('change', function() {
+          const newParams = { sort: this.value };
+          window.location.search = buildQuery(newParams);
+        });
+      }
 
       // Filter Button Logic
-      const filterBtn = document.querySelector('.filter-btn');
+      const filterBtn = document.getElementById('filterButton');
 
       function hasModalFilters() {
         const params = new URLSearchParams(window.location.search);
@@ -380,18 +418,14 @@
       }
 
       function clearFilters() {
-        // Reset selects
         document.getElementById('minPriceSelect').selectedIndex = 0;
-        document.getElementById('maxPriceSelect').selectedIndex = 0;
-        // Reset checkboxes
+        document.getElementById('maxPriceSelect').selectedIndex = document.getElementById('maxPriceSelect').options.length - 1;
         document.querySelectorAll('.filter-group input[type="checkbox"]').forEach(cb => {
           cb.checked = false;
         });
-        // Hide more brands
         document.getElementById('moreBrands').classList.add('brands-hidden');
         const showMoreBtn = document.querySelector('.show-more-btn');
         if (showMoreBtn) showMoreBtn.textContent = 'Show More';
-        // Clear params
         const clearParams = { minPrice: '', maxPrice: '', brands: '', concentrations: '' };
         window.location.search = buildQuery(clearParams);
         closeFilterModal();
@@ -436,28 +470,13 @@
       }
 
       function toggleWishlist(event) {
-        event.stopPropagation(); // Prevent link navigation
+        event.stopPropagation();
         const button = event.currentTarget;
         const productId = button.dataset.productId;
         const isActive = button.classList.contains('active');
-        const url = isActive ? `/wishlist/remove/${productId}` : `/wishlist/add`;
+        const url = isActive ? `/wishlist/remove/${productId}` : `/wishlist/add/${productId}`;
 
-        const body = isActive ? {} : { productId: productId };
-        // Note: original code used `/wishlist/add/${productId}` which is usually GET, but fetch used POST with body.
-        // I noticed in previous turn `addToWishlist` used `/wishlist/add` with body.
-        // The original code in shop.ejs line 1083 used `/wishlist/add/${productId}`.
-        // If the backend expects ID in URL for shop page, I should keep it.
-        // But usually endpoints are consistent.
-        // Let's stick to the URL structure from the existing shop.ejs code "wishlist/add/${productId}" 
-        // IF that is what the original code had (yes, see line 1083).
-        // Wait, line 1083: `const url = isActive ? ... : /wishlist/add/${productId}`.
-        // But line 1091: `body: JSON.stringify({})`. 
-        // So the ID is in the URL.
-        
-        // HOWEVER, to be safe and consistent with my previous edit (which used POST body), 
-        // I should check if the backend supports both or if I should assume the shop.ejs code was correct for its controller.
-        // The user said "sme problum in the shop page".
-        // I'll stick to the URL from the original code: `/wishlist/add/${productId}`.
+        const body = isActive ? {} : {};
         
         fetch(url, {
           method: 'POST',
@@ -495,13 +514,11 @@
             button.title = isActive ? 'Add to Wishlist' : 'Remove from Wishlist';
             showToast(data.message || (isActive ? 'Removed from wishlist!' : 'Added to wishlist!'), 'success');
           } else {
-             // Check if message implies login
              if (data.message && (data.message.toLowerCase().includes('login') || data.message.toLowerCase().includes('authenticated'))) {
                  showLoginPrompt();
              } else {
                  showToast(data.message || 'Failed to update wishlist.', 'error');
              }
-            // Revert UI if failed
             if (isActive) {
               button.classList.add('active');
               const icon = button.querySelector('i');
@@ -522,14 +539,12 @@
         .catch(err => {
           console.error('Error:', err);
           if (err.message !== 'Login required') {
-             // Handle actual parsing error
-             if (err.name === 'SyntaxError') { // HTML returned
+             if (err.name === 'SyntaxError') {
                  showLoginPrompt();
              } else {
                  showToast('An error occurred. Please try again.', 'error');
              }
           }
-          // Revert UI on error
           if (isActive) {
             button.classList.add('active');
             const icon = button.querySelector('i');
@@ -549,12 +564,12 @@
       }
 
       function clearGender() {
-        const newParams = { gender: '' }; // Will be removed by buildQuery logic
+        const newParams = { gender: '' };
         window.location.search = buildQuery(newParams);
       }
 
       function clearSort() {
-        const newParams = { sort: '' }; // Will be removed by buildQuery logic
+        const newParams = { sort: '' };
         window.location.search = buildQuery(newParams);
       }
     </script>

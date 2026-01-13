@@ -306,6 +306,12 @@ const exportOrderPDF = async (req, res) => {
 
 };
 
+// const getMyOrders = async (req,res)=>{
+//   const order = Orders.find({paymentMethod:"online" , totalAmount:{$gt:1000}}) ;
+//   console.log(order.totalAmount) ;
+// }
+// getMyOrders() ;
+
 export {
     getOrders,
     getViewOrders,

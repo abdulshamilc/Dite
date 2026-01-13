@@ -1,4 +1,5 @@
 import Categories from "../../models/categories.js";
+import Products from "../../models/productsModels.js";
 import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get categories
@@ -80,8 +81,12 @@ const addCategorie = async (req, res) => {
       return res.redirect("/admin/categories");
     }
 
-    // Check if category exists
-    const existingCategory = await Categories.findOne({ name });
+    // Check if category exists (case-insensitive)
+    const existingCategory = await Categories.findOne({ 
+      name: { $regex: new RegExp(`^${name}$`, "i") },
+      isDeleted: false 
+    });
+    
     if (existingCategory) {
       req.session.errorMessage = ERROR_MESSAGES.CATEGORY_EXISTS;
       return res.redirect("/admin/categories");
@@ -112,8 +117,13 @@ const editCategory = async (req, res) => {
       return res.redirect("/admin/categories");
     }
 
-    const existingCategory = await Categories.findOne({ name });
-    if (existingCategory && existingCategory != categorie.name) {
+    // Check for duplicate name (case-insensitive), excluding current category
+    const existingCategory = await Categories.findOne({ 
+      name: { $regex: new RegExp(`^${name}$`, "i") },
+      isDeleted: false
+    });
+
+    if (existingCategory && existingCategory._id.toString() !== req.params.id) {
       req.session.errorMessage = ERROR_MESSAGES.CATEGORY_EXISTS;
       return res.redirect("/admin/categories");
     }
@@ -136,6 +146,23 @@ const DeactivateCategory = async (req, res) => {
 
     categorie.isActive = !categorie.isActive;
     await categorie.save();
+
+    // If category is deactivated, unlist all products but save their state.
+    // If activated, restore their previous state.
+    if (!categorie.isActive) {
+        // Validation: Store 'isListed' into 'wasListed', then set 'isListed' to false.
+        await Products.updateMany(
+            { category: categorie._id }, 
+            [ { $set: { wasListed: "$isListed", isListed: false } } ]
+        );
+    } else {
+        // Restore: Set 'isListed' to 'wasListed' (if exists), otherwise keep current. Reset 'wasListed' to null.
+        await Products.updateMany(
+            { category: categorie._id }, 
+            [ { $set: { isListed: { $ifNull: ["$wasListed", "$isListed"] }, wasListed: null } } ]
+        );
+    }
+
     if (categorie.isActive)
       req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_ACTIVATED;
     else req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_DEACTIVATED;
@@ -161,10 +188,34 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+// Get Category Details
+const getCategoryDetails = async (req, res) => {
+  try {
+    const categoryId = req.params.id;
+    const category = await Categories.findById(categoryId);
+
+    if (!category) {
+       // Ideally show a flash message or specific 404
+      return res.status(HTTP_STATUS.NOT_FOUND).redirect('/admin/categories');
+    }
+
+    const products = await Products.find({ category: categoryId, isDeleted: false });
+
+    res.render("admin/categories/categoryDetails", {
+      category,
+      products
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
+  }
+};
+
 export {
     getCategories,
     addCategorie,
     editCategory,
     DeactivateCategory,
-    deleteCategory
+    deleteCategory,
+    getCategoryDetails
 }

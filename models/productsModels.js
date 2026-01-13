@@ -89,6 +89,10 @@ const productSchema = new mongoose.Schema(
       required: true,
       default: true,
     },
+    wasListed: {
+      type: Boolean,
+      default: null,
+    },
   },
   {
     timestamps: true, // automatically adds createdAt and updatedAt

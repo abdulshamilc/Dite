@@ -80,7 +80,7 @@ const getProducts = async (req, res) => {
 // Get add products
 const getAddProducts = async (req, res) => {
   try {
-    const categories = await Categories.find({ isDeleted: false }).lean();
+    const categories = await Categories.find({ isDeleted: false, isActive: true }).lean();
     const products = await Products.find({ isDeleted: false })
       .select("name")
       .lean();
@@ -654,20 +654,45 @@ const getProductDetails = async (req, res) => {
   }
 };
 // Unlist product
+// Unlist product
 const unlistProduct = async (req, res) => {
   try {
-    const product = await Products.findOne({ _id: req.params.id });
+    const product = await Products.findOne({ _id: req.params.id }).populate('category');
+
+    // If we are about to list the product (current status is unlisted)
+    if (!product.isListed) {
+        // Check if category is active
+        if (product.category && !product.category.isActive) {
+            // If checking for warning (not confirmed yet)
+            if (!req.body.force) {
+                return res.json({ 
+                    success: false, 
+                    warning: true, 
+                    message: "The category for this product is currently unlisted. Do you want to proceed and list this product?" 
+                });
+            }
+        }
+    }
 
     product.isListed = !product.isListed;
     await product.save();
+    
+    // Check if request expects JSON (from fetch)
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.json({ success: true, message: product.isListed ? "Product listed successfully" : "Product unlisted successfully" });
+    }
+    
+    // Fallback for form submit
     req.session.successMessage = SUCCESS_MESSAGES.PRODUCT_STATUS_CHANGED;
     res.redirect(`/admin/products/${req.params.id}`);
   } catch (error) {
     console.error(error);
+    if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, error: ERROR_MESSAGES.INTERNAL_ERROR });
+    }
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
-
 // Delete product
 const deleteProduct = async (req, res) => {
   try {

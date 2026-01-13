@@ -37,13 +37,16 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
           <!-- Product Images -->
           <div class="space-y-4">
-            <div class="aspect-[3/4] gradient-bg rounded-lg overflow-hidden">
+            <div id="imageContainer" class="aspect-[3/4] gradient-bg rounded-lg overflow-hidden relative group cursor-none">
               <img
                 id="mainImage"
                 src="<%= product.images && product.images.length > 0 ? product.images[0] : '/images/placeholder.png' %>"
                 alt="<%= product.name %>"
                 class="w-full h-full object-cover"
               />
+              <div id="magnifierLens" class="hidden absolute border-2 border-yellow-500 rounded-lg pointer-events-none z-10 bg-no-repeat bg-cover" 
+                   style="width: 250px; height: 250px; box-shadow: 0 0 10px rgba(0,0,0,0.5);">
+              </div>
             </div>
 
             <div class="grid grid-cols-3 gap-4">
@@ -502,6 +505,64 @@
             updatePriceDisplay(window.currentDiscounted, window.currentBase, window.currentStock, q);
           }
         });
+
+        // Magnifying Lens Logic
+        const container = document.getElementById('imageContainer');
+        const img = document.getElementById('mainImage');
+        const lens = document.getElementById('magnifierLens');
+        const LENS_SIZE = 250; // Match the style width/height
+
+        if (container && img && lens) {
+            
+            container.addEventListener('mousemove', function(e) {
+                // Ensure lens is visible for calculations if needed, though we use const now
+                lens.classList.remove('hidden');
+
+                const rect = container.getBoundingClientRect();
+                let x = e.clientX - rect.left;
+                let y = e.clientY - rect.top;
+
+                // Position lens centered on cursor
+                let left = x - (LENS_SIZE / 2);
+                let top = y - (LENS_SIZE / 2);
+
+                // Boundary checks to keep lens strictly inside the image container
+                if (left < 0) left = 0;
+                if (top < 0) top = 0;
+                if (left + LENS_SIZE > rect.width) left = rect.width - LENS_SIZE;
+                if (top + LENS_SIZE > rect.height) top = rect.height - LENS_SIZE;
+
+                // Set lens position
+                lens.style.left = left + 'px';
+                lens.style.top = top + 'px';
+
+                // Calculate ratio
+                const ZOOM = 2.5;
+                
+                // Correct formula for lens "looking" at the image at cursor position (x, y):
+                // We want the center of the lens (LENS_SIZE/2) to display the pixel 'x' from the original image.
+                // The background is scaled by ZOOM.
+                // Lens_Pixel_Value = (Lens_Coord - Bg_Pos) / ZOOM
+                // We want: x = (LENS_SIZE/2 - Bg_Pos) / ZOOM
+                // => x * ZOOM = LENS_SIZE/2 - Bg_Pos
+                // => Bg_Pos = LENS_SIZE/2 - (x * ZOOM)
+                
+                const bgX = (LENS_SIZE / 2) - (x * ZOOM);
+                const bgY = (LENS_SIZE / 2) - (y * ZOOM);
+
+                lens.style.backgroundImage = `url('${img.src}')`;
+                lens.style.backgroundSize = `${rect.width * ZOOM}px ${rect.height * ZOOM}px`;
+                lens.style.backgroundPosition = `${bgX}px ${bgY}px`;
+            });
+
+            container.addEventListener('mouseenter', function() {
+                lens.classList.remove('hidden');
+            });
+
+            container.addEventListener('mouseleave', function() {
+                lens.classList.add('hidden');
+            });
+        }
       });
 
       function showLoginPrompt() {

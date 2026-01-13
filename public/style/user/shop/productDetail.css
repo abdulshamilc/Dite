@@ -9,6 +9,4 @@
       #mainImage {
         transition: transform 0.3s ease;
       }
-      #mainImage:hover {
-        transform: scale(1.1);
-      }
+      /* Hover effect removed for JS Zoom */

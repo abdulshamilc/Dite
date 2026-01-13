@@ -92,7 +92,7 @@
             </thead>
             <tbody>
               <% categories.forEach(category => { %>
-                <tr class="border-b border-gray-700 hover:bg-gray-900">
+                <tr class="border-b border-gray-700 hover:bg-gray-900 cursor-pointer" onclick="window.location.href='/admin/categories/<%= category._id %>'">
                   <td class="px-4 py-2"><%= category.name %></td>
                   <td class="px-4 py-2"><%= category.description %></td>
                   <td class="px-4 py-2"><%= category.products.length %></td>
@@ -100,55 +100,25 @@
                     <% if (category.isActive) { %>
                       <span class="status-active">Active</span>
                     <% } else { %>
-                      <span class="status-blocked">INACTIVE</span>
+                      <span class="text-red-500 font-semibold">INACTIVE</span>
                     <% } %>
                   </td>
-                  <td class="px-4 py-2 flex space-x-2">
-                    <!-- Edit Button -->
-                    <button
-                      type="button"
-                      class="text-blue-500 hover:text-blue-600 open-edit-modal"
-                      data-id="<%= category._id %>"
-                      data-name="<%= category.name %>"
-                      data-description="<%= category.description %>"
-                      title="Edit"
-                    >
-                      <i data-lucide="edit-3" class="w-5 h-5"></i>
-                    </button>
-
-                    <!-- Active / Inactive Button -->
+                  <td class="px-4 py-2" onclick="event.stopPropagation()">
                     <% if (category.isActive) { %>
-                      <button
-                        type="button"
-                        class="text-red-500 hover:text-red-600 open-block-modal"
-                        data-id="<%= category._id %>"
-                        data-name="<%= category.name %>"
-                        title="Deactivate"
-                      >
-                        <i data-lucide="x" class="w-5 h-5"></i>
-                      </button>
+                        <button class="open-block-modal text-red-500 hover:text-red-400 font-bold text-xl px-2 py-1 transition-colors"
+                            data-id="<%= category._id %>"
+                            data-name="<%= category.name %>"
+                            title="Unlist">
+                            X
+                        </button>
                     <% } else { %>
-                      <button
-                        type="button"
-                        class="text-green-500 hover:text-green-600 open-block-modal"
-                        data-id="<%= category._id %>"
-                        data-name="<%= category.name %>"
-                        title="Activate"
-                      >
-                        <i data-lucide="check" class="w-5 h-5"></i>
-                      </button>
+                        <button class="open-block-modal text-green-500 hover:text-green-400 font-bold text-xl px-2 py-1 transition-colors"
+                            data-id="<%= category._id %>"
+                            data-name="<%= category.name %>"
+                            title="List">
+                            <i data-lucide="check" class="w-5 h-5 inline"></i>
+                        </button>
                     <% } %>
-
-                    <!-- Delete Button -->
-                    <button
-                      type="button"
-                      class="text-red-500 hover:text-red-600 open-delete-modal"
-                      data-id="<%= category._id %>"
-                      data-name="<%= category.name %>"
-                      title="Delete"
-                    >
-                      <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    </button>
                   </td>
                 </tr>
               <% }) %>

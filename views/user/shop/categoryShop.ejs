@@ -44,7 +44,7 @@
             placeholder="Search products..."
             value="<%= search %>"
           />
-          <i class="fas fa-search search-icon" onclick="performSearch()"></i>
+          <i class="fas <%= (search && search.trim() !== '') ? 'fa-times' : 'fa-search' %> search-icon" id="searchActionBtn"></i>
         </div>
       </div>
 
@@ -231,6 +231,37 @@
         window.location.search = buildQuery(newParams);
       }
 
+      function clearSearch() {
+        document.getElementById('searchInput').value = '';
+        const newParams = { search: '' };
+        window.location.search = buildQuery(newParams);
+      }
+
+      // Dynamic Icon Logic
+      const searchInput = document.getElementById('searchInput');
+      const searchActionBtn = document.getElementById('searchActionBtn');
+      
+      if (searchInput && searchActionBtn) {
+          searchInput.addEventListener('input', function() {
+              if (this.value.trim().length > 0) {
+                  searchActionBtn.classList.remove('fa-search');
+                  searchActionBtn.classList.add('fa-times');
+              } else {
+                  searchActionBtn.classList.remove('fa-times');
+                  searchActionBtn.classList.add('fa-search');
+              }
+              debounceSearch();
+          });
+          
+          searchActionBtn.addEventListener('click', function() {
+              if (this.classList.contains('fa-times')) {
+                  clearSearch();
+              } else {
+                  performSearch();
+              }
+          });
+      }
+
       function debounceSearch() {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(() => {
@@ -244,8 +275,8 @@
         window.location.search = params.toString();
       }
 
-      // Search input events
-      document.getElementById('searchInput').addEventListener('input', debounceSearch);
+      // Search input events handled above
+      // document.getElementById('searchInput').addEventListener('input', debounceSearch);
 
       document.getElementById('searchInput').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {

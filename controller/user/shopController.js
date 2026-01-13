@@ -70,7 +70,7 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
     if (search.trim()) {
       const escapedSearch = escapeRegex(search.trim());
       query.$or = [
-        { name: { $regex: new RegExp("^" + escapedSearch, "i") } },
+        { name: { $regex: new RegExp(escapedSearch, "i") } },
         { brand: { $regex: new RegExp(escapedSearch, "i") } },
       ];
     }
@@ -287,7 +287,7 @@ const getShop = async (req, res) => {
       const escapedSearch = escapeRegex(search.trim());
       searchMatch = {
         $or: [
-          { name: { $regex: new RegExp("^" + escapedSearch, "i") } },
+          { name: { $regex: new RegExp(escapedSearch, "i") } },
           { brand: { $regex: new RegExp(escapedSearch, "i") } },
         ],
       };

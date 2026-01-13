@@ -54,7 +54,8 @@ import {
     addCategorie,
     DeactivateCategory,
     deleteCategory,
-    editCategory
+    editCategory,
+    getCategoryDetails
 } from '../controller/admin/categoriesController.js';
 
 import {
@@ -136,6 +137,7 @@ router.get('/customers/:id',isAuthenticatedAdmin,customerDetails)
 
 // Categories
 router.get('/categories',pagination,isAuthenticatedAdmin,getCategories)  
+router.get('/categories/:id',isAuthenticatedAdmin,getCategoryDetails)
 router.post('/categories/addCategorie',isAuthenticatedAdmin,addCategorie)  
 router.post('/categories/active/:id',isAuthenticatedAdmin,DeactivateCategory)
 router.post('/categories/delete/:id',isAuthenticatedAdmin,deleteCategory)
