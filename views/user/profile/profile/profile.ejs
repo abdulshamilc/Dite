@@ -24,7 +24,7 @@
         
 
         <div class="avatar-container">
-          <img src="<%= user.image ? user.image : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=3a2f25&color=d3a35b&size=128&bold=true` %>" alt="Profile Picture" class="avatar-lg" id="avatarLg">
+          <img src="<%= user.image  %>" alt="Profile Picture" class="avatar-lg" id="avatarLg">
           <button type="button" class="image-overlay" onclick="document.getElementById('imageUploadForm').click()" title="Change Photo">📷</button>
         </div>
 
@@ -318,7 +318,7 @@
         const data = await response.json();
 
         if (response.ok && data.success) {
-          console.log(`Verifying OTP: ${otp} for ${isCurrentOTP ? 'current' : 'new'} email`);
+
           showMessage(isCurrentOTP ? 'Current email verified successfully!' : 'New email verified successfully!', 'success');
           
           if (isCurrentOTP) {
@@ -436,23 +436,26 @@
             body: formData
         });
 
-        // Depending on how backend responds (HTML or JSON? Usually existing express apps redirect. Fetch follows redirects automatically but we might want to reload).
-        if (response.redirected) {
-             window.location.href = response.url;
-             return;
-        }
-        
-        // If it returns HTML (common in old express apps), we might replace document or assume success.
-        // Assuming your controller redirects on success or renders profile.
-        // If it renders, we can reload.
-        // Let's reload to be safe if successful status.
         if (response.ok) {
-           showMessage('Profile updated successfully!', 'success');
-           setTimeout(() => {
-             window.location.reload();
-           }, 1000);
+           const data = await response.json();
+           if (data.success) {
+             showMessage(data.message || 'Profile updated successfully!', 'success');
+             setTimeout(() => {
+               window.location.reload();
+             }, 1000);
+           } else {
+             showMessage(data.message || 'Failed to update profile.', 'error');
+             submitBtn.disabled = false;
+             submitBtn.innerText = originalText;
+           }
         } else {
-           showMessage('Failed to update profile.', 'error');
+           // Handle HTTP errors that might not return JSON or unexpected errors
+           let message = 'Failed to update profile.';
+           try {
+              const data = await response.json();
+              if (data.message) message = data.message;
+           } catch(e) {}
+           showMessage(message, 'error');
            submitBtn.disabled = false;
            submitBtn.innerText = originalText;
         }

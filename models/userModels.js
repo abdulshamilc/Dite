@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
     },
     image:{
       type: String,
+      default: "/images/icons/DefaultProfile.jpg"
     },
     totalOrders: {
       type: Number,

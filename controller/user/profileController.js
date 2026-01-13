@@ -36,6 +36,7 @@ const getProfile = async (req, res) => {
 };
 
 // Post profile
+// Post profile
 const postProfile = async (req, res) => {
   try {
     const { name, gender, email, phone } = req.body;
@@ -43,45 +44,45 @@ const postProfile = async (req, res) => {
     const user = await User.findOne({ email: req.session.user });
 
     if (!user) {
-      return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.USER_NOT_FOUND);
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.USER_NOT_FOUND });
     }
-
+    
     let imageUrl = user.image; // keep existing one
     if (req.file) {
-      imageUrl = req.file.path || req.file.secure_url || req.file.url;
-
+      imageUrl = req.file.secure_url || req.file.url;
     }
-
+    
     // Phone Validation
-    const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
-    if (!phoneRegex.test(phone)) {
-      req.session.error = ERROR_MESSAGES.INVALID_PHONE;
-      return res.redirect("/profile");
+    if(phone){
+      const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
+      
+      if (!phoneRegex.test(phone)) {
+        return res.json({ success: false, message: ERROR_MESSAGES.INVALID_PHONE });
+    }
     }
 
     const isChanged =
-      user.name !== name ||
-      user.gender !== gender ||
-      user.phone !== phone ||
-      user.image !== imageUrl;
+      user.name != name ||
+      user.gender != gender ||
+      user.phone != phone ||
+      user.image != imageUrl;
 
     if (isChanged) {
       // Update fields
-
       user.name = name;
       user.gender = gender;
       user.phone = phone || "";
       user.image = imageUrl;
 
       await user.save();
-      req.session.success = SUCCESS_MESSAGES.PROFILE_UPDATED;
-    } else req.session.success = null;
+      return res.json({ success: true, message: SUCCESS_MESSAGES.PROFILE_UPDATED });
+    } 
+    
+    return res.json({ success: true, message: "No changes made" });
 
-    res.redirect("/profile");
   } catch (error) {
     console.error(error);
-    req.session.error = ERROR_MESSAGES.PROFILE_UPDATE_ERROR;
-    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 
