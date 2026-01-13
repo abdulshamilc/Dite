@@ -1,3 +1,4 @@
+import { ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 import { User } from "../../models/userModels.js";
 
 // Get customers
@@ -81,7 +82,7 @@ const getcustomers = async (req, res) => {
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -95,7 +96,7 @@ const blockUser = async (req, res) => {
     res.redirect("/admin/customers");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -146,7 +147,7 @@ const customerDetails = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 

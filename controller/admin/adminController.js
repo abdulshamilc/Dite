@@ -3,6 +3,7 @@ import sendMail from "../../services/mailer.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import passwordSchema from "../../validators/resetPasswordValidator.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Page not found
 const pageNotFound = (req, res) => {
@@ -24,18 +25,18 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Checking required fields
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.EMAIL_REQUIRED });
     if (!password)
-      return res.status(400).json({ message: "Password is required" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.PASSWORD_REQUIRED });
 
     // Verifying Admin Email
     const admin = await Admin.findOne({ email: email.toLowerCase() });
-    if (!admin) return res.status(400).json({ message: "Invalid Email" });
+    if (!admin) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_EMAIL });
 
     // Validating the password
     const validatePassword = await bcrypt.compare(password, admin.password);
     if (!validatePassword)
-      return res.status(400).json({ message: "Invalid Password" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_PASSWORD });
 
     // Saving admin On session
     req.session.admin = {
@@ -50,11 +51,11 @@ const login = async (req, res) => {
     req.session.save((err) => {
       if (err) {
         console.error("Session save error:", err);
-        return res.status(500).json({ message: "Session error" });
+        return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.SESSION_ERROR });
       }
       //  success response
       return res.json({
-        message: "Login successful",
+        message: SUCCESS_MESSAGES.LOGIN_SUCCESS,
         adminId: admin._id,
         redirect: returnTo,
       });
@@ -62,8 +63,8 @@ const login = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res
-      .status(500)
-      .json({ message: "Server error, please try again later" });
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 // Get forgot password
@@ -98,21 +99,21 @@ const forgetPassword = async (req, res) => {
     const email = req.body.email;
 
     // Checking required fields
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.EMAIL_REQUIRED });
 
     // Verifying the Email
     const admin = await Admin.findOne({ email: email.toLowerCase() });
-    if (!admin) return res.status(400).json({ message: "Invalid Email" });
+    if (!admin) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_EMAIL });
 
     // validating Role
     if (admin.role != "admin")
-      return res.status(400).json({ message: "Access Denied " });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.ACCESS_DENIED });
 
     await genarateOTP(email);
     req.session.email = email;
 
     return res.json({
-      message: "OTP sent successfully to your email",
+      message: SUCCESS_MESSAGES.OTP_SENT,
       adminId: admin._id,
       // redirect:"/"
       redirect: "/admin/verify-otp",
@@ -120,8 +121,8 @@ const forgetPassword = async (req, res) => {
   } catch (error) {
     console.error("Error in forgetPassword:", error);
     return res
-      .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ message: ERROR_MESSAGES.INTERNAL_ERROR, error: error.message });
   }
 };
 
@@ -142,13 +143,13 @@ const PostOtpVerification = async (req, res) => {
       email: req.session.email,
     }).sort({ createdAt: -1 });
 
-    if (!EnterdOtp) return res.status(400).json({ message: "OTP is required" });
+    if (!EnterdOtp) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.OTP_REQUIRED });
 
     if (!adminOtp)
-      return res.status(400).json({ message: "OTP expired or not found" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.OTP_INVALID_EXPIRED });
 
     if (EnterdOtp != adminOtp.otp)
-      return res.status(400).json({ message: "OTP is Incorrect" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.OTP_INCORRECT });
 
     const email = req.session.email;
     const action = "Reset Pasword";
@@ -171,7 +172,7 @@ const PostOtpVerification = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 
@@ -195,9 +196,9 @@ const getResetPasword = async (req, res) => {
       successMsg: null,
     });
   } catch (error) {
-    let msg = "Invalid reset link.";
+    let msg = ERROR_MESSAGES.RESET_LINK_INVALID;
     if (error.name === "TokenExpiredError")
-      msg = "Reset link expired. Please request a new one.";
+      msg = ERROR_MESSAGES.RESET_LINK_EXPIRED;
 
     return res.render("admin/auth/resetForgetPassword", {
       email: null,
@@ -227,10 +228,10 @@ const postResetPassword = async (req, res) => {
     } catch (err) {
       if (err.name === "TokenExpiredError") {
         return res
-          .status(400)
-          .json({ message: "Reset link expired. Please request a new one." });
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ message: ERROR_MESSAGES.RESET_LINK_EXPIRED });
       }
-      return res.status(400).json({ message: "Invalid reset token." });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.RESET_LINK_INVALID });
     }
 
     const email = decoded.email;
@@ -238,8 +239,8 @@ const postResetPassword = async (req, res) => {
     const admin = await Admin.findOne({ email: email });
     const isSame = await bcrypt.compare(newPassword, admin.password);
     if (isSame) {
-      return res.status(400).json({
-        message: "New password cannot be the same as the old password.",
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        message: ERROR_MESSAGES.PASSWORD_SAME,
       });
     }
 
@@ -250,14 +251,14 @@ const postResetPassword = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Password reset successful. You can now log in.",
+      message: SUCCESS_MESSAGES.PASSWORD_RESET_SUCCESS,
       redirect: "/admin/login",
     });
   } catch (error) {
     console.error("Error in postResetPassword:", error);
     return res
       .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+      .json({ message: ERROR_MESSAGES.INTERNAL_ERROR, error: error.message });
   }
 };
 
@@ -272,7 +273,7 @@ const logOut = (req, res) => {
     return res.redirect("/admin");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Internal server error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 

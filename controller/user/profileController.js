@@ -9,6 +9,7 @@ import Wallet from "../../models/walletModel.js";
 import mongoose from "mongoose";
 import Review from "../../models/reviewModel.js";
 import Notification from "../../models/notificationModel.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get profile
 const getProfile = async (req, res) => {
@@ -42,7 +43,7 @@ const postProfile = async (req, res) => {
     const user = await User.findOne({ email: req.session.user });
 
     if (!user) {
-      return res.status(404).send("User not found");
+      return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.USER_NOT_FOUND);
     }
 
     let imageUrl = user.image; // keep existing one
@@ -54,7 +55,7 @@ const postProfile = async (req, res) => {
     // Phone Validation
     const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
     if (!phoneRegex.test(phone)) {
-      req.session.error = "Enter a valid phone number (min 6 digits)";
+      req.session.error = ERROR_MESSAGES.INVALID_PHONE;
       return res.redirect("/profile");
     }
 
@@ -73,14 +74,14 @@ const postProfile = async (req, res) => {
       user.image = imageUrl;
 
       await user.save();
-      req.session.success = "Profile Has Been Updated";
+      req.session.success = SUCCESS_MESSAGES.PROFILE_UPDATED;
     } else req.session.success = null;
 
     res.redirect("/profile");
   } catch (error) {
     console.error(error);
-    req.session.error = "Something went wrong while updating profile";
-    res.status(500).send("Something went wrong");
+    req.session.error = ERROR_MESSAGES.PROFILE_UPDATE_ERROR;
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -99,8 +100,8 @@ const changeEmail = async (req, res) => {
 
     if (!email)
       return res
-        .status(400)
-        .json({ success: false, message: "Enter New Email" });
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .json({ success: false, message: ERROR_MESSAGES.EMAIL_REQUIRED });
     await generateOTP(
       email,
       "Verify Your Email Change",
@@ -108,14 +109,14 @@ const changeEmail = async (req, res) => {
       action
     );
 
-    return res.status(200).json({
-      message: "OTP sent to your current email",
+    return res.status(HTTP_STATUS.OK).json({
+      message: SUCCESS_MESSAGES.OTP_SENT,
       success: true,
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
-      message: "Failed to send OTP",
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      message: ERROR_MESSAGES.OTP_SEND_ERROR,
       success: false,
     });
   }
@@ -141,7 +142,7 @@ const verifyChangeEmail = async (req, res) => {
       return res.json({
         success: false,
         redirect: "/profile",
-        message: "Email Already Exists",
+        message: ERROR_MESSAGES.EMAIL_ALREADY_EXISTS,
       });
 
     if (!otp || otp.length !== 6) {
@@ -155,7 +156,7 @@ const verifyChangeEmail = async (req, res) => {
     if (!otpRecord) {
       return res.json({
         success: false,
-        message: "OTP Not found Or Expired",
+        message: ERROR_MESSAGES.OTP_INVALID_EXPIRED,
       });
     }
 
@@ -171,7 +172,7 @@ const verifyChangeEmail = async (req, res) => {
       req.session.currentEmailVerified = true;
       res.json({
         success: true,
-        message: "Current Email OTP Verification Completed!",
+        message: SUCCESS_MESSAGES.EMAIL_VERIFIED_CURRENT,
       });
     } else if (type === "new") {
       user.email = email;
@@ -179,14 +180,14 @@ const verifyChangeEmail = async (req, res) => {
       req.session.user = email;
       res.json({
         success: true,
-        message: "New Email OTP Verification Completed!",
+        message: SUCCESS_MESSAGES.EMAIL_VERIFIED_NEW,
       });
     } else {
       res.json({ success: false, message: "Invalid verification type." });
     }
   } catch (err) {
     console.error(err);
-    res.status(500).json({ success: false, message: "Server Error" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 
@@ -248,7 +249,7 @@ const postAddAddress = async (req, res) => {
       !country ||
       !phone
     ) {
-      req.session.error = "Please fill in required fields !!";
+      req.session.error = ERROR_MESSAGES.REQUIRED_FIELDS_MISSING;
       return res.redirect("/address");
     }
 
@@ -277,11 +278,11 @@ const postAddAddress = async (req, res) => {
 
     await newAdress.save();
 
-    req.session.success = "Address added successfully!";
+    req.session.success = SUCCESS_MESSAGES.ADDRESS_ADDED;
     res.redirect("/address");
   } catch (error) {
     console.error(error);
-    req.session.error = "Something Occure While Adding New Adress";
+    req.session.error = ERROR_MESSAGES.ADDRESS_ADD_ERROR;
     res.redirect("/address");
   }
 };
@@ -304,7 +305,7 @@ const postEditAddress = async (req, res) => {
     } = req.body;
 
     const address = await Address.findOne({ _id: addressId });
-    if (!address) return res.status(404).send("Address not found");
+    if (!address) return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.ADDRESS_NOT_FOUND);
 
     if (
       !fullName ||
@@ -316,7 +317,7 @@ const postEditAddress = async (req, res) => {
       !country ||
       !phone
     ) {
-      req.session.error = "Please fill in required fields !!";
+      req.session.error = ERROR_MESSAGES.REQUIRED_FIELDS_MISSING;
       return res.redirect("/address");
     }
 
@@ -352,7 +353,7 @@ const postSetDefaultAddress = async (req, res) => {
     const addressId = req.body.addressId;
 
     const address = await Address.findOne({ _id: addressId });
-    if (!address) return res.status(404).send("Address not found");
+    if (!address) return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.ADDRESS_NOT_FOUND);
 
     await Address.updateMany(
       { userId: address.userId, isDeleted: false },
@@ -372,7 +373,7 @@ const postDeleteAddress = async (req, res) => {
     const addressId = req.params.id;
 
     const address = await Address.findOne({ _id: addressId });
-    if (!address) return res.status(404).send("Address not found");
+    if (!address) return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.ADDRESS_NOT_FOUND);
 
     address.isDeleted = true;
     await address.save();
@@ -447,7 +448,7 @@ const getOrders = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching order history:", error);
-    res.status(500).send("Internal Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 // Get order details
@@ -510,7 +511,7 @@ const getCancelOrder = async (req, res) => {
 
     const order = await Order.findOne({ _id: orderId });
     if (!order) {
-      req.session.error = "Order not found.";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect("/orders");
     }
 
@@ -536,7 +537,7 @@ const getCancelOrder = async (req, res) => {
     });
   } catch (err) {
     console.error("Error loading cancel confirmation page:", err);
-    res.status(500).send("Internal Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -824,7 +825,7 @@ const getCancelSelect = async (req, res) => {
     });
   } catch (err) {
     console.error("Error loading cancel select page:", err);
-    res.status(500).send("Internal Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -835,7 +836,7 @@ const postCancelSelect = async (req, res) => {
     const { cancelledItems: cancelledItemsStr } = req.body;
 
     if (!cancelledItemsStr) {
-      req.session.error = "No items selected for cancellation.";
+      req.session.error = ERROR_MESSAGES.CANCEL_NO_SELECTION;
       return res.redirect(`/orders/${orderId}`);
     }
 
@@ -843,7 +844,7 @@ const postCancelSelect = async (req, res) => {
     try {
       parsedCancelledItems = JSON.parse(cancelledItemsStr);
     } catch (e) {
-      req.session.error = "Invalid data format.";
+      req.session.error = ERROR_MESSAGES.INVALID_DATA;
       return res.redirect(`/orders/${orderId}`);
     }
 
@@ -851,13 +852,13 @@ const postCancelSelect = async (req, res) => {
       !Array.isArray(parsedCancelledItems) ||
       parsedCancelledItems.length === 0
     ) {
-      req.session.error = "Invalid selection. Please try again.";
+      req.session.error = ERROR_MESSAGES.INVALID_SELECTION;
       return res.redirect(`/orders/${orderId}`);
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
-      req.session.error = "Order not found.";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.status(404).redirect("/orders");
     }
 
@@ -895,7 +896,7 @@ const postCancelSelect = async (req, res) => {
       .filter(Boolean);
 
     if (fullCancelledItems.length === 0) {
-      req.session.error = "No valid items to cancel. Please try again.";
+      req.session.error = ERROR_MESSAGES.CANCEL_NO_VALID_ITEMS;
       return res.redirect(`/cancelOrder/${orderId}`);
     }
 
@@ -904,8 +905,8 @@ const postCancelSelect = async (req, res) => {
     res.redirect(`/cancelOrder/${orderId}`);
   } catch (error) {
     console.error("Cancel order error:", error);
-    req.session.error = "An error occurred. Please try again.";
-    res.status(500).redirect(`/orders/${req.params.id}`);
+    req.session.error = ERROR_MESSAGES.INTERNAL_ERROR;
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).redirect(`/orders/${req.params.id}`);
   }
 };
 
@@ -925,7 +926,7 @@ const getorderInvoce = async (req, res) => {
     res.send(pdfBuffer);
   } catch (err) {
     console.error(err);
-    res.status(500).send("Error generating invoice");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INVOICE_ERROR);
   }
 };
 
@@ -939,7 +940,7 @@ const getReturn = async (req, res) => {
 
     const order = await Order.findById(orderId);
     if (!order) {
-      req.session.error = "Order not found.";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect("/orders");
     }
 
@@ -964,7 +965,7 @@ const getReturn = async (req, res) => {
     });
   } catch (err) {
     console.error("Error loading return confirmation page:", err);
-    res.status(500).send("Internal Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -1044,7 +1045,7 @@ const getReturnSelect = async (req, res) => {
     });
   } catch (err) {
     console.error("Error loading return select page:", err);
-    res.status(500).send("Internal Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -1055,7 +1056,7 @@ const postReturnSelect = async (req, res) => {
     const { returnedItems: returnedItemsStr } = req.body;
 
     if (!returnedItemsStr) {
-      req.session.error = "No items selected for return.";
+      req.session.error = ERROR_MESSAGES.RETURN_NO_SELECTION;
       return res.redirect(`/orders/${orderId}`);
     }
 
@@ -1063,7 +1064,7 @@ const postReturnSelect = async (req, res) => {
     try {
       parsedReturnedItems = JSON.parse(returnedItemsStr);
     } catch (e) {
-      req.session.error = "Invalid data format.";
+      req.session.error = ERROR_MESSAGES.INVALID_DATA;
       return res.redirect(`/orders/${orderId}`);
     }
 
@@ -1071,13 +1072,13 @@ const postReturnSelect = async (req, res) => {
       !Array.isArray(parsedReturnedItems) ||
       parsedReturnedItems.length === 0
     ) {
-      req.session.error = "Invalid selection. Please try again.";
+      req.session.error = ERROR_MESSAGES.INVALID_SELECTION;
       return res.redirect(`/orders/${orderId}`);
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
-      req.session.error = "Order not found.";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.status(404).redirect("/orders");
     }
 
@@ -1115,7 +1116,7 @@ const postReturnSelect = async (req, res) => {
       .filter(Boolean);
 
     if (fullReturnItems.length === 0) {
-      req.session.error = "No valid items to return. Please try again.";
+      req.session.error = ERROR_MESSAGES.RETURN_NO_VALID_ITEMS;
       return res.redirect(`/return/${orderId}`);
     }
 
@@ -1124,8 +1125,8 @@ const postReturnSelect = async (req, res) => {
     res.redirect(`/return/${orderId}`);
   } catch (error) {
     console.error("Return order error:", error);
-    req.session.error = "An error occurred. Please try again.";
-    res.status(500).redirect(`/orders/${req.params.id}`);
+    req.session.error = ERROR_MESSAGES.INTERNAL_ERROR;
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).redirect(`/orders/${req.params.id}`);
   }
 };// Confirm return
 const confirmReturn = async (req, res) => {
@@ -1303,7 +1304,7 @@ const getDeleteAcount = async (req, res) => {
     console.error("Error sending OTP:", error);
     req.flash(
       "errorMsg",
-      "Failed to send verification code. Please try again."
+      ERROR_MESSAGES.OTP_SEND_ERROR
     );
     res.render("user/deleteAccount", {
       title: "Delete Account",
@@ -1360,7 +1361,7 @@ const userlogOut = (req, res) => {
     return res.redirect("/");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Internal server error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 

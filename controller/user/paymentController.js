@@ -5,6 +5,7 @@ import Wallet from "../../models/walletModel.js";
 import Order from "../../models/ordersModel.js";
 import Cart from "../../models/cartModel.js";
 import Products from "../../models/productsModels.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Create Razorpay Order (for /createOrder)
 const createRazorpayOrder = async (req, res) => {
@@ -13,12 +14,12 @@ const createRazorpayOrder = async (req, res) => {
     const user = await User.findOne({ email: req.session.user });
     if (!user) {
       console.error("Payment Error [Anonymous User]: User not authenticated");
-      return res.status(401).json({ success: false, message: "User not authenticated. Please log in." });
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, message: ERROR_MESSAGES.USER_NOT_AUTHENTICATED });
     }
     const { amount } = req.body;
     if (!amount || amount < 1) {
       console.error(`Payment Error [User: ${user._id}]: Invalid amount ${amount}`);
-      return res.status(400).json({ success: false, message: "Order amount too low (min Rs. 1)." });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.AMOUNT_TOO_LOW });
     }
 
     // Pre-Payment Stock Validation
@@ -27,22 +28,22 @@ const createRazorpayOrder = async (req, res) => {
         for (const item of cart.items) {
             const product = await Products.findById(item.productId._id);
             if (!product || product.isDeleted || !product.isListed) {
-                return res.status(400).json({ 
+                return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
                     success: false, 
-                    message: `Product ${product ? product.name : 'Unknown'} is currently unavailable.` 
+                    message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE 
                 });
             }
             const variant = product.variants.find(v => v.mlSize === Number(item.size));
             if (!variant) {
-                 return res.status(400).json({ 
+                 return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
                     success: false, 
-                    message: `Variant (Size: ${item.size}) for ${product.name} is no longer available.` 
+                    message: ERROR_MESSAGES.VARIANT_UNAVAILABLE 
                 });
             }
             if (variant.stock < item.quantity) {
-                 return res.status(400).json({ 
+                 return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
                     success: false, 
-                    message: `Sorry, only ${variant.stock} units of ${product.name} (Size: ${item.size}) are left in stock.` 
+                    message: ERROR_MESSAGES.STOCK_INSUFFICIENT
                 });
             }
         }
@@ -67,7 +68,7 @@ const createRazorpayOrder = async (req, res) => {
     });
   } catch (error) {
     console.error(`Payment Error [User: ${user?._id || 'anonymous'}]:`, error);
-    res.status(500).json({ success: false, message: "Server error: Failed to create Razorpay order. Please try again later." });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.PAYMENT_CREATION_FAILED });
   }
 };
 
@@ -77,7 +78,7 @@ const verifyRazorpayPayment = async (req, res) => {
     const { razorpay_payment_id, razorpay_order_id, razorpay_signature } = req.body;
     if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
       console.error("Payment Error [Missing Details]: Invalid payment data");
-      return res.status(400).json({ success: false, message: "Missing payment details for verification." });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.PAYMENT_DETAILS_MISSING });
     }
     const expectedSignature = crypto
       .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
@@ -87,11 +88,11 @@ const verifyRazorpayPayment = async (req, res) => {
       return res.json({ success: true });
     } else {
       console.error(`Payment Error [Signature Mismatch]: Invalid signature for payment ${razorpay_payment_id}`);
-      return res.status(400).json({ success: false, message: "Invalid payment signature. Payment may be tampered." });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.SIGNATURE_MISMATCH });
     }
   } catch (error) {
     console.error("Payment Error [Verification]:", error);
-    return res.status(500).json({ success: false, message: "Server error: Payment verification failed. Contact support." });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.PAYMENT_VERIFICATION_FAILED });
   }
 };
 
@@ -101,16 +102,16 @@ const verifyRazorpayPayment = async (req, res) => {
 const retryPaymentOrder = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.session.user });
-    if (!user) return res.status(401).json({ success: false, message: "Authentication required" });
+    if (!user) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, message: ERROR_MESSAGES.USER_NOT_AUTHENTICATED });
 
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
 
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
-    if (order.userId.toString() !== user._id.toString()) return res.status(403).json({ success: false, message: "Unauthorized" });
+    if (!order) return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.ORDER_NOT_FOUND });
+    if (order.userId.toString() !== user._id.toString()) return res.status(HTTP_STATUS.FORBIDDEN).json({ success: false, message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS });
 
     if (order.paymentInfo.paymentStatus === 'Paid') {
-      return res.status(400).json({ success: false, message: "Order is already paid" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.ORDER_ALREADY_PAID });
     }
     
     // Create Razorpay order
@@ -140,7 +141,7 @@ const retryPaymentOrder = async (req, res) => {
 
   } catch (error) {
     console.error("Retry Payment Creation Error:", error);
-    res.status(500).json({ success: false, message: "Failed to initiate retry payment" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.RETRY_PAYMENT_ERROR });
   }
 };
 
@@ -155,11 +156,11 @@ const verifyRetryPayment = async (req, res) => {
       .digest("hex");
 
     if (signature !== razorpay_signature) {
-      return res.status(400).json({ success: false, message: "Invalid payment signature" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.SIGNATURE_MISMATCH });
     }
 
     const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ success: false, message: "Order not found" });
+    if (!order) return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.ORDER_NOT_FOUND });
 
     // Update order
     order.paymentInfo.paymentStatus = 'Paid';
@@ -180,11 +181,11 @@ const verifyRetryPayment = async (req, res) => {
 
     await order.save();
 
-    res.json({ success: true, message: "Payment successful" });
+    res.json({ success: true, message: SUCCESS_MESSAGES.RETRY_PAYMENT_SUCCESS });
 
   } catch (error) {
     console.error("Verify Retry Error:", error);
-    res.status(500).json({ success: false, message: "Payment verification failed" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.PAYMENT_VERIFICATION_FAILED });
   }
 };
 

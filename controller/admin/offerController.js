@@ -2,6 +2,7 @@ import Offer from "../../models/offerModel.js";
 import Products from "../../models/productsModels.js";
 import Categories from "../../models/categories.js";
 import mongoose from "mongoose";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get offers
 const getOffers = async (req, res) => {
@@ -205,36 +206,36 @@ const createOffer = async (req, res) => {
     const targetIds = rawTargetIds.filter((id) => id && id.trim() !== "");
 
     if (!name?.trim()) {
-      req.session.error = "Offer name is required";
+      req.session.error = ERROR_MESSAGES.OFFER_NAME_REQUIRED;
       return res.redirect("/admin/offers");
     }
     if (!discountType || !["flat", "percentage"].includes(discountType)) {
-      req.session.error = "Valid discount type is required";
+      req.session.error = ERROR_MESSAGES.INVALID_DISCOUNT_TYPE;
       return res.redirect("/admin/offers");
     }
     const discountNum = parseFloat(discountValue);
     if (isNaN(discountNum) || discountNum <= 0) {
-      req.session.error = "Discount value must be greater than 0";
+      req.session.error = ERROR_MESSAGES.DISCOUNT_VALUE_INVALID;
       return res.redirect("/admin/offers");
     }
     if (!appliesTo || !["product", "category"].includes(appliesTo)) {
       req.session.error =
-        "Must specify if offer applies to product or category";
+        ERROR_MESSAGES.OFFER_APPLICABILITY_REQUIRED;
       return res.redirect("/admin/offers");
     }
     if (
       !targetIds?.length ||
       targetIds.some((id) => !mongoose.Types.ObjectId.isValid(id))
     ) {
-      req.session.error = "Valid target ID(s) are required";
+      req.session.error = ERROR_MESSAGES.INVALID_TARGET_IDS;
       return res.redirect("/admin/offers");
     }
     if (!startDate) {
-      req.session.error = "Start date is required";
+      req.session.error = ERROR_MESSAGES.DATES_REQUIRED;
       return res.redirect("/admin/offers");
     }
     if (!endDate) {
-      req.session.error = "End date is required";
+      req.session.error = ERROR_MESSAGES.END_DATE_REQUIRED;
       return res.redirect("/admin/offers");
     }
     const start = new Date(startDate);
@@ -243,16 +244,16 @@ const createOffer = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     if (start < today) {
-      req.session.error = "Start date cannot be in the past";
+      req.session.error = ERROR_MESSAGES.START_DATE_PAST;
       return res.redirect("/admin/offers");
     }
 
     if (end <= start) {
-      req.session.error = "End date must be after start date";
+      req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
       return res.redirect("/admin/offers");
     }
     if (discountType === "percentage" && discountNum > 100) {
-      req.session.error = "Percentage discount cannot exceed 100%";
+      req.session.error = ERROR_MESSAGES.PERCENTAGE_EXCEEDED;
       return res.redirect("/admin/offers");
     }
 
@@ -264,7 +265,7 @@ const createOffer = async (req, res) => {
         isListed: true,
       });
       if (validProducts !== targetIds.length) {
-        req.session.error = "One or more selected products are invalid";
+        req.session.error = ERROR_MESSAGES.INVALID_PRODUCTS_SELECTED;
         return res.redirect("/admin/offers");
       }
     } else {
@@ -274,7 +275,7 @@ const createOffer = async (req, res) => {
         isDeleted: false,
       });
       if (!validCategory) {
-        req.session.error = "Selected category is invalid";
+        req.session.error = ERROR_MESSAGES.INVALID_CATEGORY_SELECTED;
         return res.redirect("/admin/offers");
       }
     }
@@ -301,7 +302,7 @@ const createOffer = async (req, res) => {
     await recalculatePrices(targetIds, targetModelName);
 
     // Redirect with success message (handled in GET)
-    req.session.success = "Offer created successfully!";
+    req.session.success = SUCCESS_MESSAGES.OFFER_CREATED;
     res.redirect("/admin/offers");
   } catch (error) {
     console.error("Error creating offer:", error);
@@ -335,13 +336,13 @@ const getOfferDetails = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid offer ID";
+      req.session.error = ERROR_MESSAGES.INVALID_OFFER_ID;
       return res.redirect("/admin/offers");
     }
 
     const offer = await Offer.findById(id);
     if (!offer) {
-      req.session.error = "Offer not found";
+      req.session.error = ERROR_MESSAGES.OFFER_NOT_FOUND;
       return res.redirect("/admin/offers");
     }
 
@@ -383,14 +384,14 @@ const getOfferDetails = async (req, res) => {
 const toggleOfferStatus = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      req.session.error = "Invalid offer ID";
+      req.session.error = ERROR_MESSAGES.INVALID_OFFER_ID;
       return res.redirect("/admin/offers");
     }
 
     const offer = await Offer.findOne({ _id: req.params.id });
 
     if (!offer) {
-      req.session.error = "Offer not found";
+      req.session.error = ERROR_MESSAGES.OFFER_NOT_FOUND;
       return res.redirect("/admin/offers");
     }
 
@@ -400,8 +401,8 @@ const toggleOfferStatus = async (req, res) => {
     await recalculatePrices(offer.targetId, offer.targetModel);
 
     req.session.success = offer.isActive
-      ? "Offer activated successfully!"
-      : "Offer deactivated successfully!";
+      ? SUCCESS_MESSAGES.OFFER_ACTIVATED
+      : SUCCESS_MESSAGES.OFFER_DEACTIVATED;
     res.redirect(`/admin/offers/${req.params.id}`);
   } catch (error) {
     console.error("Error toggling offer status:", error);
@@ -417,19 +418,19 @@ const updateOfferEndDate = async (req, res) => {
     const { endDate } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid offer ID";
+      req.session.error = ERROR_MESSAGES.INVALID_OFFER_ID;
       return res.redirect("/admin/offers");
     }
 
     if (!endDate) {
-      req.session.error = "End date is required";
+      req.session.error = ERROR_MESSAGES.END_DATE_REQUIRED;
       return res.redirect(`/admin/offers/${id}`);
     }
 
     const offer = await Offer.findById(id);
 
     if (!offer) {
-      req.session.error = "Offer not found";
+      req.session.error = ERROR_MESSAGES.OFFER_NOT_FOUND;
       return res.redirect("/admin/offers");
     }
 
@@ -438,12 +439,12 @@ const updateOfferEndDate = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     if (newEnd < today) {
-      req.session.error = "End date cannot be in the past";
+      req.session.error = ERROR_MESSAGES.START_DATE_PAST;
       return res.redirect(`/admin/offers/${id}`);
     }
 
     if (newEnd <= offer.startDate) {
-      req.session.error = "End date must be after start date";
+      req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
       return res.redirect(`/admin/offers/${id}`);
     }
 
@@ -465,13 +466,13 @@ const getEditOffer = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid offer ID";
+      req.session.error = ERROR_MESSAGES.INVALID_OFFER_ID;
       return res.redirect("/admin/offers");
     }
 
     const offer = await Offer.findById(id).populate("targetId");
     if (!offer) {
-      req.session.error = "Offer not found";
+      req.session.error = ERROR_MESSAGES.OFFER_NOT_FOUND;
       return res.redirect("/admin/offers");
     }
 
@@ -491,7 +492,7 @@ const getEditOffer = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching offer for edit:", error);
-    req.session.error = "Failed to load offer for editing";
+    req.session.error = ERROR_MESSAGES.OFFER_EDIT_LOAD_ERROR;
     res.redirect("/admin/offers");
   }
 };
@@ -501,7 +502,7 @@ const postEditOffer = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid offer ID";
+      req.session.error = ERROR_MESSAGES.INVALID_OFFER_ID;
       return res.redirect("/admin/offers");
     }
 
@@ -528,13 +529,13 @@ const postEditOffer = async (req, res) => {
       !startDate ||
       !endDate
     ) {
-      req.session.error = "All required fields must be filled.";
+      req.session.error = ERROR_MESSAGES.REQUIRED_FIELDS_MISSING;
       return res.redirect(`/admin/offers/edit/${id}`);
     }
 
     const offer = await Offer.findById(id);
     if (!offer) {
-      req.session.error = "Offer not found";
+      req.session.error = ERROR_MESSAGES.OFFER_NOT_FOUND;
       return res.redirect("/admin/offers");
     }
 
@@ -550,7 +551,7 @@ const postEditOffer = async (req, res) => {
     const end = new Date(endDate);
 
     if (end <= start) {
-      req.session.error = "End date must be after start date.";
+      req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
       return res.redirect(`/admin/offers/edit/${id}`);
     }
 
@@ -560,11 +561,11 @@ const postEditOffer = async (req, res) => {
     await offer.save();
     await recalculatePrices(targetIds, offer.targetModel);
 
-    req.session.success = "Offer updated successfully";
+    req.session.success = SUCCESS_MESSAGES.OFFER_UPDATED;
     res.redirect("/admin/offers");
   } catch (error) {
     console.error("Error updating offer:", error);
-    req.session.error = "Failed to update offer";
+    req.session.error = ERROR_MESSAGES.OFFER_UPDATE_ERROR;
     res.redirect("/admin/offers");
   }
 };
@@ -574,14 +575,14 @@ const deleteOffer = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid offer ID";
+      req.session.error = ERROR_MESSAGES.INVALID_OFFER_ID;
       return res.redirect("/admin/offers");
     }
 
     const offer = await Offer.findById(id);
 
     if (!offer) {
-      req.session.error = "Offer not found";
+      req.session.error = ERROR_MESSAGES.OFFER_NOT_FOUND;
       return res.redirect("/admin/offers");
     }
 
@@ -590,7 +591,7 @@ const deleteOffer = async (req, res) => {
 
     await recalculatePrices(offer.targetId, offer.targetModel);
 
-    req.session.success = "Offer deleted successfully!";
+    req.session.success = SUCCESS_MESSAGES.OFFER_DELETED;
     res.redirect("/admin/offers");
   } catch (error) {
     console.error("Error deleting offer:", error);

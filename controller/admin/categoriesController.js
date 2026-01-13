@@ -1,4 +1,5 @@
 import Categories from "../../models/categories.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get categories
 const getCategories = async (req, res) => {
@@ -65,7 +66,7 @@ const getCategories = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -75,14 +76,14 @@ const addCategorie = async (req, res) => {
     const { name, description } = req.body;
 
     if (!name || !description) {
-      req.session.errorMessage = "Both name and description are required.";
+      req.session.errorMessage = ERROR_MESSAGES.NAME_DESCRIPTION_REQUIRED;
       return res.redirect("/admin/categories");
     }
 
     // Check if category exists
     const existingCategory = await Categories.findOne({ name });
     if (existingCategory) {
-      req.session.errorMessage = "Category already exists!";
+      req.session.errorMessage = ERROR_MESSAGES.CATEGORY_EXISTS;
       return res.redirect("/admin/categories");
     }
 
@@ -92,11 +93,11 @@ const addCategorie = async (req, res) => {
     });
 
     await newCategories.save();
-    req.session.successMessage = "Category added successfully!";
+    req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_ADDED;
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -107,24 +108,24 @@ const editCategory = async (req, res) => {
     const { name, description } = req.body;
 
     if (!name || !description) {
-      req.session.errorMessage = "Both name and description are required.";
+      req.session.errorMessage = ERROR_MESSAGES.NAME_DESCRIPTION_REQUIRED;
       return res.redirect("/admin/categories");
     }
 
     const existingCategory = await Categories.findOne({ name });
     if (existingCategory && existingCategory != categorie.name) {
-      req.session.errorMessage = "Category already exists!";
+      req.session.errorMessage = ERROR_MESSAGES.CATEGORY_EXISTS;
       return res.redirect("/admin/categories");
     }
     categorie.name = name;
     categorie.description = description;
 
     await categorie.save();
-    req.session.successMessage = "Category Edited successfully!";
+    req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_EDITED;
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -136,12 +137,12 @@ const DeactivateCategory = async (req, res) => {
     categorie.isActive = !categorie.isActive;
     await categorie.save();
     if (categorie.isActive)
-      req.session.successMessage = "Category Activated successfully!";
-    else req.session.successMessage = "Category Deactivated successfully!";
+      req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_ACTIVATED;
+    else req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_DEACTIVATED;
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -152,11 +153,11 @@ const deleteCategory = async (req, res) => {
 
     categorie.isDeleted = !categorie.isDeleted;
     await categorie.save();
-    req.session.successMessage = "Category Deleted successfully!";
+    req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_DELETED;
     res.redirect("/admin/categories");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 

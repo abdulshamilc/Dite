@@ -2,6 +2,7 @@ import Orders from "../../models/ordersModel.js";
 import Products from "../../models/productsModels.js";
 import moment from "moment";
 import PDFDocument from "pdfkit";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 const formatRevenue = (amount) => {
   if (amount >= 100000) {
@@ -895,7 +896,7 @@ const getSalesReport = async (req, res) => {
     });
   } catch (error) {
     console.error("Sales Report Error:", error);
-    res.status(500).send("Server Error");
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 

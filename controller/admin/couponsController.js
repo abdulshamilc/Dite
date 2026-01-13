@@ -1,6 +1,7 @@
 import Coupon from "../../models/couponModel.js";
 import Orders from "../../models/ordersModel.js";
 import mongoose from "mongoose";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 const getCoupons = async (req, res) => {
   try {
@@ -59,7 +60,7 @@ const getCoupons = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching coupons:", error);
-    req.session.error = "Error loading coupons";
+    req.session.error = ERROR_MESSAGES.COUPON_LOAD_ERROR;
     res.redirect("/admin/coupons");
   }
 };
@@ -104,39 +105,39 @@ const createCoupon = async (req, res) => {
 
     // Basic validation
     if (!name?.trim()) {
-      req.session.error = "Coupon name is required.";
+      req.session.error = ERROR_MESSAGES.COUPON_NAME_REQUIRED;
       return res.redirect("/admin/coupons");
     }
 
     if (description?.trim().length > 1000) {
-      req.session.error = "Description must be less than 1000 characters.";
+      req.session.error = ERROR_MESSAGES.DESCRIPTION_TOO_LONG;
       return res.redirect("/admin/coupons");
     }
 
     if (!codeType || !["auto", "custom"].includes(codeType)) {
-      req.session.error = "Valid code type is required.";
+      req.session.error = ERROR_MESSAGES.INVALID_CODE_TYPE;
       return res.redirect("/admin/coupons");
     }
 
     if (!discountType || !["flat", "percentage"].includes(discountType)) {
-      req.session.error = "Valid discount type is required.";
+      req.session.error = ERROR_MESSAGES.INVALID_DISCOUNT_TYPE;
       return res.redirect("/admin/coupons");
     }
 
     const discountNum = parseFloat(discountValue);
     if (isNaN(discountNum) || discountNum <= 0) {
-      req.session.error = "Discount value must be greater than 0.";
+      req.session.error = ERROR_MESSAGES.DISCOUNT_VALUE_INVALID;
       return res.redirect("/admin/coupons");
     }
 
     if (discountType === "percentage" && discountNum > 100) {
-      req.session.error = "Percentage discount cannot exceed 100%.";
+      req.session.error = ERROR_MESSAGES.PERCENTAGE_EXCEEDED;
       return res.redirect("/admin/coupons");
     }
 
     const minCartNum = parseInt(minCartValue) || 0;
     if (minCartNum < 0) {
-      req.session.error = "Min cart value must be 0 or greater.";
+      req.session.error = ERROR_MESSAGES.MIN_CART_INVALID;
       return res.redirect("/admin/coupons");
     }
 
@@ -144,19 +145,19 @@ const createCoupon = async (req, res) => {
     if (discountType === "percentage") {
       maxDiscountNum = parseInt(maxDiscountAmount) || 0;
       if (maxDiscountNum < 0) {
-        req.session.error = "Max discount amount must be 0 or greater.";
+        req.session.error = ERROR_MESSAGES.MAX_DISCOUNT_INVALID;
         return res.redirect("/admin/coupons");
       }
     }
 
     const usageNum = parseInt(usageLimit);
     if (isNaN(usageNum) || usageNum < 1) {
-      req.session.error = "Usage limit must be 1 or greater.";
+      req.session.error = ERROR_MESSAGES.USAGE_LIMIT_INVALID;
       return res.redirect("/admin/coupons");
     }
 
     if (!startDate || !endDate) {
-      req.session.error = "Start and end dates are required.";
+      req.session.error = ERROR_MESSAGES.DATES_REQUIRED;
       return res.redirect("/admin/coupons");
     }
 
@@ -166,12 +167,12 @@ const createCoupon = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     if (start < today) {
-      req.session.error = "Start date cannot be in the past.";
+      req.session.error = ERROR_MESSAGES.START_DATE_PAST;
       return res.redirect("/admin/coupons");
     }
 
     if (end <= start) {
-      req.session.error = "End date must be after start date.";
+      req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
       return res.redirect("/admin/coupons");
     }
 
@@ -181,16 +182,15 @@ const createCoupon = async (req, res) => {
 
     if (codeType === "custom") {
       if (!tempProvidedCode) {
-        req.session.error = "Custom code is required.";
+        req.session.error = ERROR_MESSAGES.CUSTOM_CODE_REQUIRED;
         return res.redirect("/admin/coupons");
       }
       if (tempProvidedCode.length < 4 || tempProvidedCode.length > 20) {
-        req.session.error = "Custom code must be 4-20 characters.";
+        req.session.error = ERROR_MESSAGES.CUSTOM_CODE_LENGTH;
         return res.redirect("/admin/coupons");
       }
       if (!/^[A-Z0-9]+$/.test(tempProvidedCode)) {
-        req.session.error =
-          "Custom code must be uppercase letters and numbers only.";
+        req.session.error = ERROR_MESSAGES.CUSTOM_CODE_FORMAT;
         return res.redirect("/admin/coupons");
       }
       finalCode = tempProvidedCode;
@@ -203,8 +203,7 @@ const createCoupon = async (req, res) => {
     let existing = await Coupon.findOne({ code: finalCode });
     if (existing) {
       if (codeType === "custom") {
-        req.session.error =
-          "Coupon code already exists. Please choose another.";
+        req.session.error = ERROR_MESSAGES.COUPON_CODE_EXISTS;
         return res.redirect("/admin/coupons");
       } else {
         // Retry for auto
@@ -216,8 +215,7 @@ const createCoupon = async (req, res) => {
           attempts++;
         }
         if (attempts >= 5) {
-          req.session.error =
-            "Failed to generate unique code after several attempts.";
+          req.session.error = ERROR_MESSAGES.COUPON_GENERATION_FAILED;
           return res.redirect("/admin/coupons");
         }
       }
@@ -244,7 +242,9 @@ const createCoupon = async (req, res) => {
 
     await newCoupon.save();
 
-    req.session.success = "Coupon created successfully!";
+    await newCoupon.save();
+
+    req.session.success = SUCCESS_MESSAGES.COUPON_CREATED;
     res.redirect("/admin/coupons");
   } catch (error) {
     console.error("Error creating coupon:", error);
@@ -260,7 +260,7 @@ const getCouponDetails = async (req, res) => {
     const coupon = await Coupon.findOne({ _id: id, isDeleted: false }).lean();
 
     if (!coupon) {
-      req.session.error = "Coupon not found.";
+      req.session.error = ERROR_MESSAGES.COUPON_NOT_FOUND;
       return res.redirect("/admin/coupons");
     }
 
@@ -299,7 +299,7 @@ const getCouponDetails = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching coupon details:", error);
-    req.session.error = "Error loading coupon details.";
+    req.session.error = ERROR_MESSAGES.COUPON_DETAILS_LOAD_ERROR;
     res.redirect("/admin/coupons");
   }
 };
@@ -307,7 +307,7 @@ const getCouponDetails = async (req, res) => {
 const toggleCouponStatus = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      req.session.error = "Invalid coupon ID";
+      req.session.error = ERROR_MESSAGES.INVALID_COUPON_ID;
       return res.redirect("/admin/coupons");
     }
 
@@ -317,7 +317,7 @@ const toggleCouponStatus = async (req, res) => {
     });
 
     if (!coupon) {
-      req.session.error = "Coupon not found";
+      req.session.error = ERROR_MESSAGES.COUPON_NOT_FOUND;
       return res.redirect("/admin/coupons");
     }
 
@@ -325,8 +325,8 @@ const toggleCouponStatus = async (req, res) => {
     await coupon.save();
 
     req.session.success = coupon.isActive
-      ? "Coupon activated successfully!"
-      : "Coupon deactivated successfully!";
+      ? SUCCESS_MESSAGES.COUPON_ACTIVATED
+      : SUCCESS_MESSAGES.COUPON_DEACTIVATED;
     res.redirect(`/admin/coupons/${req.params.id}`);
   } catch (error) {
     console.error("Error toggling coupon status:", error);
@@ -341,19 +341,19 @@ const updateCouponEndDate = async (req, res) => {
     const { endDate } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid coupon ID";
+      req.session.error = ERROR_MESSAGES.INVALID_COUPON_ID;
       return res.redirect("/admin/coupons");
     }
 
     if (!endDate) {
-      req.session.error = "End date is required";
+      req.session.error = ERROR_MESSAGES.END_DATE_REQUIRED;
       return res.redirect(`/admin/coupons/${id}`);
     }
 
     const coupon = await Coupon.findOne({ _id: id, isDeleted: false });
 
     if (!coupon) {
-      req.session.error = "Coupon not found";
+      req.session.error = ERROR_MESSAGES.COUPON_NOT_FOUND;
       return res.redirect("/admin/coupons");
     }
 
@@ -362,12 +362,12 @@ const updateCouponEndDate = async (req, res) => {
     today.setHours(0, 0, 0, 0);
 
     if (newEnd < today) {
-      req.session.error = "End date cannot be in the past";
+      req.session.error = ERROR_MESSAGES.START_DATE_PAST; // Reuse for past date check
       return res.redirect(`/admin/coupons/${id}`);
     }
 
     if (newEnd <= coupon.startDate) {
-      req.session.error = "End date must be after start date";
+      req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
       return res.redirect(`/admin/coupons/${id}`);
     }
 
@@ -386,13 +386,13 @@ const getEditCoupon = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid coupon ID";
+      req.session.error = ERROR_MESSAGES.INVALID_COUPON_ID;
       return res.redirect("/admin/coupons");
     }
 
     const coupon = await Coupon.findById(id);
     if (!coupon) {
-      req.session.error = "Coupon not found";
+      req.session.error = ERROR_MESSAGES.COUPON_NOT_FOUND;
       return res.redirect("/admin/coupons");
     }
 
@@ -402,7 +402,7 @@ const getEditCoupon = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching coupon for edit:", error);
-    req.session.error = "Failed to load coupon for editing";
+    req.session.error = ERROR_MESSAGES.COUPON_EDIT_LOAD_ERROR;
     res.redirect("/admin/coupons");
   }
 };
@@ -411,7 +411,7 @@ const postEditCoupon = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid coupon ID";
+      req.session.error = ERROR_MESSAGES.INVALID_COUPON_ID;
       return res.redirect("/admin/coupons");
     }
 
@@ -436,13 +436,13 @@ const postEditCoupon = async (req, res) => {
       !startDate ||
       !endDate
     ) {
-      req.session.error = "All required fields must be filled.";
+      req.session.error = ERROR_MESSAGES.REQUIRED_FIELDS_MISSING;
       return res.redirect(`/admin/coupons/edit/${id}`);
     }
 
     const coupon = await Coupon.findById(id);
     if (!coupon) {
-      req.session.error = "Coupon not found";
+      req.session.error = ERROR_MESSAGES.COUPON_NOT_FOUND;
       return res.redirect("/admin/coupons");
     }
 
@@ -457,7 +457,7 @@ const postEditCoupon = async (req, res) => {
     const end = new Date(endDate);
 
     if (end <= start) {
-      req.session.error = "End date must be after start date.";
+      req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
       return res.redirect(`/admin/coupons/edit/${id}`);
     }
 
@@ -469,11 +469,11 @@ const postEditCoupon = async (req, res) => {
 
     await coupon.save();
 
-    req.session.success = "Coupon updated successfully";
+    req.session.success = SUCCESS_MESSAGES.COUPON_UPDATED;
     res.redirect("/admin/coupons");
   } catch (error) {
     console.error("Error updating coupon:", error);
-    req.session.error = "Failed to update coupon";
+    req.session.error = ERROR_MESSAGES.COUPON_UPDATE_ERROR;
     res.redirect("/admin/coupons");
   }
 };
@@ -483,21 +483,21 @@ const deleteCoupon = async (req, res) => {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      req.session.error = "Invalid coupon ID";
+      req.session.error = ERROR_MESSAGES.INVALID_COUPON_ID;
       return res.redirect("/admin/coupons");
     }
 
     const coupon = await Coupon.findOne({ _id: id, isDeleted: false });
 
     if (!coupon) {
-      req.session.error = "Coupon not found";
+      req.session.error = ERROR_MESSAGES.COUPON_NOT_FOUND;
       return res.redirect("/admin/coupons");
     }
 
     coupon.isDeleted = true;
     await coupon.save();
 
-    req.session.success = "Coupon deleted successfully!";
+    req.session.success = SUCCESS_MESSAGES.COUPON_DELETED;
     res.redirect("/admin/coupons");
   } catch (error) {
     console.error("Error deleting coupon:", error);

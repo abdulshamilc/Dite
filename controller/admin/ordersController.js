@@ -2,6 +2,7 @@ import Orders from "../../models/ordersModel.js";
 import { User } from "../../models/userModels.js";
 import PDFDocument from "pdfkit";
 import moment from "moment";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get orders
 const getOrders = async (req, res) => {
@@ -63,9 +64,8 @@ const getViewOrders = async (req, res) => {
 
     // Fetch the order with populated fields if needed (e.g., address if it's a ref, items with product details)
     const order = await Orders.findById(orderId);
-
     if (!order) {
-      req.session.error = "Order Not Found";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect("/orders");
     }
     const user = await User.findById(order.userId);
@@ -125,7 +125,7 @@ const updateOrderStatus = async (req, res) => {
       "Returned",
     ];
     if (!validStatuses.includes(status)) {
-      req.session.error = "Invalid status provided.";
+      req.session.error = ERROR_MESSAGES.INVALID_ORDER_STATUS;
       return res.redirect(`/admin/orders/${id}`);
     }
 
@@ -158,7 +158,7 @@ const updateOrderStatus = async (req, res) => {
       .populate("items.productId"); // Populate as needed
 
     if (!order) {
-      req.session.error = "Order not found.";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect("/admin/orders");
     }
 
@@ -168,11 +168,11 @@ const updateOrderStatus = async (req, res) => {
       await order.save();
     }
 
-    req.session.success = `Order status updated to ${status}.`;
+    req.session.success = SUCCESS_MESSAGES.ORDER_STATUS_UPDATED;
     res.redirect(`/admin/orders/view/${id}`);
   } catch (error) {
     console.error("Error updating order status:", error);
-    req.session.error = "Failed to update order status. Please try again.";
+    req.session.error = ERROR_MESSAGES.ORDER_STATUS_UPDATE_ERROR;
     res.redirect(`/admin/orders/${id}`);
   }
 };
@@ -186,7 +186,7 @@ const exportOrderPDF = async (req, res) => {
     const order = await Orders.findById(orderId).populate("items.productId");
     
     if (!order) {
-      return res.status(404).send("Order not found");
+      return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.ORDER_NOT_FOUND);
     }
 
     const doc = new PDFDocument({ margin: 50 });
@@ -301,7 +301,7 @@ const exportOrderPDF = async (req, res) => {
 
   } catch (error) {
     console.error("PDF Export Error:", error);
-    res.status(500).send("Error generating PDF");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 
 };

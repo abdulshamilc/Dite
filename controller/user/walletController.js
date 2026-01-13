@@ -1,11 +1,12 @@
 import { User } from "../../models/userModels.js";
 import Wallet from "../../models/walletModel.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get wallet
 const getWallet = async (req, res) => {
   // User validation
   if (!req.session.user) {
-    req.session.error = 'Please log in to access your wallet.';
+    req.session.error = ERROR_MESSAGES.LOGIN_REQUIRED;
     return res.redirect('/login'); 
   }
 
@@ -14,7 +15,7 @@ const getWallet = async (req, res) => {
     const user = await User.findOne({ email: userEmail });
 
     if (!user) {
-      req.session.error = 'User not found. Please log in again.';
+      req.session.error = ERROR_MESSAGES.USER_NOT_FOUND;
       return res.redirect('/login');
     }
 
@@ -49,7 +50,7 @@ const getWallet = async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching wallet:', err);
-    req.session.error = 'Failed to load wallet. Please try again.';
+    req.session.error = ERROR_MESSAGES.WALLET_LOAD_ERROR;
     res.redirect('/profile'); 
   }
 };
@@ -94,7 +95,7 @@ const getWalletHistory = async (req, res) => {
 
   } catch (error) {
     console.error("Wallet History Error:", error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -105,16 +106,16 @@ const addFundsToWallet = async (req, res) => {
     const user = await User.findOne({ email: req.session.user });
     if (!user) {
       console.error("Wallet Error [Anonymous User]: User not authenticated");
-      return res.status(401).json({ success: false, message: "User not authenticated. Please log in." });
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, message: ERROR_MESSAGES.LOGIN_REQUIRED });
     }
     const { amount, razorpayPaymentId, razorpayOrderId } = req.body;
     if (!amount || amount < 100) { // Minimum 100 as per frontend
       console.error(`Wallet Error [User: ${user._id}]: Invalid amount ${amount}`);
-      return res.status(400).json({ success: false, message: "Amount too low (min Rs. 100)." });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.WALLET_AMOUNT_TOO_LOW });
     }
     if (!razorpayPaymentId || !razorpayOrderId) {
       console.error(`Wallet Error [User: ${user._id}]: Missing payment details`);
-      return res.status(400).json({ success: false, message: "Missing payment details." });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.PAYMENT_DETAILS_MISSING });
     }
     // Find or create user's wallet
     let wallet = await Wallet.findOne({ user: user._id });
@@ -144,7 +145,7 @@ const addFundsToWallet = async (req, res) => {
 
     
     // Set success message for reload
-    req.session.success = "Funds added successfully to your wallet!";
+    req.session.success = SUCCESS_MESSAGES.FUNDS_ADDED;
     await new Promise((resolve, reject) => {
         req.session.save((err) => {
             if (err) reject(err);
@@ -154,12 +155,12 @@ const addFundsToWallet = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Funds added successfully to your wallet!",
+      message: SUCCESS_MESSAGES.FUNDS_ADDED,
       balance: wallet.balance
     });
   } catch (error) {
     console.error(`Wallet Error [User: ${req.session.user}]:`, error);
-    return res.status(500).json({ success: false, message: "Server error: Failed to add funds. Please contact support." });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.FUNDS_ADD_ERROR });
   }
 };
 
@@ -181,11 +182,11 @@ const processWalletPayment = async (userId, amount, orderID) => {
     const wallet = await Wallet.findOne({ user: userId });
     
     if (!wallet) {
-        throw new Error("Wallet not found");
+        throw new Error(ERROR_MESSAGES.WALLET_NOT_FOUND);
     }
 
     if (wallet.balance < amount) {
-        throw new Error("Insufficient wallet balance");
+        throw new Error(ERROR_MESSAGES.INSUFFICIENT_BALANCE);
     }
 
     wallet.balance -= amount;

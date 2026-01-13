@@ -2,6 +2,7 @@ import Orders from "../../models/ordersModel.js";
 import Products from "../../models/productsModels.js";
 import Wallet from "../../models/walletModel.js";
 import { nanoid } from "nanoid";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get return
 const getReturn = async (req, res) => {
@@ -127,7 +128,7 @@ const getReturn = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching returns:", error);
-    req.session.error = "Failed to load returns data.";
+    req.session.error = ERROR_MESSAGES.RETURN_LOAD_ERROR;
     res.redirect("/admin/return");
   }
 };
@@ -141,7 +142,7 @@ const getReturnDetails = async (req, res) => {
       "name email phone"
     );
     if (!order) {
-      req.session.error = "Order not found";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect("/admin/returns");
     }
 
@@ -160,7 +161,7 @@ const getReturnDetails = async (req, res) => {
     }
 
     if (!returnItem) {
-      req.session.error = "Return not found";
+      req.session.error = ERROR_MESSAGES.RETURN_NOT_FOUND;
       return res.redirect("/admin/returns");
     }
 
@@ -195,7 +196,7 @@ const getReturnDetails = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    req.session.error = "Failed to fetch return details";
+    req.session.error = ERROR_MESSAGES.RETURN_DETAILS_ERROR;
     res.redirect("/admin/returns");
   }
 };
@@ -206,7 +207,7 @@ const returnApprove = async (req, res) => {
   try {
     const order = await Orders.findById(orderId);
     if (!order) {
-      req.session.error = "Order not found";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect(`/admin/return/${orderId}`);
     }
 
@@ -224,12 +225,12 @@ const returnApprove = async (req, res) => {
     }
 
     if (!returnItem) {
-      req.session.error = "Return request not found";
+      req.session.error = ERROR_MESSAGES.RETURN_REQUEST_NOT_FOUND;
       return res.redirect(`/admin/return/${orderId}`);
     }
 
     if (returnItem.adminApproved !== "Requested") {
-      req.session.error = "Return already processed";
+      req.session.error = ERROR_MESSAGES.RETURN_ALREADY_PROCESSED;
       return res.redirect(
         `/admin/return/${orderId}?returnId=${returnItem._id}`
       );
@@ -308,11 +309,11 @@ const returnApprove = async (req, res) => {
     }
 
     req.session.success =
-      "Return approved, order status updated, and stock restored successfully";
+      SUCCESS_MESSAGES.RETURN_APPROVED;
     res.redirect(`/admin/return/${orderId}`);
   } catch (error) {
     console.error(error);
-    req.session.error = "Failed to approve return";
+    req.session.error = ERROR_MESSAGES.RETURN_APPROVE_ERROR;
     res.redirect(`/admin/return/${orderId}`);
   }
 };
@@ -324,7 +325,7 @@ const returnReject = async (req, res) => {
   try {
     const order = await Orders.findById(orderId);
     if (!order) {
-      req.session.error = "Order not found";
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
       return res.redirect(`/admin/return/${orderId}`);
     }
 
@@ -342,12 +343,12 @@ const returnReject = async (req, res) => {
     }
 
     if (!returnItem) {
-      req.session.error = "Return request not found";
+      req.session.error = ERROR_MESSAGES.RETURN_REQUEST_NOT_FOUND;
       return res.redirect(`/admin/return/${orderId}`);
     }
 
     if (returnItem.adminApproved !== "Requested") {
-      req.session.error = "Return already processed";
+      req.session.error = ERROR_MESSAGES.RETURN_ALREADY_PROCESSED;
       return res.redirect(
         `/admin/return/${orderId}?returnId=${returnItem._id}`
       );
@@ -372,11 +373,11 @@ const returnReject = async (req, res) => {
 
     await order.save();
 
-    req.session.success = "Return rejected successfully";
+    req.session.success = SUCCESS_MESSAGES.RETURN_REJECTED;
     res.redirect(`/admin/return/${orderId}?returnId=${returnItem._id}`);
   } catch (error) {
     console.error(error);
-    req.session.error = "Failed to reject return";
+    req.session.error = ERROR_MESSAGES.RETURN_REJECT_ERROR;
     res.redirect(`/admin/return/${orderId}`);
   }
 };

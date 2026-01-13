@@ -3,6 +3,7 @@ import Cart from "../../models/cartModel.js";
 import Products from "../../models/productsModels.js";
 import Wishlist from "../../models/wishlistModel.js";
 import Offer from "../../models/offerModel.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 // Get cart
 const getCart = async (req, res) => {
   try {
@@ -169,7 +170,7 @@ const addToCart = async (req, res) => {
     if (!userEmail) {
         req.session.returnTo = req.get('Referer') || "/";
         if (isAjax) {
-            return res.status(401).json({ success: false, redirect: "/login", message: "Please login to continue" });
+            return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, redirect: "/login", message: ERROR_MESSAGES.LOGIN_REQUIRED });
         }
         return res.redirect("/login");
     }
@@ -178,7 +179,7 @@ const addToCart = async (req, res) => {
     if (!user) {
         req.session.returnTo = req.get('Referer') || "/";
         if (isAjax) {
-             return res.status(401).json({ success: false, redirect: "/login", message: "User session invalid" });
+             return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, redirect: "/login", message: ERROR_MESSAGES.SESSION_INVALID });
         }
         return res.redirect("/login");
     }
@@ -186,7 +187,7 @@ const addToCart = async (req, res) => {
     const product = await Products.findById(productId);
     
     if (!product || !product.isListed || product.isDeleted) {
-        if (isAjax) return res.status(404).json({ success: false, message: "Product is currently unavailable" });
+        if (isAjax) return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE });
         return res.redirect("/shop?error=Product Unavailable");
     }
 
@@ -195,12 +196,12 @@ const addToCart = async (req, res) => {
     );
 
     if (!selectedVarient) {
-      if (isAjax) return res.json({ success: false, message: "Variant not found" });
+      if (isAjax) return res.json({ success: false, message: ERROR_MESSAGES.VARIANT_NOT_FOUND });
       return res.redirect(`/shop/${productId}?error=Variant not found`);
     }
 
     if (selectedVarient.stock === 0) {
-      if (isAjax) return res.json({ success: false, message: "Out of Stock" });
+      if (isAjax) return res.json({ success: false, message: ERROR_MESSAGES.OUT_OF_STOCK });
       return res.redirect(`/shop/${productId}?error=Out of Stock`);
     }
 
@@ -264,7 +265,7 @@ const addToCart = async (req, res) => {
       } else {
         
         if (cart.items.length >= 10) {
-          const msg = "Cart has reached the maximum of 10 distinct products!";
+          const msg = ERROR_MESSAGES.CART_LIMIT_EXCEEDED;
           if (isAjax) return res.json({ success: false, message: msg });
           return res.redirect(`/shop/${productId}?error=${msg}`);
         }
@@ -304,14 +305,14 @@ const addToCart = async (req, res) => {
     );
     
     if (isAjax) {
-        return res.json({ success: true, message: "Product added to cart successfully!" });
+        return res.json({ success: true, message: SUCCESS_MESSAGES.ADDED_TO_CART });
     }
     res.redirect(`/shop/${productId}`);
   } catch (error) {
     console.error(error);
     const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest' || req.xhr;
-    if (isAjax) return res.status(500).json({ success: false, message: "Something went wrong" });
-    res.status(500).send("Something went wrong");
+    if (isAjax) return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -344,34 +345,34 @@ const deleteCart = async (req, res) => {
 const updateQuantity = async (req, res) => {
   try {
     const userEmail = req.session.user;
-    if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
+    if (!userEmail) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS });
 
     const { action } = req.body;
     const { id: itemId } = req.params;
 
     if (!itemId || !action) {
-      return res.status(400).json({ message: "Invalid request" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_REQUEST });
     }
 
     const user = await User.findOne({ email: userEmail });
-    if (!user) return res.status(401).json({ message: "User not found" });
+    if (!user) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
 
     const cart = await Cart.findOne({ userId: user._id });
-    if (!cart) return res.status(404).json({ message: "Cart not found" });
+    if (!cart) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.CART_NOT_FOUND });
 
     const item = cart.items.id(itemId);
-    if (!item) return res.status(404).json({ message: "Item not found" });
+    if (!item) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.ITEM_NOT_FOUND });
 
     const product = await Products.findById(item.productId);
     if (!product) {
-      return res.status(404).json({ message: "This product is missing" });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.MISSING_PRODUCT });
     }
 
     const selectedVariant = product.variants.find(
       (v) => v.mlSize === Number(item.size)
     );
     if (!selectedVariant) {
-      return res.status(400).json({ message: "Variant not found" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.VARIANT_NOT_FOUND });
     }
 
     let updated = false;
@@ -387,8 +388,8 @@ const updateQuantity = async (req, res) => {
 
       if (item.quantity >= 10) {
         return res
-          .status(400)
-          .json({ message: "You can only buy up to 10 units of this item." });
+          .status(HTTP_STATUS.BAD_REQUEST)
+          .json({ message: ERROR_MESSAGES.ITEM_LIMIT_EXCEEDED });
       }
       
       // Stock Check
@@ -409,7 +410,7 @@ const updateQuantity = async (req, res) => {
         updated = true;
       }
     } else {
-      return res.status(400).json({ message: "Invalid action" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_ACTION });
     }
 
     if (updated) {
@@ -427,7 +428,7 @@ const updateQuantity = async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Quantity updated successfully",
+        message: SUCCESS_MESSAGES.QUANTITY_UPDATED,
         newQuantity: savedItem ? savedItem.quantity : 0,
         itemTotal: itemTotal, // Base Price Total
         itemDiscountedTotal: itemDiscountedTotal, // Discounted Total (Final)
@@ -435,11 +436,11 @@ const updateQuantity = async (req, res) => {
         cartTotal: cartTotal
       });
     } else {
-      return res.status(400).json({ message: "No changes made" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.NO_CHANGES });
     }
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Something went wrong" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 

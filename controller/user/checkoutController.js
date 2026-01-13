@@ -8,6 +8,7 @@ import { processWalletPayment } from './walletController.js';
 import Coupon from "../../models/couponModel.js";
 import Offer from "../../models/offerModel.js";
 import Notification from "../../models/notificationModel.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get checkout
 const getCheckout = async (req, res) => {
@@ -20,7 +21,7 @@ const getCheckout = async (req, res) => {
   const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
   if (!cart) return res.redirect("/cart");
   if (cart.items.length <= 0) {
-    req.session.error = "The Cart Does Not Have Any Product To CheckOut";
+    req.session.error = ERROR_MESSAGES.CART_EMPTY;
     return res.redirect("/cart");
   } 
 
@@ -210,7 +211,7 @@ const getPaymentpage = async (req, res) => {
     const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
     const selectedAddress = await Address.findById(addressId);
 
-    if (!selectedAddress) return res.status(404).send("Address not found");
+    if (!selectedAddress) return res.status(HTTP_STATUS.NOT_FOUND).send(ERROR_MESSAGES.ADDRESS_NOT_FOUND);
 
     if (!cart || cart.items.length === 0) {
         return res.redirect("/cart");
@@ -319,25 +320,25 @@ const applyCoupon = async (req, res) => {
     const { couponCode, subtotal } = req.body;
     const userEmail = req.session.user;
 
-    if (!userEmail) return res.json({ success: false, message: "User not logged in" });
+    if (!userEmail) return res.json({ success: false, message: ERROR_MESSAGES.LOGIN_REQUIRED });
 
     const coupon = await Coupon.findOne({ code: couponCode, isDeleted: false });
 
     if (!coupon) {
-      return res.json({ success: false, message: "Invalid coupon code" });
+      return res.json({ success: false, message: ERROR_MESSAGES.INVALID_COUPON });
     }
 
     if (!coupon.isActive) {
-      return res.json({ success: false, message: "Coupon is inactive" });
+      return res.json({ success: false, message: ERROR_MESSAGES.COUPON_INACTIVE });
     }
 
     const currentDate = new Date();
     if (currentDate < coupon.startDate || currentDate > coupon.endDate) {
-      return res.json({ success: false, message: "Coupon is expired" });
+      return res.json({ success: false, message: ERROR_MESSAGES.COUPON_EXPIRED });
     }
 
     if (coupon.usageLimit <= 0) {
-      return res.json({ success: false, message: "Coupon usage limit reached" });
+      return res.json({ success: false, message: ERROR_MESSAGES.COUPON_USAGE_LIMIT });
     }
 
     if (subtotal < coupon.minCartValue) {
@@ -363,7 +364,7 @@ const applyCoupon = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Coupon applied successfully",
+      message: SUCCESS_MESSAGES.COUPON_APPLIED,
       discountAmount,
       newTotal,
       couponCode: coupon.code
@@ -371,7 +372,7 @@ const applyCoupon = async (req, res) => {
 
   } catch (error) {
     console.error("Error applying coupon:", error);
-    return res.json({ success: false, message: "Error applying coupon" });
+    return res.json({ success: false, message: ERROR_MESSAGES.COUPON_APPLY_ERROR });
   }
 };
 
@@ -381,23 +382,23 @@ const placeOrder = async (req, res) => {
     // Fetch user from session
     const user = await User.findOne({ email: req.session.user });
     if (!user) {
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS });
     }
 
     const { addressId, items, paymentMethod, razorpayPaymentId, razorpayOrderId, couponCode } = req.body;
 
     // Basic Validation
     if (!items || items.length === 0) {
-      return res.status(400).json({ success: false, message: "No items in order" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.NO_ITEMS_IN_ORDER });
     }
     if (!addressId) {
-      return res.status(400).json({ success: false, message: "Missing address" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.MISSING_ADDRESS });
     }
 
     // Address Validation
     const selectedAddress = await Address.findById(addressId);
     if (!selectedAddress || selectedAddress.userId.toString() !== user._id.toString()) {
-      return res.status(404).json({ success: false, message: "Invalid address" });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.INVALID_ADDRESS });
     }
     const address = selectedAddress.toObject();
     delete address._id;
@@ -561,14 +562,14 @@ const placeOrder = async (req, res) => {
         paymentTime: new Date()
     };
     if (normalizedPaymentMethod === 'online') {
-         if (!razorpayPaymentId) return res.status(400).json({ success: false, message: "Payment failed" });
+         if (!razorpayPaymentId) return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.PAYMENT_FAILED });
          paymentInfo.razorpayPaymentId = razorpayPaymentId;
          paymentInfo.razorpayOrderId = razorpayOrderId;
     }
 
     // COD Validation
     if (normalizedPaymentMethod === 'cod' && finalTotal > 1000) {
-        return res.status(400).json({ success: false, message: "COD not available for orders above Rs. 1000" });
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.COD_LIMIT_EXCEEDED });
     }
 
     // Wallet Deduction
@@ -594,7 +595,7 @@ const placeOrder = async (req, res) => {
         orderStatus: 'Placed',
         
         placedAt: new Date(),
-        tracking: [{ status: 'Placed', message: 'Order placed successfully', date: new Date() }]
+        tracking: [{ status: 'Placed', message: SUCCESS_MESSAGES.ORDER_PLACED, date: new Date() }]
     });
 
     await newOrder.save();
@@ -624,11 +625,11 @@ const placeOrder = async (req, res) => {
     req.session.orderplaced = true;
     req.session.orderId = orderID;
 
-    res.json({ success: true, message: "Order placed successfully", orderId: orderID });
+    res.json({ success: true, message: SUCCESS_MESSAGES.ORDER_PLACED, orderId: orderID });
 
   } catch (error) {
     console.error("Place Order Error:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 

@@ -2,6 +2,7 @@ import Products from "../../models/productsModels.js";
 import Categories from "../../models/categories.js";
 import Offer from "../../models/offerModel.js";
 import Review from "../../models/reviewModel.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 const toNumber = (val) => {
   const n = parseInt(val, 10);
@@ -73,7 +74,7 @@ const getProducts = async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 // Get add products
@@ -87,8 +88,8 @@ const getAddProducts = async (req, res) => {
   } catch (error) {
     console.error("Error fetching categories and products:", error);
     res
-      .status(500)
-      .json({ success: false, error: "Failed to load page data." });
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ success: false, error: ERROR_MESSAGES.PAGE_LOAD_ERROR });
   }
 };
 
@@ -110,9 +111,9 @@ const postAddProducts = async (req, res) => {
 
 
     if (!name || !category || !brand || !gender || !concentration) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "Required fields are missing",
+        error: ERROR_MESSAGES.REQUIRED_FIELDS_MISSING,
       });
     }
 
@@ -121,9 +122,9 @@ const postAddProducts = async (req, res) => {
       req.files?.map((file) => file.path || file.secure_url || file.url) || [];
 
     if (imageUrls.length === 0) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "At least one product image is required",
+        error: ERROR_MESSAGES.IMAGE_REQUIRED,
       });
     }
 
@@ -207,9 +208,9 @@ const postAddProducts = async (req, res) => {
     }
 
     if (parsedVariants.length === 0) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "At least one valid variant is required",
+        error: ERROR_MESSAGES.VARIANT_REQUIRED,
       });
     }
 
@@ -218,9 +219,9 @@ const postAddProducts = async (req, res) => {
 
     const categoryExists = await Categories.findById(category);
     if (!categoryExists) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "Invalid category selected",
+        error: ERROR_MESSAGES.INVALID_CATEGORY,
       });
     }
 
@@ -244,17 +245,17 @@ const postAddProducts = async (req, res) => {
     await categoryExists.save();
 
 
-    res.status(201).json({
+    res.status(HTTP_STATUS.CREATED).json({
       success: true,
-      message: "Product added successfully",
+      message: SUCCESS_MESSAGES.PRODUCT_ADDED,
       productId: newProduct._id,
     });
   } catch (error) {
     console.error(error);
 
-    res.status(500).json({
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: error.message || "Failed to add product",
+      error: error.message || ERROR_MESSAGES.PRODUCT_ADD_ERROR,
     });
   }
 };
@@ -264,7 +265,7 @@ const getEditProducts = async (req, res) => {
     const categories = await Categories.find({ isDeleted: false }).lean();
     const product = await Products.findById(req.params.id);
     if (!product || product.isDeleted) {
-      req.session.errorMessage = "Product not found.";
+      req.session.errorMessage = ERROR_MESSAGES.PRODUCT_NOT_FOUND;
       return res.redirect("/admin/products");
     }
     const products = await Products.find({ isDeleted: false })
@@ -278,7 +279,7 @@ const getEditProducts = async (req, res) => {
     res.render("admin/products/editProducts", { categories, product, products, successMessage, errorMessage });
   } catch (err) {
     console.error(err);
-    req.session.errorMessage = "Something Went Wrong";
+    req.session.errorMessage = ERROR_MESSAGES.INTERNAL_ERROR;
     res.redirect("/admin/products");
   }
 };
@@ -289,8 +290,8 @@ const postEditProduct = async (req, res) => {
     const oldProduct = await Products.findById(productId);
     if (!oldProduct) {
       return res
-        .status(404)
-        .json({ success: false, error: "Product not found" });
+        .status(HTTP_STATUS.NOT_FOUND)
+        .json({ success: false, error: ERROR_MESSAGES.PRODUCT_NOT_FOUND });
     }
 
     const {
@@ -342,9 +343,9 @@ const postEditProduct = async (req, res) => {
 
 
     if (updatedImages.length !== 4 || updatedImages.some((img) => !img)) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "Exactly 4 valid images are required.",
+        error: ERROR_MESSAGES.IMAGES_REQUIRED_4,
       });
     }
 
@@ -352,8 +353,8 @@ const postEditProduct = async (req, res) => {
     const finalName = name ? name.trim() : oldProduct.name;
     if (!finalName) {
       return res
-        .status(400)
-        .json({ success: false, error: "Product name is required." });
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .json({ success: false, error: ERROR_MESSAGES.NAME_REQUIRED });
     }
 
     const finalDescription = description
@@ -361,8 +362,8 @@ const postEditProduct = async (req, res) => {
       : oldProduct.description;
     if (!finalDescription) {
       return res
-        .status(400)
-        .json({ success: false, error: "Product description is required." });
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .json({ success: false, error: ERROR_MESSAGES.DESCRIPTION_REQUIRED });
     }
 
 
@@ -374,22 +375,22 @@ const postEditProduct = async (req, res) => {
     const finalCategory = rawCategory ? rawCategory.trim() : oldCategoryValue;
     if (!finalCategory) {
       return res
-        .status(400)
-        .json({ success: false, error: "Category is required." });
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .json({ success: false, error: ERROR_MESSAGES.CATEGORY_REQUIRED });
     }
 
     const finalGender = gender || oldProduct.gender;
     if (!finalGender) {
       return res
-        .status(400)
-        .json({ success: false, error: "Gender is required." });
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .json({ success: false, error: ERROR_MESSAGES.GENDER_REQUIRED });
     }
 
     const finalConcentration = concentration || oldProduct.concentration;
     if (!finalConcentration) {
       return res
-        .status(400)
-        .json({ success: false, error: "Concentration is required." });
+        .status(HTTP_STATUS.BAD_REQUEST)
+        .json({ success: false, error: ERROR_MESSAGES.CONCENTRATION_REQUIRED });
     }
 
 
@@ -466,23 +467,23 @@ const postEditProduct = async (req, res) => {
 
     if (variantErrors.length > 0) {
       return res
-        .status(400)
+        .status(HTTP_STATUS.BAD_REQUEST)
         .json({ success: false, error: variantErrors.join(" ") });
     }
 
     if (parsedVariants.length === 0) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "At least one valid variant is required.",
+        error: ERROR_MESSAGES.VARIANT_REQUIRED,
       });
     }
 
 
     const wordCountDesc = finalDescription.split(/\s+/).length;
     if (wordCountDesc < 10 || wordCountDesc > 150) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: "Description must be between 10 and 150 words.",
+        error: ERROR_MESSAGES.DESCRIPTION_LENGTH,
       });
     }
 
@@ -490,10 +491,10 @@ const postEditProduct = async (req, res) => {
     const finalNotes = notes ? notes.trim() : oldProduct.notes;
     const wordCountNotes = finalNotes.split(/\s+/).length;
     if (wordCountNotes > 150 || (wordCountNotes > 0 && wordCountNotes < 5)) {
-      return res.status(400).json({
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
         error:
-          "Notes must be either empty or at least 5 words, and no more than 150 words.",
+          ERROR_MESSAGES.NOTES_LENGTH,
       });
     }
 
@@ -509,9 +510,9 @@ const postEditProduct = async (req, res) => {
         isDeleted: false,
       });
       if (existingProduct) {
-        return res.status(400).json({
+        return res.status(HTTP_STATUS.BAD_REQUEST).json({
           success: false,
-          error: "Product name already exists. Please choose a unique name.",
+          error: ERROR_MESSAGES.NAME_EXISTS,
         });
       }
     }
@@ -561,13 +562,13 @@ const postEditProduct = async (req, res) => {
       });
     }
 
-    res.json({ success: true, message: "Product Has Been Edited" });
+    res.json({ success: true, message: SUCCESS_MESSAGES.PRODUCT_EDITED });
   } catch (err) {
     console.error("Error editing product:", err);
-    res.status(500).json({
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error:
-        "Something went wrong while editing the product. Please try again.",
+        ERROR_MESSAGES.PRODUCT_EDIT_ERROR,
     });
   }
 };
@@ -583,7 +584,7 @@ const getProductDetails = async (req, res) => {
       .lean(); // Use lean for better performance since we're not modifying
 
     if (!product) {
-      return res.status(404).json({ message: "Product not found" });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.PRODUCT_NOT_FOUND });
     }
 
     const currentDate = new Date();
@@ -648,7 +649,7 @@ const getProductDetails = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching product details:", error);
-    (req.session.error = "error"), "Failed to load product details.";
+    req.session.errorMessage = ERROR_MESSAGES.PRODUCT_DETAILS_LOAD_ERROR;
     res.redirect("/admin/products");
   }
 };
@@ -659,11 +660,11 @@ const unlistProduct = async (req, res) => {
 
     product.isListed = !product.isListed;
     await product.save();
-    req.session.successMessage = "Product Status Has Been Changed  ";
+    req.session.successMessage = SUCCESS_MESSAGES.PRODUCT_STATUS_CHANGED;
     res.redirect(`/admin/products/${req.params.id}`);
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -674,11 +675,11 @@ const deleteProduct = async (req, res) => {
 
     product.isDeleted = !product.isDeleted;
     await product.save();
-    req.session.successMessage = "Product Status Has Been Deleted  ";
+    req.session.successMessage = SUCCESS_MESSAGES.PRODUCT_DELETED;
     res.redirect("/admin/products");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server Error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 

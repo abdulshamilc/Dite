@@ -1,14 +1,15 @@
 import Notification from "../../models/notificationModel.js";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 // Get all notifications
 const getNotifications = async (req, res) => {
     try {
         const notifications = await Notification.find().sort({ createdAt: -1 });
         const unreadCount = await Notification.countDocuments({ isRead: false });
-        res.status(200).json({ notifications, unreadCount });
+        res.status(HTTP_STATUS.OK).json({ notifications, unreadCount });
     } catch (error) {
         console.error("Error fetching notifications:", error);
-        res.status(500).json({ message: "Failed to fetch notifications" });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.NOTIFICATION_FETCH_ERROR });
     }
 };
 
@@ -17,10 +18,10 @@ const markAsRead = async (req, res) => {
     try {
         const { id } = req.params;
         await Notification.findByIdAndUpdate(id, { isRead: true });
-        res.status(200).json({ message: "Notification marked as read" });
+        res.status(HTTP_STATUS.OK).json({ message: SUCCESS_MESSAGES.NOTIFICATION_READ });
     } catch (error) {
         console.error("Error marking notification as read:", error);
-        res.status(500).json({ message: "Failed to update notification" });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.NOTIFICATION_UPDATE_ERROR });
     }
 };
 
@@ -28,10 +29,10 @@ const markAsRead = async (req, res) => {
 const markAllAsRead = async (req, res) => {
     try {
         await Notification.updateMany({ isRead: false }, { isRead: true });
-        res.status(200).json({ message: "All notifications marked as read" });
+        res.status(HTTP_STATUS.OK).json({ message: SUCCESS_MESSAGES.ALL_NOTIFICATIONS_READ });
     } catch (error) {
         console.error("Error marking all as read:", error);
-        res.status(500).json({ message: "Failed to update notifications" });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.NOTIFICATIONS_UPDATE_ERROR });
     }
 };
 
@@ -39,10 +40,10 @@ const markAllAsRead = async (req, res) => {
 const clearReadNotifications = async (req, res) => {
     try {
         await Notification.deleteMany({ isRead: true });
-        res.status(200).json({ message: "Read notifications cleared" });
+        res.status(HTTP_STATUS.OK).json({ message: SUCCESS_MESSAGES.NOTIFICATIONS_CLEARED });
     } catch (error) {
         console.error("Error clearing notifications:", error);
-        res.status(500).json({ message: "Failed to clear notifications" });
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.NOTIFICATIONS_CLEAR_ERROR });
     }
 }
 

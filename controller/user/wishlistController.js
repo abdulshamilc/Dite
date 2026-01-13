@@ -2,6 +2,7 @@ import {User} from  '../../models/userModels.js'
 import Product from '../../models/productsModels.js';
 import Wishlist from '../../models/wishlistModel.js';
 import Cart from '../../models/cartModel.js';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 const getWishlist = async (req, res) => {
   try {
@@ -78,7 +79,7 @@ const getWishlist = async (req, res) => {
     res.render('user/wishlist/wishlist', {
       wishlist: { items: [] },
       suggestedProducts: null,
-      error: 'Failed to load wishlist. Please try again.'
+      error: ERROR_MESSAGES.WISHLIST_LOAD_ERROR
     });
   }
 };
@@ -93,15 +94,15 @@ const addToWishlist = async (req, res) => {
 
     if (!idToUse) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Product ID is required.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.PRODUCT_ID_REQUIRED });
       }
-      return res.redirect('/shop?error=Product ID is required.');
+      return res.redirect(`/shop?error=${ERROR_MESSAGES.PRODUCT_ID_REQUIRED}`);
     }
 
     if (!userEmail) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
         req.session.returnTo = req.get('Referer') || "/";
-        return res.json({ success: false, message: 'Please log in to add to wishlist.', redirect: '/login' });
+        return res.json({ success: false, message: ERROR_MESSAGES.LOGIN_REQUIRED, redirect: '/login' });
       }
       req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
@@ -111,7 +112,7 @@ const addToWishlist = async (req, res) => {
     if (!user) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
         req.session.returnTo = req.get('Referer') || "/";
-        return res.json({ success: false, message: 'User not found.', redirect: '/login' });
+        return res.json({ success: false, message: ERROR_MESSAGES.USER_NOT_FOUND, redirect: '/login' });
       }
       req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
@@ -122,17 +123,17 @@ const addToWishlist = async (req, res) => {
     const product = await Product.findById(idToUse);
     if (!product || !product.isListed || product.isDeleted) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Product not found or unavailable.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE });
       }
-      return res.redirect('/shop?error=Product not found or unavailable.');
+      return res.redirect(`/shop?error=${ERROR_MESSAGES.PRODUCT_UNAVAILABLE}`);
     }
 
     const cart = await Cart.findOne({ userId });
     if (cart && cart.items.some(item => item.productId.toString() === idToUse)) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Product is already in your cart.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.PRODUCT_IN_CART });
       }
-      return res.redirect('/shop?error=Product is already in your cart.');
+      return res.redirect(`/shop?error=${ERROR_MESSAGES.PRODUCT_IN_CART}`);
     }
 
     let wishlist = await Wishlist.findOne({ userId });
@@ -143,27 +144,27 @@ const addToWishlist = async (req, res) => {
     const exists = wishlist.items.some(item => item.productId.toString() === idToUse);
     if (exists) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Already in wishlist.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.ALREADY_IN_WISHLIST });
       }
-      return res.redirect('/shop?error=Already in wishlist.');
+      return res.redirect(`/shop?error=${ERROR_MESSAGES.ALREADY_IN_WISHLIST}`);
     }
 
     wishlist.items.push({ productId: idToUse });
     await wishlist.save();
 
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-      res.json({ success: true, message: 'Added to wishlist!' });
+      res.json({ success: true, message: SUCCESS_MESSAGES.ADDED_TO_WISHLIST });
     } else {
-      req.session.success = 'Added to wishlist!';
+      req.session.success = SUCCESS_MESSAGES.ADDED_TO_WISHLIST;
       res.redirect(req.get('Referer') || '/shop');
     }
 
   } catch (error) {
     console.error('Error adding to wishlist:', error);
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-      res.json({ success: false, message: 'Server error. Please try again.' });
+      res.json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
     } else {
-      req.session.error = 'Server error. Please try again.';
+      req.session.error = ERROR_MESSAGES.INTERNAL_ERROR;
       res.redirect('/shop');
     }
   }
@@ -176,14 +177,14 @@ const removeFromWishlist = async (req, res) => {
 
     if (!productId) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Product ID is required.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.PRODUCT_ID_REQUIRED });
       }
-      return res.redirect('/wishlist?error=Product ID is required.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.PRODUCT_ID_REQUIRED}`);
     }
 
     if (!userEmail) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Please log in to manage your wishlist.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.LOGIN_REQUIRED });
       }
       req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login') ;
@@ -192,7 +193,7 @@ const removeFromWishlist = async (req, res) => {
     const user = await User.findOne({ email: userEmail });
     if (!user) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'User not found.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.USER_NOT_FOUND });
       }
       req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login') ;
@@ -203,17 +204,15 @@ const removeFromWishlist = async (req, res) => {
     const wishlist = await Wishlist.findOne({ userId });
     if (!wishlist) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Wishlist not found.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.WISHLIST_NOT_FOUND });
       }
-      return res.redirect('/wishlist?error=Wishlist not found.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.WISHLIST_NOT_FOUND}`);
     }
 
     const initialLength = wishlist.items.length;
     wishlist.items = wishlist.items.filter(item => item.productId.toString() !== productId);
     await wishlist.save();
-
-    const successMsg = initialLength > wishlist.items.length ? 'Removed from wishlist!' : 'Item not found in wishlist.';
-
+    const successMsg = initialLength > wishlist.items.length ? SUCCESS_MESSAGES.REMOVED_FROM_WISHLIST : ERROR_MESSAGES.ITEM_NOT_IN_WISHLIST;
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
       res.json({ success: true, message: successMsg });
     } else {
@@ -223,9 +222,9 @@ const removeFromWishlist = async (req, res) => {
   } catch (error) {
     console.error('Error removing from wishlist:', error);
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-      res.json({ success: false, message: 'Server error. Please try again.' });
+      res.json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
     } else {
-      req.session.error = 'Server error. Please try again.';
+      req.session.error = ERROR_MESSAGES.INTERNAL_ERROR;
       res.redirect('/wishlist');
     }
   }
@@ -238,15 +237,15 @@ const addToCartFromWishlist = async (req, res) => {
 
     if (!itemId) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Wishlist item ID is required.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.WISHLIST_ITEM_ID_REQUIRED });
       }
-      return res.redirect('/wishlist?error=Wishlist item ID is required.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.WISHLIST_ITEM_ID_REQUIRED}`);
     }
 
     if (!userEmail) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
         req.session.returnTo = req.get('Referer') || "/";
-        return res.json({ success: false, message: 'Please log in to add to cart.', redirect: '/login' });
+        return res.json({ success: false, message: ERROR_MESSAGES.LOGIN_REQUIRED, redirect: '/login' });
       }
       req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
@@ -256,7 +255,7 @@ const addToCartFromWishlist = async (req, res) => {
     if (!user) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
         req.session.returnTo = req.get('Referer') || "/";
-        return res.json({ success: false, message: 'User not found.', redirect: '/login' });
+        return res.json({ success: false, message: ERROR_MESSAGES.USER_NOT_FOUND, redirect: '/login' });
       }
       req.session.returnTo = req.get('Referer') || "/";
       return res.redirect('/login');
@@ -272,18 +271,18 @@ const addToCartFromWishlist = async (req, res) => {
 
     if (!wishlist) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Wishlist not found.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.WISHLIST_NOT_FOUND });
       }
-      return res.redirect('/wishlist?error=Wishlist not found.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.WISHLIST_NOT_FOUND}`);
     }
 
     // Find the specific wishlist item
     const itemIndex = wishlist.items.findIndex(item => item._id.toString() === itemId);
     if (itemIndex === -1) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Wishlist item not found.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.WISHLIST_ITEM_NOT_FOUND });
       }
-      return res.redirect('/wishlist?error=Wishlist item not found.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.WISHLIST_ITEM_NOT_FOUND}`);
     }
 
     const item = wishlist.items[itemIndex];
@@ -291,16 +290,16 @@ const addToCartFromWishlist = async (req, res) => {
 
     if (!product || !product.isListed || product.isDeleted) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Product not found or unavailable.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE });
       }
-      return res.redirect('/wishlist?error=Product not found or unavailable.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.PRODUCT_UNAVAILABLE}`);
     }
 
     if (!product.variants || product.variants.length === 0) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'Product has no variants available.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.NO_VARIANTS_AVAILABLE });
       }
-      return res.redirect('/wishlist?error=Product has no variants available.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.NO_VARIANTS_AVAILABLE}`);
     }
 
     // Find the first available variant (isListed, !isDeleted, stock > 0), starting from index 0
@@ -315,9 +314,9 @@ const addToCartFromWishlist = async (req, res) => {
 
     if (selectedVariantIndex === -1) {
       if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-        return res.json({ success: false, message: 'No available stock for this product.' });
+        return res.json({ success: false, message: ERROR_MESSAGES.NO_STOCK_AVAILABLE });
       }
-      return res.redirect('/wishlist?error=No available stock for this product.');
+      return res.redirect(`/wishlist?error=${ERROR_MESSAGES.NO_STOCK_AVAILABLE}`);
     }
 
     const selectedVariant = product.variants[selectedVariantIndex];
@@ -354,9 +353,9 @@ const addToCartFromWishlist = async (req, res) => {
       
       if (currentTotalQuantity + 1 > 10) {
          if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-          return res.json({ success: false, message: 'Cart limit is 10 units total.' });
+          return res.json({ success: false, message: ERROR_MESSAGES.CART_LIMIT_EXCEEDED });
         }
-        return res.redirect('/wishlist?error=Cart limit is 10 units total.');
+        return res.redirect(`/wishlist?error=${ERROR_MESSAGES.CART_LIMIT_EXCEEDED}`);
       }
 
       cart.items[existingItemIndex].quantity = newQuantity;
@@ -364,17 +363,17 @@ const addToCartFromWishlist = async (req, res) => {
       // Check total cart limit or other constraints if necessary
        if (cart.items.length >= 10) {
           if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-             return res.json({ success: false, message: 'Cart has reached the maximum of 10 distinct products!' });
+             return res.json({ success: false, message: ERROR_MESSAGES.CART_DISTINCT_LIMIT });
           }
-           return res.redirect('/wishlist?error=Cart max limit reached.');
+           return res.redirect(`/wishlist?error=${ERROR_MESSAGES.CART_DISTINCT_LIMIT}`);
         }
 
        const currentTotalQuantity = cart.items.reduce((acc, item) => acc + item.quantity, 0);
        if (currentTotalQuantity + 1 > 10) {
           if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.json({ success: false, message: 'Cart limit is 10 units total.' });
+            return res.json({ success: false, message: ERROR_MESSAGES.CART_LIMIT_EXCEEDED });
           }
-          return res.redirect('/wishlist?error=Cart limit is 10 units total.');
+          return res.redirect(`/wishlist?error=${ERROR_MESSAGES.CART_LIMIT_EXCEEDED}`);
        }
 
       // Add new item
@@ -397,19 +396,19 @@ const addToCartFromWishlist = async (req, res) => {
     await wishlist.save();
 
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-      req.session.success = 'Moved to cart!';
-      res.json({ success: true, message: 'Moved to cart!' });
+      req.session.success = SUCCESS_MESSAGES.MOVED_TO_CART;
+      res.json({ success: true, message: SUCCESS_MESSAGES.MOVED_TO_CART });
     } else {
-      req.session.success = 'Moved to cart!';
+      req.session.success = SUCCESS_MESSAGES.MOVED_TO_CART;
       res.redirect('/wishlist');
     }
 
   } catch (error) {
     console.error('Error adding to cart from wishlist:', error);
     if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
-      res.json({ success: false, message: 'Server error. Please try again.' });
+      res.json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
     } else {
-      req.session.error = 'Server error. Please try again.';
+      req.session.error = ERROR_MESSAGES.INTERNAL_ERROR;
       res.redirect('/wishlist');
     }
   }

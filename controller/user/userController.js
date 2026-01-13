@@ -9,6 +9,7 @@ import { generateOTP } from "../../utils/genarateOtp.js";
 import jwt from "jsonwebtoken";
 import Cart from '../../models/cartModel.js' ;
 import Wallet from '../../models/walletModel.js';
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 // Not logged in home
 // Not logged in home
 const notLogginedHome = (req, res) => {
@@ -42,13 +43,13 @@ const signup = async (req, res) => {
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       if (existingUser.isBlocked) {
-        return res.status(400).render("user/authentications/signup", {
-          errors: { userExist: "This account is blocked" },
+        return res.status(HTTP_STATUS.BAD_REQUEST).render("user/authentications/signup", {
+          errors: { userExist: ERROR_MESSAGES.ACCOUNT_BLOCKED },
           oldData: req.body,
         });
       }
-      return res.status(400).render("user/authentications/signup", {
-        errors: { userExist: "User Already Exists" },
+        return res.status(HTTP_STATUS.BAD_REQUEST).render("user/authentications/signup", {
+        errors: { userExist: ERROR_MESSAGES.EMAIL_ALREADY_EXISTS },
         oldData: req.body,
       });
     }
@@ -58,7 +59,7 @@ const signup = async (req, res) => {
     res.redirect("/set-password");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -115,7 +116,7 @@ const postSetPassword = async (req, res) => {
     res.redirect("/signup/verify-otp");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Server error");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -154,7 +155,7 @@ const resendSignupOtp = async (req, res) => {
     res.redirect("/signup/verify-otp");
   } catch (error) {
     console.error(error);
-    res.status(500).send("Error resending OTP");
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send("Error resending OTP");
   }
 };
 
@@ -172,7 +173,7 @@ const postSignupOtpVerify = async (req, res) => {
 
     // Validate OTP digits
     if (!otpArray.every((otp) => /^\d$/.test(otp))) {
-      req.session.otpError = "Invalid OTP format. Please enter 6 digits.";
+      req.session.otpError = ERROR_MESSAGES.OTP_INVALID_FORMAT;
       return res.redirect("/signup/verify-otp");
     }
 
@@ -192,7 +193,7 @@ const postSignupOtpVerify = async (req, res) => {
     });
 
     if (!otpVerify || Number(enteredOtp) !== otpVerify.otp) {
-      req.session.otpError = "Invalid or expired OTP.";
+      req.session.otpError = ERROR_MESSAGES.OTP_INVALID_EXPIRED;
       return res.redirect("/signup/verify-otp");
     }
 
@@ -291,32 +292,32 @@ const login = async (req, res) => {
 
   if (email == "") {
     return res.render("user/authentications/login", {
-      errors: { message: "Email Required " },
+      errors: { message: ERROR_MESSAGES.EMAIL_REQUIRED },
     });
   }
   if (password == "") {
     return res.render("user/authentications/login", {
-      errors: { message: "Password Required " },
+      errors: { message: ERROR_MESSAGES.PASSWORD_REQUIRED },
     });
   }
 
   const user = await User.findOne({ email: email.toLowerCase() });
   if (!user) {
     return res.render("user/authentications/login", {
-      errors: { message: "Invalid email " },
+      errors: { message: ERROR_MESSAGES.INVALID_EMAIL },
     });
   }
 
   const validatePassword = await bcrypt.compare(password, user.password);
   if (!validatePassword) {
     return res.render("user/authentications/login", {
-      errors: { message: "Invalid Password " },
+      errors: { message: ERROR_MESSAGES.PASSWORD_MISMATCH },
     });
   }
 
   if (user.isBlocked) {
     return res.render("user/authentications/login", {
-      errors: { message: "User Is Blocked By Admin " },
+      errors: { message: ERROR_MESSAGES.ACCOUNT_BLOCKED },
     });
   }
 
@@ -364,18 +365,18 @@ const forgetPassword = async (req, res) => {
     const email = req.body.email;
 
     // Checking required fields
-    if (!email) return res.status(400).json({ message: "Email is required" });
+    if (!email) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.EMAIL_REQUIRED });
 
     // Verifying the Email
     const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) return res.status(400).json({ message: "Invalid Email" });
+    if (!user) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_EMAIL });
   
 
     generateOTP(email, "Forget Password" , "The OTP For Resetting Your Password" , "Forget Password");
     req.session.email = email;
 
     return res.json({
-      message: "OTP sent successfully to your email",
+      message: SUCCESS_MESSAGES.OTP_SENT,
       userId: user._id,
       // redirect:"/"
       redirect: "/forgot-password/otpVerification",
@@ -383,8 +384,8 @@ const forgetPassword = async (req, res) => {
   } catch (error) {
     console.error("Error in forgetPassword:", error);
     return res
-      .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+      .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      .json({ message: ERROR_MESSAGES.INTERNAL_ERROR, error: error.message });
   }
 };
 
@@ -406,13 +407,13 @@ const PostOtpVerification = async (req, res) => {
     const EnterdOtp = req.body.otp;
 
 
-    if (!EnterdOtp) return res.status(400).json({ message: "OTP is required" });
+    if (!EnterdOtp) return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.OTP_REQUIRED });
 
     if (!userOtp)
-      return res.status(400).json({ message: "OTP expired or not found" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.OTP_INVALID_EXPIRED });
 
     if (EnterdOtp != userOtp.otp)
-      return res.status(400).json({ message: "OTP is Incorrect" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.OTP_INCORRECT });
 
     const email = req.session.email;
     const action = "Reset Pasword";
@@ -435,7 +436,7 @@ const PostOtpVerification = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in PostOtpVerification:", error);
-    return res.status(500).json({ message: "Internal server error" });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 
@@ -462,9 +463,9 @@ const getResetPasword = async (req, res) => {
       successMsg: null,
     });
   } catch (error) {
-    let msg = "Invalid reset link.";
+    let msg = ERROR_MESSAGES.RESET_LINK_INVALID;
     if (error.name === "TokenExpiredError")
-      msg = "Reset link expired. Please request a new one.";
+      msg = ERROR_MESSAGES.RESET_LINK_EXPIRED;
 
     return res.render("user/authentications/resetPassword", {
       email: null,
@@ -496,10 +497,10 @@ const postResetPassword = async (req, res) => {
   } catch (err) {
     if (err.name === "TokenExpiredError") {
       return res
-      .status(400)
-      .json({ message: "Reset link expired. Please request a new one." });
+      .status(HTTP_STATUS.BAD_REQUEST)
+      .json({ message: ERROR_MESSAGES.RESET_LINK_EXPIRED });
     }
-    return res.status(400).json({ message: "Invalid reset token." });
+    return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.RESET_LINK_INVALID });
   }
 
 
@@ -511,7 +512,7 @@ const postResetPassword = async (req, res) => {
       return res
         .status(400)
         .json({
-          message: "New password cannot be the same as the old password.",
+          message: ERROR_MESSAGES.PASSWORD_SAME,
         });
     }
 
@@ -522,13 +523,13 @@ const postResetPassword = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Password reset successful. You can now log in.",
+      message: SUCCESS_MESSAGES.PASSWORD_RESET_SUCCESS,
     });
   } catch (error) {
     console.error("Error in postResetPassword:", error);
     return res
       .status(500)
-      .json({ message: "Something went wrong", error: error.message });
+      .json({ message: ERROR_MESSAGES.INTERNAL_ERROR, error: error.message });
   }
 };
 
@@ -538,10 +539,10 @@ const postResetPassword = async (req, res) => {
 const restPassword = async (req, res) => {
   try {
     const userEmail = req.session.user;
-    if (!userEmail) return res.status(401).json({ message: "Unauthorized" });
+    if (!userEmail) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS });
 
     const user = await User.findOne({ email: userEmail });
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(HTTP_STATUS.NOT_FOUND).json({ message: ERROR_MESSAGES.USER_NOT_FOUND });
 
     const { currentPassword, newPassword, confirmPassword } = req.body;
 
@@ -553,12 +554,12 @@ const restPassword = async (req, res) => {
     // Check if current password matches database
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch)
-      return res.status(400).json({ message: "Current password is incorrect" });
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.CURRENT_PASSWORD_INCORRECT });
 
     // Ensure new password is different from current
     if (currentPassword === newPassword) {
       return res.status(400).json({
-        message: "New password must be different from current password",
+        message: ERROR_MESSAGES.NEW_PASSWORD_DIFFERENT,
       });
     }
 
@@ -569,12 +570,12 @@ const restPassword = async (req, res) => {
     user.password = hashedPassword;
     await user.save();
 
-    return res.status(200).json({ message: "Password updated successfully!" });
+    return res.status(HTTP_STATUS.OK).json({ message: SUCCESS_MESSAGES.PASSWORD_UPDATED });
   } catch (error) {
     console.error(error);
     return res
       .status(500)
-      .json({ message: "Server error. Please try again later." });
+      .json({ message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 

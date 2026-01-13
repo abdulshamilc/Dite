@@ -6,6 +6,7 @@ import Offer from "../../models/offerModel.js";
 import Cart from "../../models/cartModel.js";
 import Review from "../../models/reviewModel.js";
 import mongoose from "mongoose";
+import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/index.js";
 
 const escapeRegex = (string) => {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -211,7 +212,7 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
        name: pageTitle,
        products: [],
        wishlist: [],
-       error: "Something went wrong!",
+       error: ERROR_MESSAGES.INTERNAL_ERROR,
        minPrice: 0, maxPrice: 10000,
        minPriceOptions: [], maxPriceOptions: [],
        topBrands: [], otherBrands: [], brands: [],
@@ -449,7 +450,7 @@ const getShop = async (req, res) => {
     res.status(500).render("user/shop/shop", {
       products: [],
       wishlist: [],
-      error: "Something went wrong!",
+      error: ERROR_MESSAGES.INTERNAL_ERROR,
       minPrice: 0,
       maxPrice: 10000,
       minPriceOptions: [5000, 10000, 15000, 30000, 50000, 10000],
@@ -517,7 +518,7 @@ const getOffers = async (req, res) => {
 
   } catch (error) {
       console.error(error);
-      res.status(500).send("Server Error");
+      res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
 
@@ -670,7 +671,7 @@ const productDetail = async (req, res) => {
     res.status(500).render("user/shop/productDetail", {
       product: null,
       suggestions: [],
-      error: "Something went wrong!",
+      error: ERROR_MESSAGES.INTERNAL_ERROR,
     });
   }
 };
@@ -713,7 +714,7 @@ const getCatogoryShop = async (req, res) => {
         name: "Category Not Found",
         products: [],
         wishlist: [],
-        error: "Category not found!",
+        error: ERROR_MESSAGES.CATEGORY_NOT_FOUND,
         minPrice: 0, maxPrice: 10000,
         minPriceOptions: [], maxPriceOptions: [],
         topBrands: [], otherBrands: [], brands: [],
@@ -729,7 +730,7 @@ const getCatogoryShop = async (req, res) => {
         name: "Error",
         products: [],
         wishlist: [],
-        error: "Something went wrong!",
+        error: ERROR_MESSAGES.INTERNAL_ERROR,
         minPrice: 0, maxPrice: 10000,
         minPriceOptions: [], maxPriceOptions: [],
         topBrands: [], otherBrands: [], brands: [],
@@ -745,12 +746,12 @@ const getProductAPI = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id);
     if (!product || product.isDeleted || !product.isListed) {
-      return res.status(404).json({ success: false, message: 'Product not found or unavailable.' });
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE });
     }
     res.json({ success: true, product });
   } catch (error) {
     console.error('Error fetching product:', error);
-    res.status(500).json({ success: false, message: 'Server error.' });
+    res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.INTERNAL_ERROR });
   }
 };
 
