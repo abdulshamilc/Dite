@@ -98,6 +98,7 @@
     <script>
         const orderId = '<%= order._id %>';
         const orderItems = <%- JSON.stringify(order.items || []) %>;
+        const couponMinCartValue = <%= order.couponMinCartValue || 0 %>;
         const cancelForm = document.getElementById('cancelForm');
         const confirmCancelBtn = document.getElementById('confirmCancel');
 
@@ -123,6 +124,15 @@
 
             const selectedItems = [];
             let hasSelection = false;
+            let totalActiveItems = 0;
+            let totalCancelQty = 0;
+            
+            // Calculate totals for validation
+            orderItems.forEach((item, idx) => {
+                const q = item.activeQty !== undefined ? item.activeQty : item.quantity;
+                if(q > 0) totalActiveItems += q;
+            });
+
             document.querySelectorAll('.product-checkbox:checked').forEach(checkbox => {
                 const index = parseInt(checkbox.id.replace('item', ''));
                 const qtyInput = document.getElementById(`qty${index}`);
@@ -135,11 +145,16 @@
                             name: item.name,
                             mlSize: item.mlSize || 0,
                             basePrice: item.basePrice || 0,
+                            paidUnitPrice: item.paidUnitPrice, 
+                            discountedPrice: item.discountedPrice,
+                            couponDiscount: item.couponDiscount,
                             image: item.image
+                            // Pass necessary fields; server re-validates item existence
                         },
                         cancelQty: qty
                     });
                     hasSelection = true;
+                    totalCancelQty += qty;
                 }
             });
 
@@ -155,7 +170,84 @@
                 return;
             }
 
-            // Create hidden input for cancelledItems JSON
+            // --- Coupon Minimum Cart Validation ---
+            if (couponMinCartValue > 0) {
+                const isFullCancel = totalCancelQty >= totalActiveItems;
+                if (!isFullCancel) {
+                    let remainingSubtotal = 0;
+                    
+                    orderItems.forEach((item, index) => {
+                       const currentQty = item.activeQty !== undefined ? item.activeQty : item.quantity;
+                       if (currentQty <= 0) return; // Skip already dead items
+                       
+                       // Find if this item is being cancelled
+                       // Need to match ID exactly. orderItems is source of truth indices.
+                       const selected = selectedItems.find(si => si.item._id === item._id);
+                       const cancelQ = selected ? selected.cancelQty : 0;
+                       
+                       const newQty = Math.max(0, currentQty - cancelQ);
+                       
+                       // Determine price to use (must match backend logic)
+                       // Backend uses: paidUnitPrice if exists, else (discountedPrice - couponDiscount)
+                       let effectivePrice = 0;
+                       if (item.paidUnitPrice !== undefined) {
+                           effectivePrice = item.paidUnitPrice;
+                       } else {
+                           const price = item.discountedPrice || 0;
+                           const coupon = item.couponDiscount || 0;
+                           effectivePrice = Math.max(0, price - coupon);
+                       }
+                       
+                       remainingSubtotal += effectivePrice * newQty;
+                    });
+                    
+                    // console.log("Projected Remaining Subtotal:", remainingSubtotal, "Min:", couponMinCartValue);
+
+                    if (remainingSubtotal < couponMinCartValue) {
+                         Swal.fire({
+                            icon: 'warning',
+                            title: 'Coupon Violation Warning',
+                            html: `Cancelling these items would reduce your order below the coupon's minimum value of <b>₹${couponMinCartValue}</b>.<br><br>
+                                   You can either:<br>
+                                   1. Keep the items (Cancel request aborted)<br>
+                                   2. Cancel the <b>ENTIRE</b> order`,
+                            showCancelButton: true,
+                            showDenyButton: true,
+                            confirmButtonText: 'Abort (Keep Items)',
+                            denyButtonText: 'Cancel Entire Order',
+                            cancelButtonText: 'Close',
+                            background: '#2a2a2a', color: '#ffffff', confirmButtonColor: '#10b981', denyButtonColor: '#d33'
+                        }).then((result) => {
+                            if (result.isDenied) {
+                                // Cancel Entire Order Logic - Select all and submit
+                                const allItems = [];
+                                orderItems.forEach(item => {
+                                    const q = item.activeQty !== undefined ? item.activeQty : item.quantity;
+                                    if (q > 0) {
+                                        allItems.push({
+                                            item: { _id: item._id, mlSize: item.mlSize }, // minimal needed for backend lookup 
+                                            cancelQty: q
+                                        });
+                                    }
+                                });
+                                
+                                submitCancellation(allItems);
+                            } else if (result.isConfirmed) {
+                                // 'Abort (Keep Items)' clicked
+                                window.location.href = `/order/${orderId}`;
+                            }
+                        });
+                        return; // Blocking partial cancel submit
+                    }
+                }
+            }
+            // --------------------------------------
+
+            submitCancellation(selectedItems);
+        };
+
+        function submitCancellation(items) {
+             // Create hidden input for cancelledItems JSON
             let hiddenInput = document.querySelector('input[name="cancelledItems"]');
             if (!hiddenInput) {
                 hiddenInput = document.createElement('input');
@@ -163,11 +255,26 @@
                 hiddenInput.name = 'cancelledItems';
                 cancelForm.appendChild(hiddenInput);
             }
-            hiddenInput.value = JSON.stringify(selectedItems);
+            hiddenInput.value = JSON.stringify(items);
 
             // Submit the form to proceed to the cancel confirmation page
             cancelForm.submit();
-        };
+        }
+
+        // Auto-select all items if query param exists (for full order cancel flow)
+        if (new URLSearchParams(window.location.search).get('selectAll') === 'true') {
+            document.querySelectorAll('.product-checkbox').forEach((checkbox, index) => {
+                if (!checkbox.checked) {
+                    checkbox.click(); // Trigger change event logic naturally
+                    
+                    // Ensure max quantity is selected
+                    const qtyInput = document.getElementById(`qty${index}`);
+                    if (qtyInput) {
+                        qtyInput.value = qtyInput.max;
+                    }
+                }
+            });
+        }
     </script>
     <%- include("../../../partials/user/footer") %>
 </body>

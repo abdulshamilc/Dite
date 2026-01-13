@@ -142,42 +142,43 @@
               <thead>
                 <tr class="bg-gray-800">
                   <th class="px-4 py-2 text-left">Order ID</th>
-                  <th class="px-4 py-2 text-left">Date & Time</th>
-                  <th class="px-4 py-2 text-left">Customer</th>
-                  <th class="px-4 py-2 text-left">Total Amount</th>
-                  <th class="px-4 py-2 text-left">Discount</th>
+                  <th class="px-4 py-2 text-left">Date</th>
+                  <th class="px-2 py-2 text-left">Customer</th>
+                  <th class="px-2 py-2 text-left">Status</th>
+                  <th class="px-4 py-2 text-left">Amount</th>
                   <th class="px-4 py-2 text-left">Coupon</th>
-                  <th class="px-4 py-2 text-left">Payment Method</th>
-                  <th class="px-4 py-2 text-left">Status</th>
+                  <th class="px-4 py-2 text-left">Method</th>
                 </tr>
               </thead>
               <tbody>
-                <% orderSalesData.forEach(function(order) { %>
-                <tr class="border-b border-gray-700 hover:bg-gray-900 <%= order.isToday ? 'bg-[#c5a987]/20 border-l-4 border-l-white' : '' %>">
-                  <td class="px-4 py-2 font-mono text-sm"><%= order.orderId %></td>
-                  <td class="px-4 py-2"><%= order.date %></td>
-                  <td class="px-4 py-2">
-                    <div class="font-medium"><%= order.customerName %></div>
-                    <div class="text-xs text-gray-500"><%= order.customerEmail %></div>
+                <% orderSalesData.forEach(function(row) { %>
+                <tr class="border-b border-gray-700 hover:bg-gray-900">
+                  <td class="px-4 py-2 font-mono text-xs"><%= row.orderId %></td>
+                  <td class="px-4 py-2 text-xs"><%= row.date %></td>
+                  <td class="px-2 py-2 text-sm">
+                    <div class="font-medium truncate w-24"><%= row.customerName %></div>
                   </td>
-                  <td class="px-4 py-2 revenue">₹<%= order.totalAmount.toLocaleString() %></td>
-                  <td class="px-4 py-2 text-red-400">
-                    <div>Prod: ₹<%= order.productDiscount.toLocaleString() %></div>
-                  </td>
-                  <td class="px-4 py-2 text-orange-400">
-                    <% if(order.discountAmount > 0) { %>
-                      <div>-₹<%= order.discountAmount.toLocaleString() %></div>
-                      <div class="text-xs text-gray-500"><%= order.couponCode %></div>
-                    <% } else { %>
-                      <span class="text-gray-600">-</span>
-                    <% } %>
-                  </td>
-                  <td class="px-4 py-2"><%= order.paymentMethod %></td>
-                  <td class="px-4 py-2">
-                    <span class="px-2 py-1 text-xs rounded <%= order.orderStatus === 'Delivered' ? 'bg-green-600' : order.orderStatus === 'Cancelled' ? 'bg-red-600' : order.orderStatus === 'Returned' ? 'bg-purple-600' : 'bg-yellow-600' %>">
-                      <%= order.orderStatus %>
+                  <td class="px-2 py-2">
+                    <span class="px-2 py-1 text-[10px] rounded <%= row.status === 'Delivered' ? 'bg-green-900 text-green-200' : row.status === 'Placed' ? 'bg-blue-900 text-blue-200' : row.status === 'Cancelled' ? 'bg-red-900 text-red-200' : row.status === 'Returned' ? 'bg-purple-900 text-purple-200' : 'bg-yellow-900 text-yellow-200' %>">
+                      <%= row.status %>
                     </span>
                   </td>
+                  <td class="px-4 py-2 font-bold text-sm">
+                    <% if (row.isDebit) { %>
+                        <span class="text-red-400">-₹<%= row.amount.toLocaleString() %></span>
+                    <% } else { %>
+                        <span class="text-green-400">+₹<%= row.amount.toLocaleString() %></span>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-2 text-xs">
+                    <% if(row.discountAmount > 0) { %>
+                        <div class="text-orange-400">-₹<%= row.discountAmount.toLocaleString() %></div>
+                        <div class="text-[10px] text-gray-500"><%= row.couponCode %></div>
+                    <% } else { %>
+                        <span>-</span>
+                    <% } %>
+                  </td>
+                  <td class="px-4 py-2 text-xs"><%= row.paymentMethod %></td>
                 </tr>
                 <% }) %>
               </tbody>

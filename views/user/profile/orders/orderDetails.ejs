@@ -480,32 +480,30 @@
                         <div class="space-y-2">
                             <div class="flex justify-between text-gray-300">
                                 <span>Subtotal</span>
-                                <span>₹<%= (order.totalAmount + (order.discountAmount || 0)).toFixed(2) %></span>
+                                <span>₹<%= (subTotal || 0).toFixed(2) %></span>
                             </div>
                            
-                            <% if (order.couponCode) { %>
+                            <% if (order.couponCode && order.discountAmount > 0) { %>
                             <div class="flex justify-between text-gray-300">
                                 <span>Coupon Applied (<span class="text-green-400 font-semibold"><%= order.couponCode %></span>)</span>
                                 <span class="text-green-400">-₹<%= (order.discountAmount || 0).toFixed(2) %></span>
                             </div>
-                            <% } else if (order.discount > 0) { %>
-                             <!-- Check if generic discount exists if no specific coupon code (fallback) -->
-                             <div class="flex justify-between text-gray-300">
-                                <span>Discount</span>
-                                <span class="text-green-400">-₹<%= (order.discount || 0).toFixed(2) %></span>
+                            <% } %>
+                            
+                            <% if (discount > 0) { %>
+                            <div class="flex justify-between text-gray-300">
+                                <span>Discount (Offers + Coupon)</span>
+                                <span class="text-green-400">-₹<%= discount.toFixed(2) %></span>
                             </div>
                             <% } %>
+                            
                             <div class="flex justify-between text-gray-300">
                                 <span>Delivery Charge</span>
-                                <span>₹<%= (order.deliveryCharge || 40).toFixed(2) %></span>
-                            </div>
-                            <div class="flex justify-between text-gray-300">
-                                <span>Tax</span>
-                                <span>₹<%= (order.tax || 0).toFixed(2) %></span>
+                                <span>₹<%= (hasActiveItems ? (order.deliveryCharge || 40) : 0).toFixed(2) %></span>
                             </div>
                             <div class="flex justify-between text-lg font-bold accent-text pt-2 border-t border-gray-600">
                                 <span>Total Paid</span>
-                                <span>₹<%= (order.totalAmount || 0).toFixed(2) %></span>
+                                <span>₹<%= (totalAmount || 0).toFixed(2) %></span>
                             </div>
                         </div>
                     </div>

@@ -10,24 +10,54 @@ const orderedProductSchema = new mongoose.Schema({
   },
   name: String,
   mlSize: String,
-  basePrice: Number,
-  discoundedPrice: Number,
+  image: String,
+
+  // Prices
+  basePrice: Number,      // MRP
+  offerPrice: Number,     // After category/product offer
+  paidUnitPrice: Number,  // FINAL paid price (offerPrice - couponPerUnit)
+  couponPerUnit: {        // Coupon share per unit
+    type: Number,
+    default: 0
+  },
+
+  // Quantities
+  orderedQty: {           // Immutable initial qty
+    type: Number,
+    required: true
+  },
+  activeQty: {            // Mutable (decreases on cancel/return)
+    type: Number,
+    required: true
+  },
+  
+  // Legacy/Compatibility (can mirror activeQty)
+  quantity: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  
+  // Legacy status
   productStatus: {
     type: String,
     enum: ["Placed", "Delivered", "Cancelled", "Returned"],
     default: "Placed",
     required: true,
   },
-  quantity: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
+  
+  // Legacy: Aggregate line-item coupon total? 
+  // We keep it for backward compat if needed, but logic should use couponPerUnit
   couponDiscount: {
     type: Number,
     default: 0,
   },
-  image: String,
+  discountedPrice: { // Legacy: Often used as 'paid price' or 'offer price' ambiguously
+     type: Number
+  },
+  discoundedPrice: { // Typo version often found in codebase
+     type: Number
+  },
 });
 
 const canceledProductSchema = new mongoose.Schema({
@@ -48,7 +78,11 @@ const canceledProductSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  discountedPrice: {
+  // Store what was actually refunded
+  paidUnitPrice: {
+    type: Number, 
+  },
+  discountedPrice: { // Legacy
     type: Number,
     required: true,
   },
@@ -88,7 +122,11 @@ const returndProductSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  discountedPrice: {
+  // Store what should be refunded
+  paidUnitPrice: {
+    type: Number,
+  },
+  discountedPrice: { // Legacy
     type: Number,
     required: true,
   },
@@ -187,11 +225,14 @@ const orderSchema = new mongoose.Schema(
     },
     discountAmount: {
       type: Number,
-      default: 0,
     },
     deliveryCharge: {
       type: Number,
-      default: 0,
+      default: 40,
+    },
+    couponMinCartValue: {
+        type: Number,
+        default: 0
     },
 
     deliveredAt: {

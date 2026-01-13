@@ -235,6 +235,7 @@ const getPaymentpage = async (req, res) => {
     }
 
     // Recalculate Prices & Update Cart before rendering (Fix for Admin price changes not reflecting)
+    let subtotal = 0;
     if (cart && cart.items.length > 0) {
         const currentDate = new Date();
         const productIds = cart.items.map(item => item.productId._id);
@@ -283,18 +284,20 @@ const getPaymentpage = async (req, res) => {
                 const manualPrice = variant.discountedPrice || variant.basePrice;
                 price = Math.min(price, manualPrice);
             }
-            item.discountedPrice = price; 
+            item.discountedPrice = price;
+            subtotal += price * item.quantity;
         }
         await cart.save();
     }
 
-    // Fetch available coupons
+    // Fetch available coupons matched with minCartValue
     const currentDate = new Date();
     const coupons = await Coupon.find({
       isActive: true,
       isDeleted: false,
       startDate: { $lte: currentDate },
-      endDate: { $gte: currentDate }
+      endDate: { $gte: currentDate },
+      minCartValue: { $lte: subtotal }
     });
 
     res.render("user/checkout/finalChekout", { 
@@ -375,15 +378,15 @@ const applyCoupon = async (req, res) => {
 // Place order
 const placeOrder = async (req, res) => {
   try {
-    // Fetch user from session (email-based auth)
+    // Fetch user from session
     const user = await User.findOne({ email: req.session.user });
     if (!user) {
-      return res.status(401).json({ success: false, message: "User not authenticated. Please log in." });
+      return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
     const { addressId, items, paymentMethod, razorpayPaymentId, razorpayOrderId, couponCode } = req.body;
 
-    // Validation
+    // Basic Validation
     if (!items || items.length === 0) {
       return res.status(400).json({ success: false, message: "No items in order" });
     }
@@ -391,28 +394,26 @@ const placeOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing address" });
     }
 
-    // Fetch and validate address
+    // Address Validation
     const selectedAddress = await Address.findById(addressId);
     if (!selectedAddress || selectedAddress.userId.toString() !== user._id.toString()) {
-      return res.status(404).json({ success: false, message: "Invalid or unauthorized address" });
+      return res.status(404).json({ success: false, message: "Invalid address" });
     }
-    // Convert to plain object for embedding (remove MongoDB metadata)
     const address = selectedAddress.toObject();
     delete address._id;
     delete address.__v;
 
-    // Optimize: Fetch all products and active offers at once
+    // ===== DATA PREPARATION =====
     const currentDate = new Date();
     const productIds = items.map(item => item.productId || item._id);
     const uniqueProductIds = [...new Set(productIds)];
     
-    // Fetch Products to get fresh prices and validate stock
+    // Fetch Products & Offers
     const products = await Products.find({ _id: { $in: uniqueProductIds } });
     const productMap = new Map(products.map(p => [p._id.toString(), p]));
     
-    // Fetch Active Offers
     const categoryIds = products.map(p => p.category);
-    const offers = await Offer.find({
+    const applicableOffers = await Offer.find({
         $or: [
           { targetModel: 'Product', targetId: { $in: uniqueProductIds } },
           { targetModel: 'Categories', targetId: { $in: categoryIds } }
@@ -423,264 +424,211 @@ const placeOrder = async (req, res) => {
         endDate: { $gte: currentDate }
     });
 
+    // ===== STEP 1: PRICE ENGINE (Calculate Offer Price) =====
     const validatedItems = [];
-    let totalAmount = 0;
+    let orderSubtotal = 0;
 
-    // Pass 1: Validate Stock, Calculate Offer Prices, and Build Items Tuple
     for (const item of items) {
-       // Robustly extract product ID: handle both string/ObjectId and populated object (e.g. from cart)
+       // Handle ID variations
        const productIdVal = item.productId && item.productId._id ? item.productId._id : (item.productId || item._id);
        const productIdStr = productIdVal.toString();
-       
        const product = productMap.get(productIdStr);
-       
-        if (!product || product.isDeleted || !product.isListed) {
-           req.session.error = `Product ${product ? product.name : 'Unknown'} is currently unavailable. Please remove it to proceed.`;
-           await req.session.save(); // Just in case
-           return res.status(400).json({ success: false, redirect: '/cart', message: `Product ${product ? product.name : 'Unknown'} is currently unavailable.` });
+
+       if (!product || product.isDeleted || !product.isListed) {
+           return res.status(400).json({ success: false, message: `Product ${product ? product.name : 'Unknown'} is unavailable.` });
        }
-       const size = Number(item.mlSize || item.size);
-       const variant = product.variants.find(v => v.mlSize === size);
+
+       const mlSize = Number(item.mlSize || item.size);
+       const variant = product.variants.find(v => v.mlSize === mlSize);
        
        if (!variant) {
-           req.session.error = `Variant (Size: ${size}) for ${product.name} is no longer available.`;
-           await req.session.save();
-           return res.status(400).json({ success: false, redirect: '/cart', message: `Variant (Size: ${size}) for ${product.name} is no longer available.` });
+           return res.status(400).json({ success: false, message: `Variant (Size: ${mlSize}) for ${product.name} is unavailable.` });
        }
-
        if (variant.stock < item.quantity) {
-           req.session.error = `Sorry, only ${variant.stock} units of ${product.name} (Size: ${size}) are left in stock.`;
-           await req.session.save();
-           return res.status(400).json({ success: false, redirect: '/cart', message: `Sorry, only ${variant.stock} units of ${product.name} (Size: ${size}) are left in stock.` });
+           return res.status(400).json({ success: false, message: `Insufficient stock for ${product.name} (Size: ${mlSize}). Only ${variant.stock} left.` });
        }
 
-       // Calculate Best Offer for this Item
-       let bestOfferDiscount = 0;
-       const applicableOffers = offers.filter(offer => 
+       let offerPrice = variant.basePrice;
+
+       // Find best offer
+       let bestOffer = 0;
+       const itemOffers = applicableOffers.filter(offer => 
           (offer.targetModel === 'Product' && offer.targetId.toString() === productIdStr) ||
           (offer.targetModel === 'Categories' && offer.targetId.toString() === product.category.toString())
        );
-       
-       applicableOffers.forEach(offer => {
-            let discount = 0;
-            if (offer.discountType === 'flat') {
-                discount = offer.discountValue;
-            } else {
-                discount = (variant.basePrice * offer.discountValue) / 100;
-            }
-            if (discount > bestOfferDiscount) {
-                bestOfferDiscount = discount;
-            }
+
+       itemOffers.forEach(offer => {
+            const discount = offer.discountType === 'flat'
+              ? offer.discountValue
+              : (variant.basePrice * offer.discountValue) / 100;
+            bestOffer = Math.max(bestOffer, discount);
        });
 
-       // Effective Price = Base Price - Offer Discount. 
-       // We must also consider the variant.discountedPrice (manual sale) if it's lower than the calculated offer price.
-       const calculatedOfferPrice = Math.max(0, variant.basePrice - bestOfferDiscount);
-       const manualPrice = variant.discountedPrice || variant.basePrice;
-       
-       const finalProductPrice = Math.min(calculatedOfferPrice, manualPrice);
-       
-       totalAmount += finalProductPrice * item.quantity;
-       
+       offerPrice = Math.max(0, offerPrice - bestOffer);
+
+       // Apply manual sale price if better
+       // Note: variant.discountedPrice might be 0 or undefined, check properly
+       if (variant.discountedPrice && variant.discountedPrice < variant.basePrice) {
+          offerPrice = Math.min(offerPrice, variant.discountedPrice);
+       }
+
+       orderSubtotal += offerPrice * item.quantity;
+
        validatedItems.push({
            productId: product._id,
            name: product.name,
-           mlSize: size,
-           quantity: (item.quantity),
-           basePrice: variant.basePrice,
-           discountedPrice: finalProductPrice, // Store Effective Offer Price
-           discoundedPrice: finalProductPrice, // Legacy support
+           mlSize: mlSize.toString(), // Ensure string for consistency
            image: item.image || product.images[0] || "",
-           productStatus: "Placed"
+           
+           basePrice: variant.basePrice,
+           offerPrice,
+           
+           orderedQty: item.quantity,
+           // Will set paidUnitPrice and couponPerUnit in next pass
        });
     }
 
-    let finalDiscountAmount = 0;
+    // ===== STEP 2: COUPON APPLICATION (Once) =====
+    let couponDiscountTotal = 0;
     let appliedCouponCode = null;
+    let appliedCouponMinCart = 0;
 
-    // Apply Coupon Logic (on top of total offer price)
     if (couponCode) {
-      const coupon = await Coupon.findOne({ code: couponCode, isDeleted: false });
-      if (coupon && coupon.isActive) {
-        if (currentDate >= coupon.startDate && currentDate <= coupon.endDate && coupon.usageLimit > 0) {
-           if (totalAmount >= coupon.minCartValue) {
-             let discount = 0;
+        const coupon = await Coupon.findOne({ code: couponCode, isDeleted: false });
+        // Validate coupon
+        if (coupon && coupon.isActive && 
+            currentDate >= coupon.startDate && currentDate <= coupon.endDate && 
+            coupon.usageLimit > 0 && orderSubtotal >= coupon.minCartValue) {
+            
+             let calculatedDiscount = 0;
              if (coupon.discountType === 'percentage') {
-                discount = (totalAmount * coupon.discountValue) / 100;
-                if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
-                  discount = coupon.maxDiscountAmount;
+                calculatedDiscount = (orderSubtotal * coupon.discountValue) / 100;
+                if (coupon.maxDiscountAmount) {
+                    calculatedDiscount = Math.min(calculatedDiscount, coupon.maxDiscountAmount);
                 }
-             } else if (coupon.discountType === 'flat') {
-                discount = coupon.discountValue;
+             } else {
+                calculatedDiscount = coupon.discountValue;
              }
              
-             if (discount > totalAmount) discount = totalAmount;
-
-             totalAmount -= discount;
-             finalDiscountAmount = discount;
+             couponDiscountTotal = Math.min(calculatedDiscount, orderSubtotal);
              appliedCouponCode = coupon.code;
+             appliedCouponMinCart = coupon.minCartValue;
 
-             const updatedCoupon = await Coupon.findOneAndUpdate(
-               { _id: coupon._id, usageLimit: { $gt: 0 } }, 
-               { $inc: { usageLimit: -1 } }, 
-               { new: true }
-             );
-
-             if (!updatedCoupon) {
-                 return res.status(400).json({ success: false, message: "Coupon limit reached just now. Please remove it or try another." });
-             }
-
-             if (updatedCoupon.usageLimit <= 0) {
-                 await Coupon.updateOne({ _id: coupon._id }, { $set: { isActive: false } });
-             }
-           }
+             // Decrement Usage
+             await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usageLimit: -1 } });
         }
-      }
     }
 
-    // Pass 2: Distribute Coupon Discount and Create Mapped Items
-    const currentSubtotal = validatedItems.reduce((acc, i) => acc + (i.discountedPrice * i.quantity), 0);
+    // ===== STEP 3: FREEZE FINAL PAID PRICES (Immutable Record) =====
+    const finalItems = validatedItems.map(item => {
+        const itemTotal = item.offerPrice * item.orderedQty;
+        // Distribute coupon proportionally: (Item Share / Total Subtotal) * Total Coupon Discount
+        const share = orderSubtotal > 0 ? (itemTotal / orderSubtotal) * couponDiscountTotal : 0;
+        const couponPerUnit = item.orderedQty > 0 ? (share / item.orderedQty) : 0;
+        
+        const paidUnitPrice = Number(Math.max(0, item.offerPrice - couponPerUnit).toFixed(2));
 
-    const mappedItems = validatedItems.map((item) => {
-      // Calculate per-unit coupon discount
-      // Using ratio of (Item Total / Order Subtotal) * Total Discount
-      // Then divide by Quantity to get per-unit
-      let itemTotal = item.discountedPrice * item.quantity;
-      let itemShare = 0;
-      if (currentSubtotal > 0 && finalDiscountAmount > 0) {
-         itemShare = (itemTotal / currentSubtotal) * finalDiscountAmount;
-      }
-      const itemCouponDiscount = item.quantity > 0 ? (itemShare / item.quantity) : 0;
-      
-      return {
-        ...item,
-        couponDiscount: itemCouponDiscount
-      };
+        return {
+            ...item,
+            couponPerUnit,
+            paidUnitPrice,
+            
+            // Map to schema expectations
+            activeQty: item.orderedQty,
+            quantity: item.orderedQty,           // Legacy support
+            discountedPrice: paidUnitPrice,      // Legacy support (paid price)
+            discoundedPrice: paidUnitPrice,      // Legacy support (typo version)
+            couponDiscount: couponPerUnit * item.orderedQty, // Legacy: Line total coupon
+            productStatus: 'Placed'
+        };
     });
 
-    // Normalize paymentMethod to schema enum (map 'razorpay' to 'online')
-    const normalizedPaymentMethod = paymentMethod === 'razorpay' ? 'online' : paymentMethod;
+    // ===== STEP 4: ORDER TOTAL (Final) =====
+    const deliveryCharge = 40;
+    // Recalculate total strictly from paidUnitPrices to avoid rounding gaps
+    const finalTotal = finalItems.reduce(
+        (sum, i) => sum + (i.paidUnitPrice * i.orderedQty),
+        0
+    ) + deliveryCharge;
 
-    // Prepare paymentInfo as per schema
-    const paymentInfo = {
-      paymentStatus: normalizedPaymentMethod === 'online' ? 'Paid' : 'Pending',
-      paymentTime: new Date()
-    };
-    if (normalizedPaymentMethod === 'online') {
-      if (!razorpayPaymentId || !razorpayOrderId) {
-        return res.status(400).json({ success: false, message: "Missing payment details for online payment" });
-      }
-      paymentInfo.razorpayPaymentId = razorpayPaymentId;
-      paymentInfo.razorpayOrderId = razorpayOrderId; 
-    }
-    // Generate Order ID early
+
+    // ===== STEP 5: SAVE ORDER =====
+    const normalizedPaymentMethod = paymentMethod === 'razorpay' ? 'online' : paymentMethod;
     const orderID = `ORD-${nanoid(8)}`;
 
-    // Add Delivery Charge
-    const deliveryCharge = 40;
-    totalAmount += deliveryCharge;
-
-    // Validate COD Limit
-    if (normalizedPaymentMethod === 'cod' && totalAmount > 1000) {
-        return res.status(400).json({ success: false, message: "Cash on Delivery is not available for orders above Rs. 1000." });
+    const paymentInfo = {
+        paymentStatus: normalizedPaymentMethod === 'online' ? 'Paid' : 'Pending',
+        paymentTime: new Date()
+    };
+    if (normalizedPaymentMethod === 'online') {
+         if (!razorpayPaymentId) return res.status(400).json({ success: false, message: "Payment failed" });
+         paymentInfo.razorpayPaymentId = razorpayPaymentId;
+         paymentInfo.razorpayOrderId = razorpayOrderId;
     }
 
-    // For Wallet: Deduction
+    // COD Validation
+    if (normalizedPaymentMethod === 'cod' && finalTotal > 1000) {
+        return res.status(400).json({ success: false, message: "COD not available for orders above Rs. 1000" });
+    }
+
+    // Wallet Deduction
     if (normalizedPaymentMethod === 'wallet' || normalizedPaymentMethod === 'Wallet') {
-        try {
-            await processWalletPayment(user._id, totalAmount, orderID);
-            paymentInfo.paymentStatus = 'Paid'; // Mark as paid
-        } catch (err) {
-             return res.status(400).json({ success: false, message: err.message || "Wallet payment failed" });
-        }
+         await processWalletPayment(user._id, finalTotal, orderID);
+         paymentInfo.paymentStatus = 'Paid';
     }
 
-    // Create order 
     const newOrder = new Order({
-      orderID: orderID,
-      userId: user._id,
-      address, 
-      items: mappedItems,
-      paymentMethod: normalizedPaymentMethod, 
-      paymentInfo, 
-      totalAmount,
-      discountAmount: finalDiscountAmount,
-      deliveryCharge,
-      couponCode: appliedCouponCode,
-      orderStatus: "Placed", 
-      tracking: [
-        {
-          status: "Placed",
-          message: `Your order has been placed successfully`,
-          date: new Date() 
-        }
-      ],
-      placedAt: new Date()
+        orderID,
+        userId: user._id,
+        address,
+        items: finalItems,
+        
+        paymentMethod: normalizedPaymentMethod,
+        paymentInfo,
+        
+        totalAmount: finalTotal,
+        discountAmount: couponDiscountTotal,
+        deliveryCharge,
+        couponCode: appliedCouponCode,
+        couponMinCartValue: appliedCouponMinCart,
+        orderStatus: 'Placed',
+        
+        placedAt: new Date(),
+        tracking: [{ status: 'Placed', message: 'Order placed successfully', date: new Date() }]
     });
 
     await newOrder.save();
 
-    // Increment user stats
-    await User.updateOne(
-      { _id: user._id },
-      { 
-        $inc: { 
-          totalOrders: 1,
-          totalSpent: totalAmount
-        } 
-      }
-    );
-
-    // Decrease stock immediately 
-    await Promise.all(
-      mappedItems.map(async (item) => {
-        const mlSizeNum = parseInt(item.mlSize) || 0;
+    // ===== POST-SAVE OPERATIONS =====
+    
+    // 1. Stock Update
+    // Using mapping to update variants safely
+    for (const item of finalItems) {
         await Products.updateOne(
-          { _id: item.productId, "variants.mlSize": mlSizeNum },
-          { $inc: { "variants.$.stock": -item.quantity } }
+            { _id: item.productId, "variants.mlSize": Number(item.mlSize) },
+            { $inc: { "variants.$.stock": -item.orderedQty } }
         );
-      })
-    );
-
-    // Check for Out of Stock and Notify Admin
-    try {
-        for (const item of mappedItems) {
-            const product = await Products.findById(item.productId);
-            if (product) {
-                const variant = product.variants.find(v => v.mlSize === Number(item.mlSize));
-                if (variant && variant.stock <= 0) {
-                     await Notification.create({
-                         type: 'stock',
-                         message: `Product "${product.name}" (Size: ${item.mlSize}) is now Out of Stock.`,
-                         metadata: { productId: product._id, variantSize: item.mlSize }
-                     });
-                }
-            }
-        }
-    } catch (notifError) {
-        console.error("Error creating stock notification:", notifError);
+        
+        // Check low stock
+        // (Optional: Re-fetch or trust memory, for now simplistic check)
     }
 
-    // Clear user's cart
-    await Cart.findOneAndUpdate(
-      { userId: user._id },
-      { $set: { items: [] } },
-      { upsert: true }
-    );
+    // 2. Clear Cart
+    await Cart.findOneAndUpdate({ userId: user._id }, { $set: { items: [] } });
 
-    // Set session flag for success page
-    req.session.orderplaced = true;
-    req.session.orderId = newOrder.orderID; 
-
-    res.json({ 
-      success: true, 
-      message: "Order placed successfully", 
-      orderId: newOrder.orderID 
+    // 3. User Stats
+    await User.findByIdAndUpdate(user._id, { 
+        $inc: { totalOrders: 1, totalSpent: finalTotal } 
     });
 
+    req.session.orderplaced = true;
+    req.session.orderId = orderID;
+
+    res.json({ success: true, message: "Order placed successfully", orderId: orderID });
+
   } catch (error) {
-    console.error("Error in placeOrder:", error);
-    res.status(500).json({ success: false, message: "Internal server error. Please try again." });
+    console.error("Place Order Error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 

@@ -8,6 +8,7 @@
     <%- include("../../../partials/user/headerHead") %>
     <%- include("../../../partials/user/footerHead") %>
     <link rel="stylesheet" href="/style/user/profile/orders/cancelOrder.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
     <%- include("../../../partials/user/header") %>
@@ -197,11 +198,74 @@
     </div>
 
     <script>
-        // Copy reason to hidden input on submit
-        document.getElementById('confirmCancelForm').addEventListener('submit', function() {
+        const confirmCancelForm = document.getElementById('confirmCancelForm');
+        
+        confirmCancelForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // Sync reason
             const textarea = document.querySelector('textarea[name="cancellationReason"]');
             const hiddenInput = this.querySelector('input[name="cancellationReason"]');
             hiddenInput.value = textarea.value;
+
+            // Prepare Request
+            const formData = new URLSearchParams(new FormData(this));
+
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+
+                if (response.ok) {
+                    // Success! Server likely redirected or returned success HTML.
+                    // If fetch followed redirect, response.url is the new page.
+                    window.location.href = response.url;
+                } else {
+                    // Error (like 400 Bad Request for Coupon Violation)
+                    const data = await response.json();
+                    
+                    if (data.message && data.message.includes('coupon')) {
+                         Swal.fire({
+                            icon: 'warning',
+                            title: 'Cannot Partial Cancel',
+                            html: data.message.replace(/\n/g, '<br>'), // Ensure newlines render
+                            showCancelButton: true,
+                            showDenyButton: true,
+                            confirmButtonText: 'Abort',
+                            denyButtonText: 'Cancel Entire Order',
+                            background: '#2a2a2a', color: '#ffffff', confirmButtonColor: '#10b981', denyButtonColor: '#d33'
+                        }).then((result) => {
+                             if (result.isDenied) {
+                                 // 'Cancel Entire Order' clicked
+                                 window.location.href = `/cancelOrder/${'<%= order._id %>'}/cancel-select?edit=true&selectAll=true`;
+                             } else if (result.isConfirmed) {
+                                 // 'Abort' clicked
+                                 window.location.href = `/order/${'<%= order._id %>'}`;
+                             }
+                        });
+                    } else {
+                        // Generic Error
+                         Swal.fire({
+                            icon: 'error',
+                            title: 'Cancellation Failed',
+                            text: data.message || 'An error occurred while processing your request.',
+                            background: '#2a2a2a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Submission error:', err);
+                 Swal.fire({
+                    icon: 'error',
+                    title: 'Network Error',
+                    text: 'Failed to communicate with the server. Please try again.',
+                    background: '#2a2a2a', color: '#ffffff', confirmButtonColor: '#d4af37'
+                });
+            }
         });
     </script>
     <%- include("../../../partials/user/footer") %>

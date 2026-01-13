@@ -6,6 +6,8 @@
       <title>Offers</title>
       <script src="https://cdn.tailwindcss.com"></script>
       <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+      <!-- SweetAlert2 -->
+      <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <link rel="stylesheet" href="/style/admin/offers/offers.css">
     </head>
@@ -320,16 +322,27 @@
           // Clear product selections
           document.querySelectorAll('#productSelect input[type="checkbox"]').forEach(checkbox => checkbox.checked = false);
           document.querySelectorAll('.product-option').forEach(opt => opt.classList.remove('selected'));
-          // Set min date for startDate to today
-          const today = new Date().toISOString().split('T')[0];
-          document.getElementById('startDate').min = today;
-          document.getElementById('startDate').value = today; // Default to today
-          document.getElementById('endDate').min = today;
-          document.getElementById('endDate').value = '';
+          
+          // Date Logic
+          const today = new Date();
+          const todayStr = today.toISOString().split('T')[0];
+          
+          const startInput = document.getElementById('startDate');
+          startInput.min = todayStr;
+          startInput.value = todayStr;
+          
+          const tomorrow = new Date(today);
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toISOString().split('T')[0];
+          
+          const endInput = document.getElementById('endDate');
+          endInput.min = tomorrowStr;
+          endInput.value = '';
+          
           // Set max date for endDate to 1 year from today
           const oneYearFromToday = new Date();
           oneYearFromToday.setFullYear(oneYearFromToday.getFullYear() + 1);
-          document.getElementById('endDate').max = oneYearFromToday.toISOString().split('T')[0];
+          endInput.max = oneYearFromToday.toISOString().split('T')[0];
         }
 
         function closeAddOfferModal() {
@@ -407,13 +420,32 @@
 
         // Handle startDate change to update endDate min
         document.getElementById('startDate').addEventListener('change', function() {
-          const start = this.value;
+          const startVal = this.value;
+          if (!startVal) return;
+          
+          const startDate = new Date(startVal);
+          const today = new Date();
+          today.setHours(0,0,0,0);
+          
+          if (startDate < today) {
+              Swal.fire({
+                  icon: 'warning',
+                  title: 'Invalid Date',
+                  text: 'Start Date cannot be in the past.',
+                  confirmButtonColor: '#d33'
+              });
+              this.value = new Date().toISOString().split('T')[0];
+              return;
+          }
+
           const endInput = document.getElementById('endDate');
-          if (start) {
-            endInput.min = start;
-            if (endInput.value < start) {
+          
+          const minEnd = new Date(startDate);
+          minEnd.setDate(minEnd.getDate() + 1);
+          endInput.min = minEnd.toISOString().split('T')[0];
+          
+          if (endInput.value && new Date(endInput.value) <= startDate) {
               endInput.value = '';
-            }
           }
           document.getElementById('startDateError').style.display = 'none';
           this.classList.remove('error');
@@ -421,11 +453,31 @@
 
         // Date validation (endDate > startDate)
         document.getElementById('endDate').addEventListener('change', function() {
-          const start = document.getElementById('startDate').value;
-          const end = this.value;
-          if (start && end && new Date(end) <= new Date(start)) {
-            showFieldError('endDate', 'End date must be after start date.');
-            this.value = '';
+          const startVal = document.getElementById('startDate').value;
+          const endVal = this.value;
+          
+          if (!startVal) {
+               Swal.fire({
+                  icon: 'warning',
+                  title: 'Missing Start Date',
+                  text: 'Please check Start Date first.',
+                  confirmButtonColor: '#d33'
+              });
+              this.value = '';
+              return;
+          }
+          
+          const startDate = new Date(startVal);
+          const endDate = new Date(endVal);
+
+          if (endVal && endDate <= startDate) {
+               Swal.fire({
+                  icon: 'warning',
+                  title: 'Invalid Date Range',
+                  text: 'End Date must be after Start Date.',
+                  confirmButtonColor: '#d33'
+              });
+              this.value = '';
           } else {
             document.getElementById('endDateError').style.display = 'none';
             this.classList.remove('error');
@@ -507,14 +559,18 @@
             hasErrors = true;
             errorMessages.push('End date is required.');
           } else if (startDate && new Date(endDate) <= new Date(startDate)) {
-            showFieldError('endDate', 'End date must be after start date.');
-            hasErrors = true;
-            errorMessages.push('End date must be after start date.');
+               Swal.fire({
+                  icon: 'warning',
+                  title: 'Invalid End Date',
+                  text: 'End Date must be greater than Start Date.',
+                  confirmButtonColor: '#d33'
+              });
+              hasErrors = true;
           }
 
           if (hasErrors) {
             e.preventDefault();
-            showErrorPopup(errorMessages.join(' '));
+            // We rely on Swal for date errors, keeping console free of spam
           }
         });
 

@@ -6,7 +6,9 @@
     <title>Coupons</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <link rel="stylesheet" href="/style/admin/coupons/coupon.css">
   </head>
   <body class="min-h-screen bg-black text-white">
@@ -351,16 +353,27 @@
         document.getElementById('maxDiscountAmount').required = false;
         // Clear all errors
         clearFormErrors();
-        // Set min date for startDate to today
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('startDate').min = today;
-        document.getElementById('startDate').value = today; // Default to today
-        document.getElementById('endDate').min = today;
-        document.getElementById('endDate').value = '';
-        // Set max date for endDate to 1 year from today
+        
+        // Date Logic
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        
+        const startInput = document.getElementById('startDate');
+        startInput.min = todayStr;
+        startInput.value = todayStr;
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowStr = tomorrow.toISOString().split('T')[0];
+        
+        const endInput = document.getElementById('endDate');
+        endInput.min = tomorrowStr;
+        endInput.value = '';
+        
+        // Set max date for endDate to 1 year from today (optional but good practice)
         const oneYearFromToday = new Date();
         oneYearFromToday.setFullYear(oneYearFromToday.getFullYear() + 1);
-        document.getElementById('endDate').max = oneYearFromToday.toISOString().split('T')[0];
+        endInput.max = oneYearFromToday.toISOString().split('T')[0];
       }
 
       function closeAddCouponModal() {
@@ -393,13 +406,33 @@
 
       // Handle startDate change to update endDate min
       document.getElementById('startDate').addEventListener('change', function() {
-        const start = this.value;
+        const startVal = this.value;
+        if (!startVal) return;
+
+        const startDate = new Date(startVal);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        if (startDate < today) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Invalid Date',
+                text: 'Start Date cannot be in the past.',
+                confirmButtonColor: '#d33'
+            });
+            this.value = new Date().toISOString().split('T')[0];
+            return;
+        }
+
         const endInput = document.getElementById('endDate');
-        if (start) {
-          endInput.min = start;
-          if (endInput.value < start) {
-            endInput.value = '';
-          }
+        
+        // End date must be at least start date + 1 day
+        const minEnd = new Date(startDate);
+        minEnd.setDate(minEnd.getDate() + 1);
+        endInput.min = minEnd.toISOString().split('T')[0];
+        
+        if (endInput.value && new Date(endInput.value) <= startDate) {
+            endInput.value = ''; 
         }
         document.getElementById('startDateError').style.display = 'none';
         this.classList.remove('error');
@@ -407,14 +440,36 @@
 
       // Date validation (endDate > startDate)
       document.getElementById('endDate').addEventListener('change', function() {
-        const start = document.getElementById('startDate').value;
-        const end = this.value;
-        if (start && end && new Date(end) <= new Date(start)) {
-          showFieldError('endDate', 'End date must be after start date.');
-          this.value = '';
-        } else {
-          document.getElementById('endDateError').style.display = 'none';
-          this.classList.remove('error');
+        const startVal = document.getElementById('startDate').value;
+        const endVal = this.value;
+        
+        if (!startVal) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Missing Start Date',
+                text: 'Please select a Start Date first.',
+                confirmButtonColor: '#d33'
+            });
+            this.value = '';
+            return;
+        }
+
+        if (endVal) {
+            const startDate = new Date(startVal);
+            const endDate = new Date(endVal);
+            
+            if (endDate <= startDate) {
+                 Swal.fire({
+                    icon: 'warning',
+                    title: 'Invalid Date Range',
+                    text: 'End Date must be after the Start Date (cannot be same day).',
+                    confirmButtonColor: '#d33'
+                });
+                this.value = '';
+            } else {
+               document.getElementById('endDateError').style.display = 'none';
+               this.classList.remove('error');
+            }
         }
       });
 
@@ -429,7 +484,6 @@
         if (!name) {
           showFieldError('couponName', 'Name is required.');
           hasErrors = true;
-          errorMessages.push('Name is required.');
         }
 
         // Description length
@@ -437,7 +491,6 @@
         if (description && description.length > 1000) {
           showFieldError('description', 'Description must be less than 1000 characters.');
           hasErrors = true;
-          errorMessages.push('Description too long.');
         }
 
         // Code Type
@@ -445,7 +498,6 @@
         if (!codeType) {
           showFieldError('codeType', 'Please select a code generation method.');
           hasErrors = true;
-          errorMessages.push('Code generation method is required.');
         }
 
         // Code Validation
@@ -457,24 +509,19 @@
           if (!codeValue) {
             showFieldError('codeType', 'Auto-generated code failed. Please try again.');
             hasErrors = true;
-            errorMessages.push('Auto code generation failed.');
           }
         } else if (codeType && codeType.value === 'custom') {
           codeValue = customCodeInput.value.trim().toUpperCase();
           if (!codeValue) {
             showFieldError('couponCode', 'Custom code is required.');
             hasErrors = true;
-            errorMessages.push('Custom code is required.');
           } else if (codeValue.length < 4 || codeValue.length > 20) {
             showFieldError('couponCode', 'Custom code must be 4-20 characters.');
             hasErrors = true;
-            errorMessages.push('Custom code length invalid.');
           } else if (!/^[A-Z0-9]+$/.test(codeValue)) {
             showFieldError('couponCode', 'Custom code must be uppercase letters and numbers only.');
             hasErrors = true;
-            errorMessages.push('Custom code format invalid.');
           }
-          // Set the value to hidden or directly to name="code"
           document.getElementById('generatedCode').value = codeValue;
         }
 
@@ -483,7 +530,6 @@
         if (!discountType) {
           showFieldError('discountType', 'Discount type is required.');
           hasErrors = true;
-          errorMessages.push('Discount type is required.');
         }
 
         // Discount Value
@@ -491,11 +537,9 @@
         if (isNaN(discountValue) || discountValue <= 0) {
           showFieldError('discountValue', 'Discount value must be greater than 0.');
           hasErrors = true;
-          errorMessages.push('Discount value must be greater than 0.');
         } else if (discountType && discountType.value === 'percentage' && discountValue > 100) {
           showFieldError('discountValue', 'Percentage discount cannot exceed 100%.');
           hasErrors = true;
-          errorMessages.push('Percentage discount cannot exceed 100%.');
         }
 
         // Min Cart Value
@@ -503,7 +547,6 @@
         if (isNaN(minCartValue) || minCartValue < 0) {
           showFieldError('minCartValue', 'Min cart value must be 0 or greater.');
           hasErrors = true;
-          errorMessages.push('Min cart value invalid.');
         }
 
         // Max Discount Amount (only validate if percentage)
@@ -512,7 +555,6 @@
           if (isNaN(maxDiscountAmount) || maxDiscountAmount < 0) {
             showFieldError('maxDiscountAmount', 'Max discount amount must be 0 or greater.');
             hasErrors = true;
-            errorMessages.push('Max discount amount invalid.');
           }
         }
 
@@ -521,32 +563,43 @@
         if (isNaN(usageLimit) || usageLimit < 1) {
           showFieldError('usageLimit', 'Usage limit must be 1 or greater.');
           hasErrors = true;
-          errorMessages.push('Usage limit invalid.');
         }
 
-        // Start Date
-        const startDate = document.getElementById('startDate').value;
-        if (!startDate) {
+        // Date Validation Check (Final)
+        const startDateVal = document.getElementById('startDate').value;
+        const endDateVal = document.getElementById('endDate').value;
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        if (!startDateVal) {
           showFieldError('startDate', 'Start date is required.');
           hasErrors = true;
-          errorMessages.push('Start date is required.');
+        } else if (new Date(startDateVal) < today) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Invalid Start Date',
+                text: 'Start Date cannot be in the past.',
+                confirmButtonColor: '#d33'
+            });
+            hasErrors = true;
         }
 
-        // End Date
-        const endDate = document.getElementById('endDate').value;
-        if (!endDate) {
+        if (!endDateVal) {
           showFieldError('endDate', 'End date is required.');
           hasErrors = true;
-          errorMessages.push('End date is required.');
-        } else if (startDate && new Date(endDate) <= new Date(startDate)) {
-          showFieldError('endDate', 'End date must be after start date.');
-          hasErrors = true;
-          errorMessages.push('End date must be after start date.');
+        } else if (startDateVal && new Date(endDateVal) <= new Date(startDateVal)) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Invalid End Date',
+                text: 'End Date must be greater than Start Date.',
+                confirmButtonColor: '#d33'
+            });
+            hasErrors = true;
         }
 
         if (hasErrors) {
           e.preventDefault();
-          showErrorPopup(errorMessages.join(' '));
+          // We used Swal for dates, leaving standard errors for others to avoid popup spam
         }
       });
 

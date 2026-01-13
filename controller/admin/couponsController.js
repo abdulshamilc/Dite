@@ -162,6 +162,14 @@ const createCoupon = async (req, res) => {
 
     const start = new Date(startDate);
     const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (start < today) {
+      req.session.error = "Start date cannot be in the past.";
+      return res.redirect("/admin/coupons");
+    }
+
     if (end <= start) {
       req.session.error = "End date must be after start date.";
       return res.redirect("/admin/coupons");
@@ -350,6 +358,14 @@ const updateCouponEndDate = async (req, res) => {
     }
 
     const newEnd = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (newEnd < today) {
+      req.session.error = "End date cannot be in the past";
+      return res.redirect(`/admin/coupons/${id}`);
+    }
+
     if (newEnd <= coupon.startDate) {
       req.session.error = "End date must be after start date";
       return res.redirect(`/admin/coupons/${id}`);
@@ -437,8 +453,16 @@ const postEditCoupon = async (req, res) => {
     coupon.minCartValue = parseInt(minCartValue) || 0;
     coupon.maxDiscountAmount = parseInt(maxDiscountAmount) || 0;
     coupon.usageLimit = parseInt(usageLimit);
-    coupon.startDate = new Date(startDate);
-    coupon.endDate = new Date(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end <= start) {
+      req.session.error = "End date must be after start date.";
+      return res.redirect(`/admin/coupons/edit/${id}`);
+    }
+
+    coupon.startDate = start;
+    coupon.endDate = end;
 
     // Code type and actual Code are generally not editable to maintain integrity,
     // unless requirement specified. User only asked to "edit coupen like add coupen".

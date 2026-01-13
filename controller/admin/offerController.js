@@ -239,6 +239,14 @@ const createOffer = async (req, res) => {
     }
     const start = new Date(startDate);
     const end = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (start < today) {
+      req.session.error = "Start date cannot be in the past";
+      return res.redirect("/admin/offers");
+    }
+
     if (end <= start) {
       req.session.error = "End date must be after start date";
       return res.redirect("/admin/offers");
@@ -426,6 +434,14 @@ const updateOfferEndDate = async (req, res) => {
     }
 
     const newEnd = new Date(endDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (newEnd < today) {
+      req.session.error = "End date cannot be in the past";
+      return res.redirect(`/admin/offers/${id}`);
+    }
+
     if (newEnd <= offer.startDate) {
       req.session.error = "End date must be after start date";
       return res.redirect(`/admin/offers/${id}`);
@@ -530,8 +546,16 @@ const postEditOffer = async (req, res) => {
     offer.appliesTo = appliesTo;
     offer.targetModel = appliesTo === "product" ? "Product" : "Categories";
     offer.targetId = targetIds;
-    offer.startDate = new Date(startDate);
-    offer.endDate = new Date(endDate);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end <= start) {
+      req.session.error = "End date must be after start date.";
+      return res.redirect(`/admin/offers/edit/${id}`);
+    }
+
+    offer.startDate = start;
+    offer.endDate = end;
 
     await offer.save();
     await recalculatePrices(targetIds, offer.targetModel);

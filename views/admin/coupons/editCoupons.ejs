@@ -6,6 +6,8 @@
     <title>Edit Coupon - Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <link rel="stylesheet" href="/style/admin/coupons/editCoupons.css">
   </head>
   <body class="min-h-screen bg-black text-white">
@@ -90,19 +92,31 @@
               </div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <!-- Start Date -->
-                <div class="form-group">
-                  <label for="startDate">Start Date <span class="required-asterisk">*</span></label>
-                  <input type="date" id="startDate" name="startDate" value="<%= new Date(coupon.startDate).toISOString().split('T')[0] %>">
-                  <div class="error-message" id="startDateError">Start date is required.</div>
-                </div>
-
-                <!-- End Date -->
-                <div class="form-group">
-                  <label for="endDate">End Date <span class="required-asterisk">*</span></label>
-                  <input type="date" id="endDate" name="endDate" value="<%= new Date(coupon.endDate).toISOString().split('T')[0] %>">
-                  <div class="error-message" id="endDateError">End date is required.</div>
-                </div>
+                  <% 
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const startStr = new Date(coupon.startDate).toISOString().split('T')[0];
+                    // If current start date is in past, allow it (min = startStr), else min = today
+                    const minStart = startStr < todayStr ? startStr : todayStr;
+                    // End date min: max(today, startStr)
+                    const minEnd = startStr > todayStr ? startStr : todayStr;
+                  %>
+                  <!-- Start Date -->
+                  <div class="form-group">
+                    <label for="startDate">Start Date <span class="required-asterisk">*</span></label>
+                    <input type="date" id="startDate" name="startDate" 
+                           value="<%= startStr %>"
+                           min="<%= minStart %>">
+                    <div class="error-message" id="startDateError">Start date is required.</div>
+                  </div>
+  
+                  <!-- End Date -->
+                  <div class="form-group">
+                    <label for="endDate">End Date <span class="required-asterisk">*</span></label>
+                    <input type="date" id="endDate" name="endDate" 
+                           value="<%= new Date(coupon.endDate).toISOString().split('T')[0] %>"
+                           min="<%= minEnd %>">
+                    <div class="error-message" id="endDateError">End date is required.</div>
+                  </div>
               </div>
 
               <!-- Buttons -->
@@ -137,6 +151,73 @@
       typeSelect.addEventListener('change', toggleMaxDiscount);
       // Run once on load
       toggleMaxDiscount();
+      
+      // Date Logic for Edit
+      const startInput = document.getElementById('startDate');
+      const endInput = document.getElementById('endDate');
+      
+      // Enforce restrictions when user *changes* the dates
+      startInput.addEventListener('change', function() {
+        const startVal = this.value;
+        if (!startVal) return;
+        
+        const startDate = new Date(startVal);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        
+        if (startDate < today) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Invalid Date',
+                text: 'Start Date cannot be in the past.',
+                confirmButtonColor: '#d33'
+            });
+            this.value = new Date().toISOString().split('T')[0];
+            return;
+        }
+        
+        // Update End Date Min
+        const minEnd = new Date(startDate);
+        minEnd.setDate(minEnd.getDate() + 1);
+        endInput.min = minEnd.toISOString().split('T')[0];
+        
+        // If current end date is invalid vs new start date
+        if (endInput.value) {
+            const endDate = new Date(endInput.value);
+            if (endDate <= startDate) {
+                endInput.value = '';
+            }
+        }
+      });
+      
+      endInput.addEventListener('change', function() {
+         const startVal = startInput.value;
+         const endVal = this.value;
+         
+         if (!startVal) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Missing Start Date',
+                text: 'Please check Start Date first.',
+                confirmButtonColor: '#d33'
+            });
+            this.value = '';
+            return;
+         }
+         
+         const startDate = new Date(startVal);
+         const endDate = new Date(endVal);
+         
+         if (endDate <= startDate) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Invalid Date Range',
+                text: 'End Date must be after Start Date.',
+                confirmButtonColor: '#d33'
+            });
+            this.value = '';
+         }
+      });
 
       // Form Validation
       document.getElementById('editCouponForm').addEventListener('submit', function(e) {
@@ -169,8 +250,14 @@
             document.getElementById('endDateError').style.display = 'block';
             hasError = true;
         }
+        
         if(start && end && new Date(end) <= new Date(start)) {
-            alert('End date must be after start date');
+             Swal.fire({
+                icon: 'warning',
+                title: 'Invalid Date Range',
+                text: 'End Date must be after Start Date.',
+                confirmButtonColor: '#d33'
+            });
             hasError = true;
         }
 

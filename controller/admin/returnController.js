@@ -247,8 +247,15 @@ const returnApprove = async (req, res) => {
     );
 
     if (originalItem) {
-      originalItem.quantity -= returnItem.returndQuantity;
-      if (originalItem.quantity <= 0) {
+      // Update active quantity
+      if (originalItem.activeQty !== undefined) {
+         originalItem.activeQty -= returnItem.returndQuantity;
+         originalItem.quantity = originalItem.activeQty; // Sync legacy
+      } else {
+         originalItem.quantity -= returnItem.returndQuantity;
+      }
+
+      if ((originalItem.activeQty !== undefined ? originalItem.activeQty : originalItem.quantity) <= 0) {
         originalItem.productStatus = "Returned";
       }
     }
@@ -282,7 +289,8 @@ const returnApprove = async (req, res) => {
     await order.save();
 
     // Refund to wallet using the net-per-unit price stored during request creation
-    const refundPerUnit = Math.max(0, returnItem.discountedPrice || 0);
+    // NOTE: Delivery charge is NOT refunded for returns (Refund = Total Paid - Delivery Charge)
+    const refundPerUnit = returnItem.paidUnitPrice !== undefined ? returnItem.paidUnitPrice : Math.max(0, returnItem.discountedPrice || 0);
     const totalRefundAmount = refundPerUnit * (returnItem.returndQuantity || 0);
     if (
       totalRefundAmount > 0 &&

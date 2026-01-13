@@ -50,6 +50,25 @@ const getSalesReport = async (req, res) => {
 
     const orders = await Orders.find(dateFilter).populate("items.productId");
 
+    // NEW LOGIC: Sales Criteria
+    // COD: Only when Delivered
+    // Online/Wallet: When Payment is 'Paid' (Done)
+    const isSale = (order) => {
+        if (order.paymentMethod === 'cod') {
+            return order.orderStatus === 'Delivered';
+        } else {
+            // Online or Wallet
+            return order.paymentInfo && order.paymentInfo.paymentStatus === 'Paid';
+        }
+    };
+    // Aggregation Matcher for Queries
+    const salesMatchObj = {
+        $or: [
+            { paymentMethod: 'cod', orderStatus: 'Delivered' },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+        ]
+    };
+
     orders.forEach((order) => {
       totalOrders++;
       if (order.orderStatus) {
@@ -58,7 +77,9 @@ const getSalesReport = async (req, res) => {
       }
 
       const monthKey = moment(order.placedAt).format("MMM YYYY"); // Accurate key
-      if (order.orderStatus === "Delivered") {
+      
+      // Apply New Sales Logic
+      if (isSale(order)) {
         totalRevenue += order.totalAmount || 0;
         successfulOrders++;
         totalCouponDiscount += order.discountAmount || 0;
@@ -97,7 +118,13 @@ const getSalesReport = async (req, res) => {
     if (userSet.size > 0) {
       const uniqueUserIds = Array.from(userSet);
        const returningStats = await Orders.aggregate([
-           { $match: { userId: { $in: uniqueUserIds }, orderStatus: 'Delivered' } },
+           { $match: { 
+               userId: { $in: uniqueUserIds }, 
+               $or: [
+                    { paymentMethod: 'cod', orderStatus: 'Delivered' },
+                    { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+               ]
+           } },
            { $group: { _id: "$userId", count: { $sum: 1 } } },
            { $match: { count: { $gt: 1 } } },
            { $count: "returning" }
@@ -161,8 +188,11 @@ const getSalesReport = async (req, res) => {
       chartDataRaw = await Orders.aggregate([
         {
           $match: {
-            orderStatus: "Delivered",
             placedAt: { $gte: startOf7DaysAgo, $lte: endOfToday },
+            $or: [
+                { paymentMethod: 'cod', orderStatus: 'Delivered' },
+                { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+            ]
           },
         },
         {
@@ -202,8 +232,11 @@ const getSalesReport = async (req, res) => {
       chartDataRaw = await Orders.aggregate([
         {
           $match: {
-            orderStatus: "Delivered",
             placedAt: { $gte: startOf4WeeksAgo, $lte: endOfCurrentWeek },
+             $or: [
+                { paymentMethod: 'cod', orderStatus: 'Delivered' },
+                { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+            ]
           },
         },
         {
@@ -252,8 +285,11 @@ const getSalesReport = async (req, res) => {
       chartDataRaw = await Orders.aggregate([
         {
           $match: {
-            orderStatus: "Delivered",
             placedAt: { $gte: startOf12MonthsAgo, $lte: endOfCurrentMonth },
+             $or: [
+                { paymentMethod: 'cod', orderStatus: 'Delivered' },
+                { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+            ]
           },
         },
         {
@@ -297,8 +333,11 @@ const getSalesReport = async (req, res) => {
       chartDataRaw = await Orders.aggregate([
         {
           $match: {
-            orderStatus: "Delivered",
             placedAt: { $gte: startYearDate, $lte: endYearDate },
+             $or: [
+                { paymentMethod: 'cod', orderStatus: 'Delivered' },
+                { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+            ]
           },
         },
         {
@@ -333,11 +372,14 @@ const getSalesReport = async (req, res) => {
           chartDataRaw = await Orders.aggregate([
             {
               $match: {
-                orderStatus: "Delivered",
                 placedAt: {
                   $gte: startRange.toDate(),
                   $lte: endRange.toDate(),
                 },
+                 $or: [
+                    { paymentMethod: 'cod', orderStatus: 'Delivered' },
+                    { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+                ]
               },
             },
             {
@@ -411,7 +453,13 @@ const getSalesReport = async (req, res) => {
 
     // Top Products
     const topProductsAgg = await Orders.aggregate([
-      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $match: { 
+          ...dateFilter, 
+          $or: [
+            { paymentMethod: 'cod', orderStatus: 'Delivered' },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+        ]
+      } },
       { $unwind: "$items" },
       {
         $lookup: {
@@ -450,7 +498,13 @@ const getSalesReport = async (req, res) => {
 
     // Category
     const categoryAgg = await Orders.aggregate([
-      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $match: { 
+          ...dateFilter, 
+          $or: [
+            { paymentMethod: 'cod', orderStatus: 'Delivered' },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+        ]
+      } },
       { $unwind: "$items" },
       {
         $lookup: {
@@ -500,7 +554,13 @@ const getSalesReport = async (req, res) => {
 
     // Gender 
     const genderAgg = await Orders.aggregate([
-      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $match: { 
+           ...dateFilter,
+           $or: [
+            { paymentMethod: 'cod', orderStatus: 'Delivered' },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+           ]
+      } },
       { $unwind: "$items" },
       {
         $lookup: {
@@ -590,7 +650,13 @@ const getSalesReport = async (req, res) => {
 
     // Aggregates for sales data
     const deliveredAgg = await Orders.aggregate([
-      { $match: { ...dateFilter, orderStatus: "Delivered" } },
+      { $match: { 
+           ...dateFilter, 
+           $or: [
+            { paymentMethod: 'cod', orderStatus: 'Delivered' },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+           ]
+      } },
       { $unwind: "$items" },
       {
         $lookup: {
@@ -653,6 +719,7 @@ const getSalesReport = async (req, res) => {
       isDeleted: false,
     });
 
+
     // Build groupedSalesData
     const groupedSalesData = [];
     for (const product of allProducts) {
@@ -698,10 +765,10 @@ const getSalesReport = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    const totalSalesOrders = await Orders.countDocuments(dateFilter);
+    const totalSalesOrders = await Orders.countDocuments({ ...dateFilter, ...salesMatchObj });
     const totalPages = Math.ceil(totalSalesOrders / limit);
 
-    const orderSalesData = await Orders.find(dateFilter)
+    const rawOrderData = await Orders.find({ ...dateFilter, ...salesMatchObj })
       .populate("userId", "name email")
       .populate("items.productId", "name")
       .sort({ placedAt: -1 })
@@ -709,43 +776,90 @@ const getSalesReport = async (req, res) => {
       .limit(limit)
       .lean();
 
-    const formattedOrders = orderSalesData.map((order) => {
-      const itemsSummary = order.items
-        .map((item) => {
-          const productName = item.productId?.name || "Unknown Product";
-          return `${productName} (${item.mlSize}ml x${item.quantity})`;
-        })
-        .join(", ");
-
-      return {
-        orderId:
-          order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
-        date: moment(order.placedAt).format("DD MMM YYYY, hh:mm A"),
-        customerName: order.userId?.name || "Guest",
-        customerEmail: order.userId?.email || "N/A",
-        items: itemsSummary,
-        itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-        totalAmount: order.totalAmount || 0,
-        paymentMethod: order.paymentMethod
-          ? order.paymentMethod.toUpperCase()
-          : "N/A",
-        orderStatus: order.orderStatus || "N/A",
-        transactionId:
-          order.paymentInfo?.razorpayPaymentId ||
-          order.paymentInfo?.razorpayOrderId ||
-          "N/A",
-        deliveredAt: order.deliveredAt
-          ? moment(order.deliveredAt).format("DD MMM YYYY")
-          : "N/A",
-        isToday: moment(order.placedAt).isSame(moment(), "day"),
-        discountAmount: order.discountAmount || 0,
-        couponCode: order.couponCode || '',
-        productDiscount: order.items.reduce((acc, item) => {
-           const base = item.basePrice || 0;
-           const sold = item.discoundedPrice || item.basePrice || 0;
-           return acc + ((base - sold) * item.quantity);
-        }, 0)
+    // FLATTEN ORDERS INTO TRANSACTIONS
+    const formattedOrders = rawOrderData.flatMap((order) => {
+      const rows = [];
+      
+      const commonData = {
+          orderId: order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
+          date: moment(order.placedAt).format("DD MMM, hh:mm A"), // Shortened Date
+          customerName: order.userId?.name || "Guest",
+          customerEmail: order.userId?.email || "N/A",
+          paymentMethod: order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A",
+          discountAmount: order.discountAmount || 0,
+          couponCode: order.couponCode || '',
       };
+
+      // 1. CREDIT TRANSACTION (The Sale)
+      // Calculate Original Amount (Immutable) to persist effectively even if totalAmount is reduced by cancellations
+      let originalTotalAmount = 0;
+      order.items.forEach(item => {
+          // Use orderedQty (initial) if available, else standard quantity (which might be reduced? No, schema says quantity is legacy/active, orderedQty is immutable)
+          // Actually activeQty is mutable. quantity might be mutable too in old logic.
+          // Safest: Use orderedQty if exists, else item.quantity + (any cancelled quantity we can find? No, simpler to assume orderedQty exists for new logic).
+          const qty = item.orderedQty !== undefined ? item.orderedQty : item.quantity; 
+          const price = item.paidUnitPrice !== undefined ? item.paidUnitPrice : (item.discoundedPrice || item.basePrice);
+          originalTotalAmount += (price * qty);
+      });
+      originalTotalAmount += (order.deliveryCharge || 0);
+
+      // If it exists in this list, it qualifies as a sale (Paid Online or Delivered/Returned COD)
+      let creditStatus = 'Placed';
+      if (order.paymentMethod === 'cod') creditStatus = 'Delivered'; // COD implies Delivery for money in
+      
+      rows.push({
+          ...commonData,
+          type: 'Credit',
+          status: creditStatus,
+          amount: originalTotalAmount, // Use immutable original amount
+          isDebit: false
+      });
+
+      // 2. DEBIT TRANSACTION - CANCELLATION
+      // Only for Online/Wallet (Money was collected, then refunded)
+      if (order.paymentMethod !== 'cod') {
+          if (order.cancelProducts && order.cancelProducts.length > 0) {
+              let cancelRefund = 0;
+              order.cancelProducts.forEach(cp => {
+                  const price = cp.paidUnitPrice !== undefined ? cp.paidUnitPrice : cp.discountedPrice;
+                  cancelRefund += (price * cp.canceledQuantity);
+              });
+              
+              if (cancelRefund > 0) {
+                  rows.push({
+                      ...commonData,
+                      type: 'Debit',
+                      status: 'Cancelled',
+                      amount: cancelRefund,
+                      isDebit: true
+                  });
+              }
+          }
+      }
+
+      // 3. DEBIT TRANSACTION - RETURN
+      // Valid for both COD and Online
+      if (order.returndProduct && order.returndProduct.length > 0) {
+          let returnRefund = 0;
+          order.returndProduct.forEach(rp => {
+              if (rp.adminApproved === 'Approved') {
+                  const price = rp.paidUnitPrice !== undefined ? rp.paidUnitPrice : rp.discountedPrice;
+                  returnRefund += (price * rp.returndQuantity);
+              }
+          });
+
+          if (returnRefund > 0) {
+              rows.push({
+                  ...commonData,
+                  type: 'Debit',
+                  status: 'Returned',
+                  amount: returnRefund,
+                  isDebit: true
+              });
+          }
+      }
+
+      return rows;
     });
 
     res.render("admin/sales/salesReport", {
@@ -806,74 +920,34 @@ const exportSalesReport = async (req, res) => {
       dateFilter.placedAt = { ...dateFilter.placedAt, $lte: end };
     }
 
-    const orders = await Orders.find(dateFilter).populate("items.productId");
+    const salesMatchObj = {
+        $or: [
+            { paymentMethod: 'cod', orderStatus: { $in: ['Delivered', 'Returned'] } },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+        ]
+    };
 
-    let totalRevenue = 0;
-    let totalOrders = 0;
-    let successfulOrders = 0;
-    const userSet = new Set();
-    
-    // NOTE: If you need to fix the PRICE_FIELD logic for detailed export rows, make sure you use the aggregation logic instead of just finding.
-    
-    orders.forEach((order) => {
-      totalOrders++;
-      if (order.orderStatus === "Delivered") {
-        totalRevenue += order.totalAmount || 0;
-        successfulOrders++;
-        userSet.add(order.userId.toString());
-      }
-    });
-
-    const newCustomers = userSet.size;
-    const avgOrderValue =
-      successfulOrders > 0 ? Math.round(totalRevenue / successfulOrders) : 0;
-
-    // Detailed data
-    const deliveredAgg = await Orders.aggregate([
-      { $match: { ...dateFilter, orderStatus: "Delivered" } },
-      { $unwind: "$items" },
-      {
-        $lookup: {
-          from: "products",
-          localField: "items.productId",
-          foreignField: "_id",
-          as: "product",
-        },
-      },
-      { $unwind: { path: "$product", preserveNullAndEmptyArrays: true } },
-      {
-        $group: {
-          _id: {
-            productId: "$items.productId",
-            mlSize: "$items.mlSize",
-          },
-          productName: { $first: "$product.name" },
-          mlSize: { $first: "$items.mlSize" },
-          soldQuantity: { $sum: "$items.quantity" },
-          revenue: {
-            $sum: { $multiply: ["$items.quantity", PRICE_FIELD] },
-          },
-        },
-      },
-    ]);
-
-    const deliveredMap = new Map();
-    deliveredAgg.forEach((item) => {
-      const key = `${item._id.productId.toString()}_${item.mlSize}`;
-      deliveredMap.set(key, {
-        soldQuantity: item.soldQuantity || 0,
-        revenue: item.revenue || 0,
-        productName: item.productName,
-      });
-    });
-
-    const orderData = await Orders.find(dateFilter)
+    const orders = await Orders.find({ 
+        ...dateFilter,
+        ...salesMatchObj
+     })
       .populate("userId", "name email")
       .populate("items.productId", "name")
       .sort({ placedAt: -1 })
       .lean();
 
-    const exportData = orderData.map((order) => {
+    let totalRevenue = 0;
+    let successfulOrders = 0; // Using this as 'Total Orders' count
+    const userSet = new Set();
+    
+    // Flatten Orders -> Transactions
+    const transactionRows = [];
+    orders.forEach((order) => {
+      // Summary Stats Calculation
+      totalRevenue += order.totalAmount || 0;
+      successfulOrders++;
+      if (order.userId) userSet.add(order.userId._id ? order.userId._id.toString() : order.userId.toString());
+
       const itemsSummary = order.items
         .map((item) => {
           const productName = item.productId?.name || "Unknown Product";
@@ -881,28 +955,74 @@ const exportSalesReport = async (req, res) => {
         })
         .join("; ");
 
-      return {
-        orderId:
-          order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
+      const commonData = {
+        orderId: order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
         date: moment(order.placedAt).format("DD MMM YYYY, hh:mm A"),
         customerName: order.userId?.name || "Guest",
         customerEmail: order.userId?.email || "N/A",
         items: itemsSummary,
-        itemsCount: order.items.reduce((sum, item) => sum + item.quantity, 0),
-        totalAmount: order.totalAmount || 0,
-        paymentMethod: order.paymentMethod
-          ? order.paymentMethod.toUpperCase()
-          : "N/A",
-        orderStatus: order.orderStatus || "N/A",
-        transactionId:
-          order.paymentInfo?.razorpayPaymentId ||
-          order.paymentInfo?.razorpayOrderId ||
-          "N/A",
-        deliveredAt: order.deliveredAt
-          ? moment(order.deliveredAt).format("DD MMM YYYY")
-          : "N/A",
+        paymentMethod: order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A",
+        transactionId: order.paymentInfo?.razorpayPaymentId || order.paymentInfo?.razorpayOrderId || "N/A",
       };
+
+       // 1. Credit (Sale)
+       let originalTotalAmount = 0;
+       order.items.forEach(item => {
+          const qty = item.orderedQty !== undefined ? item.orderedQty : item.quantity; 
+          const price = item.paidUnitPrice !== undefined ? item.paidUnitPrice : (item.discoundedPrice || item.basePrice);
+          originalTotalAmount += (price * qty);
+       });
+       originalTotalAmount += (order.deliveryCharge || 0);
+
+       let creditStatus = 'Placed';
+       if (order.paymentMethod === 'cod') creditStatus = 'Delivered';
+
+       transactionRows.push({
+           ...commonData,
+           status: creditStatus,
+           amount: originalTotalAmount,
+           isDebit: false
+       });
+
+       // 2. Cancel Refund
+       if (order.paymentMethod !== 'cod' && order.cancelProducts && order.cancelProducts.length > 0) {
+           let cancelRefund = 0;
+           order.cancelProducts.forEach(cp => {
+               const price = cp.paidUnitPrice !== undefined ? cp.paidUnitPrice : cp.discountedPrice;
+               cancelRefund += (price * cp.canceledQuantity);
+           });
+           if (cancelRefund > 0) {
+               transactionRows.push({
+                   ...commonData,
+                   status: 'Cancelled',
+                   amount: cancelRefund,
+                   isDebit: true
+               });
+           }
+       }
+
+        // 3. Return Refund
+        if (order.returndProduct && order.returndProduct.length > 0) {
+            let returnRefund = 0;
+            order.returndProduct.forEach(rp => {
+                if (rp.adminApproved === 'Approved') {
+                    const price = rp.paidUnitPrice !== undefined ? rp.paidUnitPrice : rp.discountedPrice;
+                    returnRefund += (price * rp.returndQuantity);
+                }
+            });
+            if (returnRefund > 0) {
+                transactionRows.push({
+                    ...commonData,
+                    status: 'Returned',
+                    amount: returnRefund,
+                    isDebit: true
+                });
+            }
+        }
     });
+
+    const newCustomers = userSet.size;
+    const avgOrderValue = successfulOrders > 0 ? Math.round(totalRevenue / successfulOrders) : 0;
 
     try {
       const ExcelJS = (await import("exceljs")).default;
@@ -920,7 +1040,7 @@ const exportSalesReport = async (req, res) => {
         "Average Order Value",
         `₹${avgOrderValue.toLocaleString()}`,
       ]);
-      worksheet.addRow(["Total Orders", totalOrders]);
+      worksheet.addRow(["Total Transactions", transactionRows.length]);
       worksheet.addRow(["Total Customers", newCustomers]);
       worksheet.addRow([]);
 
@@ -928,14 +1048,11 @@ const exportSalesReport = async (req, res) => {
         "Order ID",
         "Date & Time",
         "Customer Name",
-        "Customer Email",
         "Items",
-        "Items Count",
-        "Total Amount",
+        "Status",
+        "Amount",
         "Payment Method",
-        "Transaction ID",
-        "Order Status",
-        "Delivered Date",
+        "Transaction ID"
       ]);
 
       headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
@@ -945,37 +1062,38 @@ const exportSalesReport = async (req, res) => {
         fgColor: { argb: "FFC5A987" },
       };
 
-      exportData.forEach((row) => {
-        worksheet.addRow([
+      transactionRows.forEach((row) => {
+        const amountVal = row.isDebit ? -row.amount : row.amount;
+        const excelRow = worksheet.addRow([
           row.orderId,
           row.date,
           row.customerName,
-          row.customerEmail,
           row.items,
-          row.itemsCount,
-          row.totalAmount,
+          row.status,
+          amountVal,
           row.paymentMethod,
-          row.transactionId,
-          row.orderStatus,
-          row.deliveredAt,
+          row.transactionId
         ]);
+        
+        // Color amount
+        const amountCell = excelRow.getCell(6);
+        amountCell.font = {
+            color: { argb: row.isDebit ? 'FFFF0000' : 'FF008000' }, // Red if debit, Green if credit
+            bold: true
+        };
+        amountCell.numFmt = '"₹"#,##0.00;[Red]-"₹"#,##0.00';
       });
 
       worksheet.columns = [
         { width: 15 }, 
         { width: 20 }, 
         { width: 20 }, 
-        { width: 25 }, 
         { width: 40 }, 
-        { width: 12 }, 
         { width: 15 }, 
         { width: 15 }, 
-        { width: 25 }, 
         { width: 15 }, 
-        { width: 15 }, 
+        { width: 25 }
       ];
-
-      worksheet.getColumn(7).numFmt = '"₹"#,##0';
 
       res.setHeader(
         "Content-Type",
@@ -993,9 +1111,10 @@ const exportSalesReport = async (req, res) => {
     } catch (excelError) {
       console.error("ExcelJS not available, using CSV fallback:", excelError);
       let csv =
-        "Order ID,Date & Time,Customer Name,Customer Email,Items,Items Count,Total Amount,Payment Method,Transaction ID,Order Status,Delivered Date\n";
-      exportData.forEach((row) => {
-        csv += `${row.orderId},"${row.date}",${row.customerName},${row.customerEmail},"${row.items}",${row.itemsCount},₹${row.totalAmount},${row.paymentMethod},${row.transactionId},${row.orderStatus},${row.deliveredAt}\n`;
+        "Order ID,Date & Time,Customer Name,Items,Status,Amount,Payment Method,Transaction ID\n";
+      transactionRows.forEach((row) => {
+        const sign = row.isDebit ? '-' : '+';
+        csv += `${row.orderId},"${row.date}",${row.customerName},"${row.items}",${row.status},${sign}₹${row.amount},${row.paymentMethod},${row.transactionId}\n`;
       });
 
       res.setHeader("Content-Type", "text/csv");
@@ -1031,24 +1150,95 @@ const exportSalesPdf = async (req, res) => {
       dateFilter.placedAt = { ...dateFilter.placedAt, $lte: end };
     }
 
-    const orders = await Orders.find(dateFilter)
+    const salesMatchObj = {
+        $or: [
+            { paymentMethod: 'cod', orderStatus: { $in: ['Delivered', 'Returned'] } },
+            { paymentMethod: { $ne: 'cod' }, "paymentInfo.paymentStatus": 'Paid' }
+        ]
+    };
+
+    const orders = await Orders.find({ ...dateFilter, ...salesMatchObj })
       .populate("userId", "name email")
       .populate("items.productId", "name")
       .sort({ placedAt: -1 })
       .lean();
 
+    // Flatten logic similar to chart data to get accurate total revenue for header
+    // Actually, just calculating it from the rows is easier.
+    
+    // Create Transaction Rows
+    const transactionRows = [];
     let totalRevenue = 0;
-    let successfulOrders = 0;
+    let totalCancelRefund = 0;
+    let totalReturnRefund = 0;
 
-    orders.forEach((order) => {
-      if (order.orderStatus === "Delivered") {
-        totalRevenue += order.totalAmount || 0;
-        successfulOrders++;
-      }
+    orders.forEach(order => {
+         const commonData = {
+           orderId: order.orderID || order._id.toString().substring(0, 8).toUpperCase(),
+           date: moment(order.placedAt).format("DD/MM/YY"),
+           paymentMethod: order.paymentMethod ? order.paymentMethod.toUpperCase() : "N/A"
+         };
+
+         // 1. Credit (Sale)
+         let originalTotalAmount = 0;
+         order.items.forEach(item => {
+            const qty = item.orderedQty !== undefined ? item.orderedQty : item.quantity; 
+            const price = item.paidUnitPrice !== undefined ? item.paidUnitPrice : (item.discoundedPrice || item.basePrice);
+            originalTotalAmount += (price * qty);
+         });
+         originalTotalAmount += (order.deliveryCharge || 0);
+
+         let creditStatus = 'Placed';
+         if (order.paymentMethod === 'cod') creditStatus = 'Delivered';
+
+         transactionRows.push({
+             ...commonData,
+             status: creditStatus,
+             amount: originalTotalAmount,
+             isDebit: false
+         });
+         totalRevenue += originalTotalAmount;
+
+         // 2. Cancel Refund
+         if (order.paymentMethod !== 'cod' && order.cancelProducts && order.cancelProducts.length > 0) {
+             let cancelRefund = 0;
+             order.cancelProducts.forEach(cp => {
+                 const price = cp.paidUnitPrice !== undefined ? cp.paidUnitPrice : cp.discountedPrice;
+                 cancelRefund += (price * cp.canceledQuantity);
+             });
+             if (cancelRefund > 0) {
+                 transactionRows.push({
+                     ...commonData,
+                     status: 'Cancelled',
+                     amount: cancelRefund,
+                     isDebit: true
+                 });
+                 totalCancelRefund += cancelRefund;
+             }
+         }
+
+          // 3. Return Refund
+          if (order.returndProduct && order.returndProduct.length > 0) {
+              let returnRefund = 0;
+              order.returndProduct.forEach(rp => {
+                  if (rp.adminApproved === 'Approved') {
+                      const price = rp.paidUnitPrice !== undefined ? rp.paidUnitPrice : rp.discountedPrice;
+                      returnRefund += (price * rp.returndQuantity);
+                  }
+              });
+              if (returnRefund > 0) {
+                  transactionRows.push({
+                      ...commonData,
+                      status: 'Returned',
+                      amount: returnRefund,
+                      isDebit: true
+                  });
+                  totalReturnRefund += returnRefund;
+              }
+          }
     });
 
-    const avgOrderValue =
-      successfulOrders > 0 ? Math.round(totalRevenue / successfulOrders) : 0;
+    const netRevenue = totalRevenue - totalCancelRefund - totalReturnRefund;
 
     const doc = new PDFDocument({ margin: 30, size: "A4" });
 
@@ -1056,7 +1246,7 @@ const exportSalesPdf = async (req, res) => {
     res.setHeader(
       "Content-Disposition",
       `attachment; filename=sales_report_${startDate || "all"}_${
-        endDate || "time"
+        endDate || "now"
       }.pdf`
     );
 
@@ -1065,73 +1255,73 @@ const exportSalesPdf = async (req, res) => {
     doc.fontSize(20).text("Sales Report", { align: "center" });
     doc.moveDown();
 
-    doc
-      .fontSize(12)
-      .text(`Period: ${startDate || "All Time"} to ${endDate || "Now"}`);
-    doc.text(`Total Revenue: Rs. ${totalRevenue.toLocaleString()}`);
-    doc.text(`Average Order Value: Rs. ${avgOrderValue.toLocaleString()}`);
-    doc.text(`Total Orders: ${orders.length}`);
+    doc.fontSize(10);
+    doc.text(`Period: ${startDate || "All Time"} to ${endDate || "Now"}`);
+    doc.text(`Starting Revenue (Gross): Rs. ${totalRevenue.toLocaleString()}`);
+    doc.text(`Total Cancel Refunds: Rs. ${totalCancelRefund.toLocaleString()}`);
+    doc.text(`Total Return Refunds: Rs. ${totalReturnRefund.toLocaleString()}`);
+    doc.moveDown(0.5);
+    doc.font("Helvetica-Bold").text(`Net Revenue: Rs. ${netRevenue.toLocaleString()}`);
+    doc.font("Helvetica").text(`Total Transactions: ${transactionRows.length}`);
     doc.moveDown();
 
-    const tableTop = 200;
-    let y = tableTop;
+    // Table Config
+    const startY = doc.y;
+    // New Column Layout: Date, Order ID, Status, Amount, Method
+    // Removing Customer and Items as requested to focus on ledgers.
+    const colX = { date: 30, id: 100, status: 220, amt: 350, method: 480 };
+    const colW = { date: 60, id: 110, status: 120, amt: 100, method: 80 };
 
-    doc.font("Helvetica-Bold");
-    doc.text("Date", 30, y, { width: 70 });
-    doc.text("Order ID", 100, y, { width: 60 });
-    doc.text("Customer", 170, y, { width: 100 });
-    doc.text("Items", 280, y, { width: 150 });
-    doc.text("Amount", 440, y, { width: 70, align: "right" });
-    doc.text("Status", 520, y, { width: 50 });
+    const drawHeader = (y) => {
+        doc.font("Helvetica-Bold").fontSize(9).fillColor('black');
+        doc.text("Date", colX.date, y, { width: colW.date });
+        doc.text("Order ID", colX.id, y, { width: colW.id });
+        doc.text("Status", colX.status, y, { width: colW.status });
+        // Right align amount header?
+        doc.text("Amount", colX.amt, y, { width: colW.amt, align: 'right' });
+        doc.text("Method", colX.method, y, { width: colW.method, align: 'right' });
+        
+        doc.moveTo(30, y + 12).lineTo(570, y + 12).stroke();
+    };
 
-    doc
-      .moveTo(30, y + 15)
-      .lineTo(570, y + 15)
-      .stroke();
-    y += 25;
-    doc.font("Helvetica");
+    let y = startY;
+    drawHeader(y);
+    y += 20;
 
-    orders.forEach((order) => {
-      if (y > 700) {
+    doc.font("Helvetica").fontSize(9); // Size 9 for better legibility
+
+    transactionRows.forEach((row) => {
+      if (y > 750) {
         doc.addPage();
         y = 30; 
-        doc.font("Helvetica-Bold");
-        doc.text("Date", 30, y, { width: 70 });
-        doc.text("Order ID", 100, y, { width: 60 });
-        doc.text("Customer", 170, y, { width: 100 });
-        doc.text("Items", 280, y, { width: 150 });
-        doc.text("Amount", 440, y, { width: 70, align: "right" });
-        doc.text("Status", 520, y, { width: 50 });
-        doc
-          .moveTo(30, y + 15)
-          .lineTo(570, y + 15)
-          .stroke();
-        y += 25;
-        doc.font("Helvetica");
+        drawHeader(y);
+        y += 20;
+        doc.font("Helvetica").fontSize(9);
       }
 
-      const dateStr = moment(order.placedAt).format("DD/MM/YYYY");
-      const orderId =
-        order.orderID || order._id.toString().substring(0, 6).toUpperCase();
-      const customer = order.userId?.name || "Guest";
-      const items = order.items
-        .map(
-          (i) =>
-            `${i.quantity}x ${i.productId?.name?.substring(0, 15) || "Item"}`
-        )
-        .join(", ");
-      const amount = `Rs. ${order.totalAmount}`;
-      const status = order.orderStatus;
+      doc.fillColor('black'); // Default
+      doc.text(row.date, colX.date, y, { width: colW.date });
+      doc.text(row.orderId, colX.id, y, { width: colW.id });
+      
+      // Status Color Logic
+      if (row.status === 'Cancelled') doc.fillColor('red');
+      else if (row.status === 'Returned') doc.fillColor('purple');
+      else if (row.status === 'Delivered') doc.fillColor('green');
+      else if (row.status === 'Placed') doc.fillColor('blue');
+      
+      doc.text(row.status, colX.status, y, { width: colW.status });
+      
+      // Amount Color Logic
+      if (row.isDebit) doc.fillColor('red');
+      else doc.fillColor('green');
+      
+      const sign = row.isDebit ? '-' : '+';
+      doc.text(`${sign}Rs.${row.amount.toLocaleString()}`, colX.amt, y, { width: colW.amt, align: 'right' });
+      
+      doc.fillColor('black');
+      doc.text(row.paymentMethod, colX.method, y, { width: colW.method, align: 'right' });
 
-      doc.fontSize(10);
-      doc.text(dateStr, 30, y, { width: 70 });
-      doc.text(orderId, 100, y, { width: 60 });
-      doc.text(customer, 170, y, { width: 100, ellipsis: true });
-      doc.text(items, 280, y, { width: 150, ellipsis: true });
-      doc.text(amount, 440, y, { width: 70, align: "right" });
-      doc.text(status, 520, y, { width: 50 });
-
-      y += 20;
+      y += 18; // Increased row height slightly
     });
 
     doc.end();
