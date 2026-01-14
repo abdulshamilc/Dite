@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Order Details - Admin</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
     <link rel="stylesheet" href="/style/admin/orders/orderDetails.css">
   </head>
@@ -341,17 +342,18 @@
               <!-- Status Update -->
               <div class="card p-6">
                 <h3 class="font-bold mb-4 text-brand">Update Status</h3>
-                <form method="POST" action="/admin/orders/<%= order._id %>/status" class="space-y-4">
-                  <select name="status" class="bg-gray-800 p-2 rounded w-full text-white" required>
+                <% const isOrderFinished = ['Cancelled', 'Returned'].includes(order.orderStatus); %>
+                <form id="statusUpdateForm" method="POST" action="/admin/orders/<%= order._id %>/status" class="space-y-4">
+                  <select id="statusSelect" name="status" class="bg-gray-800 p-2 rounded w-full text-white <%= isOrderFinished ? 'opacity-50 cursor-not-allowed' : '' %>" required <%= isOrderFinished ? 'disabled' : '' %>>
                     <option value="">Select Status</option>
                     <option value="Placed" <%= order.orderStatus === 'Placed' ? 'selected' : '' %>>Placed</option>
                     <option value="Shipped" <%= order.orderStatus === 'Shipped' ? 'selected' : '' %>>Shipped</option>
                     <option value="Out for Delivery" <%= order.orderStatus === 'Out for Delivery' ? 'selected' : '' %>>Out for Delivery</option>
                     <option value="Delivered" <%= order.orderStatus === 'Delivered' ? 'selected' : '' %>>Delivered</option>
-                    <option value="Cancelled" <%= order.orderStatus === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
-                    <option value="Returned" <%= order.orderStatus === 'Returned' ? 'selected' : '' %>>Returned</option>
                   </select>
-                  <button type="submit" class="btn btn-primary w-full">Update Status</button>
+                  <button type="submit" class="btn btn-primary w-full <%= isOrderFinished ? 'opacity-50 cursor-not-allowed' : '' %>" <%= isOrderFinished ? 'disabled' : '' %>>
+                    <%= isOrderFinished ? `Order is ${order.orderStatus}` : 'Update Status' %>
+                  </button>
                 </form>
               </div>
               <!-- Customer Details -->
@@ -541,6 +543,59 @@
       <% if (typeof successMessage !== 'undefined' && successMessage) { %>
         showSuccessPopup("<%= successMessage %>");
       <% } %>
+
+      // Status Update Intercept
+      document.getElementById('statusUpdateForm').addEventListener('submit', function(e) {
+        const select = document.getElementById('statusSelect');
+        const initialStatus = "<%= order.orderStatus %>";
+        const selectedStatus = select.value;
+        
+        // Define Status Flow
+        const statusFlow = ['Placed', 'Shipped', 'Out for Delivery', 'Delivered'];
+        
+        // If user manually selected a DIFFERENT status, let it submit normally
+        if (selectedStatus && selectedStatus !== initialStatus) {
+            return; 
+        }
+
+        // If user didn't change status (or selected same), assume "Next Status" intent
+        e.preventDefault(); // Stop creating post request immediately
+
+        const currentIndex = statusFlow.indexOf(initialStatus);
+        
+        if (currentIndex === -1 || currentIndex === statusFlow.length - 1) {
+            // Already at end or unknown status, just submit current (likely to fail or refresh)
+            // Or show info that no next status exists
+            if (initialStatus === 'Delivered') {
+                 showErrorPopup("Order is already Delivered.");
+                 return;
+            }
+             this.submit();
+             return;
+        }
+
+        const nextStatus = statusFlow[currentIndex + 1];
+
+        // SweetAlert Confirmation
+        Swal.fire({
+            title: 'Update Status?',
+            text: `Are you sure you want to change status from "${initialStatus}" to "${nextStatus}"?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#000000', // Black confirm
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, Update',
+            background: '#1a1a1a', // Dark background for theme
+            color: '#fff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Set the select to the next status
+                select.value = nextStatus;
+                // Submit the form
+                this.submit();
+            }
+        });
+      });
     </script>
   </body>
 </html>

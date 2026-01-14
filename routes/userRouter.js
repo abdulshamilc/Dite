@@ -102,7 +102,8 @@ import {
   verifyRazorpayPayment,
 // addFundsToWallet, (Removed)
   retryPaymentOrder,
-  verifyRetryPayment
+  verifyRetryPayment,
+  retrySessionPayment
 } from "../controller/user/paymentController.js"; 
 
 import {
@@ -359,6 +360,7 @@ router.post(
 );
 
 router.post("/checkout/payment/retry/:id", isAuthenticatedUser, isBlocked, retryPaymentOrder);
+router.post("/checkout/payment/retry-session", isAuthenticatedUser, isBlocked, retrySessionPayment);
 router.post("/checkout/payment/verify-retry", isAuthenticatedUser, isBlocked, verifyRetryPayment);
 
 

@@ -10,17 +10,28 @@ import { SUCCESS_MESSAGES, ERROR_MESSAGES, HTTP_STATUS } from "../../constants/i
 // Create Razorpay Order (for /createOrder)
 const createRazorpayOrder = async (req, res) => {
   try {
-    // Fetch user from session (same as in placeOrder)
+    // Fetch user from session
     const user = await User.findOne({ email: req.session.user });
     if (!user) {
       console.error("Payment Error [Anonymous User]: User not authenticated");
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, message: ERROR_MESSAGES.USER_NOT_AUTHENTICATED });
     }
-    const { amount } = req.body;
+    const { amount, items, addressId, couponCode } = req.body;
+    
     if (!amount || amount < 1) {
       console.error(`Payment Error [User: ${user._id}]: Invalid amount ${amount}`);
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: ERROR_MESSAGES.AMOUNT_TOO_LOW });
     }
+
+    // Save details to session for retry scenarios (User Request)
+    req.session.checkoutBackup = {
+        amount,
+        items,
+        addressId,
+        couponCode,
+        timestamp: new Date()
+    };
+    req.session.save();
 
     // Pre-Payment Stock Validation
     const cart = await Cart.findOne({ userId: user._id }).populate("items.productId");
@@ -51,7 +62,7 @@ const createRazorpayOrder = async (req, res) => {
     
     // Create Razorpay order (amount in paise)
     const order = await razorpay.orders.create({
-      amount: amount * 100, // Convert rupees to paise
+      amount: amount * 100, 
       currency: 'INR',
       receipt: "rcpt_" + Date.now().toString(),
       notes: {
@@ -62,7 +73,7 @@ const createRazorpayOrder = async (req, res) => {
       success: true,
       order: {
         id: order.id,
-        amount: order.amount, // In paise—your frontend expects this
+        amount: order.amount, 
         currency: order.currency
       }
     });
@@ -70,6 +81,52 @@ const createRazorpayOrder = async (req, res) => {
     console.error(`Payment Error [User: ${user?._id || 'anonymous'}]:`, error);
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.PAYMENT_CREATION_FAILED });
   }
+};
+
+// Retry Session Payment (For retrying from failed page using session data)
+const retrySessionPayment = async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.session.user });
+        if (!user) return res.status(HTTP_STATUS.UNAUTHORIZED).json({ success: false, message: ERROR_MESSAGES.USER_NOT_AUTHENTICATED });
+        
+        if (!req.session.checkoutBackup) {
+            return res.status(HTTP_STATUS.BAD_REQUEST).json({ success: false, message: "Session expired or no backup found. Please restart checkout." });
+        }
+
+        const { amount } = req.session.checkoutBackup;
+        
+        // Re-validate stock if needed (optional but recommended)
+        // For now, assuming quick retry, proceeding with Razorpay creation
+        
+        const order = await razorpay.orders.create({
+            amount: amount * 100,
+            currency: 'INR',
+            receipt: "retry_rcpt_" + Date.now().toString(),
+            notes: {
+                userId: user._id.toString(),
+                isRetry: "true"
+            }
+        });
+
+        // Update timestamp
+        req.session.checkoutBackup.timestamp = new Date();
+        req.session.save();
+
+        return res.json({
+            success: true,
+            order: {
+                id: order.id,
+                amount: order.amount,
+                currency: order.currency
+            },
+            key: process.env.RAZORPAY_KEY_ID, 
+            backup: req.session.checkoutBackup // Return backup data if needed by frontend
+        });
+
+    } catch (error) {
+        console.error("Retry Session Payment Error:", error);
+        res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ success: false, message: ERROR_MESSAGES.PAYMENT_CREATION_FAILED });
+    }
 };
 
 // Verify Razorpay Payment (for /verifyPayment)
@@ -194,5 +251,6 @@ export {
     verifyRazorpayPayment,
     // addFundsToWallet, (Removed)
     retryPaymentOrder,
-    verifyRetryPayment
+    verifyRetryPayment,
+    retrySessionPayment
 }

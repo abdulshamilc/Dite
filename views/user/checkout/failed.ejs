@@ -8,6 +8,36 @@
     <%- include("../../partials/user/headerHead") %>
     <%- include("../../partials/user/footerHead") %>
     <link rel="stylesheet" href="/style/user/checkout/failed.css">
+    <style>
+      /* Payment Overlay - Copied from checkout.ejs logic */
+      .payment-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .payment-overlay.show {
+        display: flex;
+        opacity: 1;
+      }
+
+      #paymentMessage {
+        font-size: 1.5rem;
+        color: #4ade80; /* Green by default */
+        text-align: center;
+        padding: 2rem;
+        font-family: Arial, sans-serif;
+      }
+    </style>
 </head>
 <body class="min-h-screen bg-black text-white flex flex-col">
     <%- include("../../partials/user/header") %>
@@ -57,16 +87,195 @@
             <p class="retry-incentive">Don't worry—your cart is safe. Try again?</p>
             <!-- Enhanced Layered Action Buttons (mirroring success structure) -->
             <div class="flex flex-col sm:flex-row gap-8 justify-center items-center">
-                <a href="<%= addressId ? `/checkout/payment/${addressId}` : '/checkout/address' %>" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300 w-full sm:w-auto">
+                <button onclick="handleRetry()" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300 w-full sm:w-auto cursor-pointer">
                     RETRY PAYMENT
-                </a>
+                </button>
                 <a href="/" class="px-8 py-4 text-lg font-semibold tracking-wider text-white rounded-lg btn-layered transition-all duration-300 w-full sm:w-auto">
                     CONTINUE SHOPPING
                 </a>
             </div>
         </div>
     </main>
+    </main>
+    
+    <!-- Payment Status Overlay -->
+    <div class="payment-overlay" id="paymentOverlay">
+      <div id="paymentMessage">Processing...</div>
+    </div>
+
     <!-- Footer -->
     <%- include("../../partials/user/footer") %>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+      function showPaymentStatus(message, isError = false) {
+        const overlay = document.getElementById('paymentOverlay');
+        const msgEl = document.getElementById('paymentMessage');
+        msgEl.textContent = message;
+        if (isError) {
+          msgEl.style.color = '#ef4444'; // Red
+        } else {
+          msgEl.style.color = '#4ade80'; // Green
+        }
+        overlay.classList.add('show');
+      }
+      
+      function hidePaymentStatus() {
+        document.getElementById('paymentOverlay').classList.remove('show');
+      }
+
+      function handleRetry() {
+          Swal.fire({
+              title: 'Retry Payment',
+              text: "How would you like to proceed?",
+              icon: 'question',
+              showCancelButton: true,
+              confirmButtonColor: '#d4af37',
+              cancelButtonColor: '#f59e0b',
+              confirmButtonText: 'Retry (Same Method)',
+              cancelButtonText: 'Choose Different Method',
+              background: '#1a1a1a',
+              color: '#ffffff'
+          }).then((result) => {
+              if (result.isConfirmed) {
+                  initiateSessionRetry();
+              } else if (result.dismiss === Swal.DismissReason.cancel) {
+                  window.location.href = "<%= addressId ? `/checkout/payment/${addressId}` : '/checkout/address' %>";
+              }
+          });
+      }
+
+      function initiateSessionRetry() {
+        showPaymentStatus("Initiating Payment..."); // Green Text
+
+        fetch('/checkout/payment/retry-session', { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+             if(data.success) {
+                // Short delay to let user see "Initiating" before modal opens (optional, but good UX)
+                setTimeout(() => {
+                    // Hide overlay so Razorpay modal is visible
+                    // Or keep it? Razorpay might cover it? 
+                    // Usually Razorpay is z-index high, but overlay is 2000. 
+                    // Let's hide it or change text to "Please pay..."
+                    // Changing text might be better if we want background to remain dark.
+                    // But checkout.ejs says "Opening payment modal..."
+                    showPaymentStatus("Opening payment modal...");
+                    
+                    const options = {
+                        key: data.key,
+                        amount: data.order.amount,
+                        currency: "INR",
+                        name: "Dité",
+                        description: "Retry Payment",
+                        order_id: data.order.id,
+                        handler: function(response) {
+                            verifyAndPlaceOrder(response, data.backup);
+                        },
+                        theme: { color: '#d4af37' },
+                        modal: {
+                            ondismiss: function() {
+                                hidePaymentStatus();
+                                Swal.fire({ 
+                                    icon: 'info', 
+                                    title: 'Payment Cancelled', 
+                                    text: 'You cancelled the payment process.',
+                                    background: '#1a1a1a',
+                                    color: '#fff' 
+                                });
+                            }
+                        }
+                    };
+                    const rzp = new Razorpay(options);
+                    rzp.on('payment.failed', function (response){
+                        showPaymentStatus("Payment Failed: " + response.error.description, true); // Red Text
+                        setTimeout(() => hidePaymentStatus(), 3000);
+                    });
+                    
+                    // Actually, we should probably hide overlay just before opening, 
+                    // or else the overlay blocks interaction with the modal?
+                    // No, Razorpay modal is an iframe usually on top. 
+                    // But if overlay z-index is 2000, it might block. 
+                    // Let's momentarily hide it or lower z-index.
+                    // But checking checkout.ejs logic: initiateRazorpay calls openRazorpayCheckout.
+                    // openRazorpayCheckout doesn't explicitly hide overlay. 
+                    // Wait, Razorpay modal works? 
+                    // If overlay is 0.95 opacity black, it will hide everything.
+                    // checkout.ejs: verifyRazorpayPayment calls showPaymentStatus.
+                    // The "Opening payment modal..." stays? No, checkout.ejs might hide it?
+                    // Actually `openRazorpayCheckout` in checkout.ejs:
+                    // It shows 'Opening payment modal...' then opens instance.
+                    // If overlay is ON, you CANNOT click the modal if overlay is on top.
+                    // So we MUST hide the overlay effectively when modal opens.
+                    // Razorpay modal is interactive.
+                    // Let's assume we hide it here.
+                    hidePaymentStatus();
+                    rzp.open();
+                }, 1000);
+             } else {
+                showPaymentStatus(data.message || 'Retry failed', true); // Red
+                setTimeout(() => hidePaymentStatus(), 2000);
+             }
+          })
+          .catch(err => {
+             console.error(err);
+             showPaymentStatus('Network connection error', true); // Red
+             setTimeout(() => hidePaymentStatus(), 2000);
+          });
+      }
+
+      function verifyAndPlaceOrder(paymentResponse, backupData) {
+          showPaymentStatus("Verifying Payment..."); // Green
+
+          // 1. Verify
+          fetch('/verifyPayment', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                  razorpay_payment_id: paymentResponse.razorpay_payment_id,
+                  razorpay_order_id: paymentResponse.razorpay_order_id,
+                  razorpay_signature: paymentResponse.razorpay_signature
+              })
+          }).then(res => res.json()).then(verifyData => {
+              if(verifyData.success) {
+                  showPaymentStatus("Placing Order...", false); // Green update
+
+                  // 2. Place Order using backup data
+                  return fetch('/checkout/placeOrder', {
+                      method: 'POST',
+                      headers: {'Content-Type': 'application/json'},
+                      body: JSON.stringify({
+                          items: backupData.items,
+                          addressId: backupData.addressId,
+                          couponCode: backupData.couponCode,
+                          paymentMethod: 'razorpay',
+                          razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                          razorpayOrderId: paymentResponse.razorpay_order_id
+                      })
+                  });
+              } else {
+                  throw new Error(verifyData.message || 'Verification failed');
+              }
+          })
+          .then(res => res.json())
+          .then(orderData => {
+              if(orderData.success) {
+                  showPaymentStatus("Order Placed Successfully!"); // Green
+                  setTimeout(() => {
+                      window.location.href = '/checkout/success';
+                  }, 1500);
+              } else {
+                  showPaymentStatus(orderData.message, true); // Red
+                  setTimeout(() => hidePaymentStatus(), 3000);
+              }
+          })
+          .catch(err => {
+              console.error(err);
+              showPaymentStatus(err.message, true); // Red
+              setTimeout(() => hidePaymentStatus(), 3000);
+          });
+      }
+    </script>
 </body>
 </html>

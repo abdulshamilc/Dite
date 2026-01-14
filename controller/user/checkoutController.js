@@ -622,6 +622,7 @@ const placeOrder = async (req, res) => {
         $inc: { totalOrders: 1, totalSpent: finalTotal } 
     });
 
+    delete req.session.checkoutBackup;
     req.session.orderplaced = true;
     req.session.orderId = orderID;
 

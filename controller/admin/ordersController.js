@@ -307,8 +307,13 @@ const exportOrderPDF = async (req, res) => {
 };
 
 // const getMyOrders = async (req,res)=>{
-//   const order = Orders.find({paymentMethod:"online" , totalAmount:{$gt:1000}}) ;
-//   console.log(order.totalAmount) ;
+//   const order = await Orders.find({paymentMethod:"online" , totalAmount:{$gt:10000}},{items:1 , _id:0}) ;
+  
+//   const allItems = order
+//       .map(order => order.items
+//       .map(v => v.name)); ;
+
+//   console.log(allItems);
 // }
 // getMyOrders() ;
 

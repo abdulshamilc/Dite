@@ -1184,7 +1184,10 @@
         amount: currentTotal,
         currency: "INR",
         receipt: "receipt#" + Date.now(),
-        notes: { desc: "Order Payment" }
+        notes: { desc: "Order Payment" },
+        items: cartItems,
+        addressId: selectedAddressId,
+        couponCode: appliedCouponCode
       })
     })
     .then(res => res.json())
