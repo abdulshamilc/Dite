@@ -461,3 +461,385 @@
     color: white;
   }
   .btn-apply:hover { background: #b5823d; }
+
+  /* ========== RESPONSIVE STYLES ========== */
+
+  /* Tablet (max-width: 960px) */
+  @media (max-width: 960px) {
+    body {
+      padding-top: 100px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 100%;
+      padding: 1.5rem;
+      margin: 0 auto;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .layout {
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 100%;
+      padding: 24px 20px;
+      padding-top: 60px;
+      margin: 0 auto;
+    }
+
+    .avatar-lg {
+      width: 130px;
+      height: 130px;
+    }
+
+    .form {
+      gap: 18px;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .row label {
+      min-width: auto;
+      width: 100%;
+    }
+
+    .field {
+      min-width: 100%;
+      width: 100%;
+    }
+
+    .gender {
+      flex-wrap: wrap;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .verify-to-edit-btn {
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .form-buttons {
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+
+    .form-buttons .edit-btn {
+      width: 100%;
+    }
+  }
+
+  /* Mobile Phone (max-width: 768px) */
+  @media (max-width: 768px) {
+    body {
+      padding-top: 85px;
+    }
+
+    .container {
+      width: 100%;
+      padding: 1rem;
+      margin: 0 auto;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      margin: 15px 0;
+      text-align: center;
+    }
+
+    .layout {
+      width: 100%;
+      padding: 0;
+    }
+
+    .card {
+      width: 100%;
+      border-radius: 12px;
+      padding: 20px 16px;
+      padding-top: 55px;
+    }
+
+    .card {
+      padding: 20px 16px;
+      padding-top: 55px;
+      border-radius: 12px;
+    }
+
+    .edit-btn {
+      top: 14px;
+      right: 14px;
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+
+    .avatar-container {
+      margin: 8px auto 20px;
+    }
+
+    .avatar-lg {
+      width: 110px;
+      height: 110px;
+      border-width: 4px;
+    }
+
+    .image-overlay {
+      width: 36px;
+      height: 36px;
+      font-size: 16px;
+    }
+
+    .form {
+      gap: 16px;
+    }
+
+    .field {
+      padding: 12px 14px;
+      font-size: 14px;
+    }
+
+    .gender {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .gender label {
+      font-size: 14px;
+    }
+
+    .view-mode .row {
+      margin-bottom: 16px;
+    }
+
+    .view-mode .field-text {
+      padding: 10px 0;
+      font-size: 14px;
+    }
+
+    /* OTP Modal Mobile */
+    .modal-content {
+      margin: 5% auto;
+      padding: 24px 18px;
+      width: 95%;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+    }
+
+    .otp-input-container {
+      gap: 6px;
+    }
+
+    .otp-input {
+      width: 42px;
+      height: 42px;
+      font-size: 16px;
+      margin: 0 3px;
+    }
+
+    .modal-buttons {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      width: 100%;
+    }
+
+    /* Crop Modal Mobile */
+    .crop-container {
+      width: 98%;
+      padding: 16px;
+    }
+
+    .crop-image-wrapper {
+      height: 300px;
+    }
+
+    .crop-footer {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .crop-btn {
+      width: 100%;
+    }
+
+    /* Message Container Mobile */
+    .message-container {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      max-width: none;
+    }
+
+    .message {
+      font-size: 14px;
+      padding: 10px 14px;
+    }
+  }
+
+  /* Small Phone (max-width: 480px) */
+  @media (max-width: 480px) {
+    body {
+      padding-top: 70px;
+    }
+
+    .container {
+      padding: 1rem 0.5rem;
+    }
+
+    .page-title {
+      font-size: 1.25rem;
+      margin: 12px 0;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      padding: 16px 12px;
+      padding-top: 50px;
+      border-radius: 10px;
+    }
+
+    .edit-btn {
+      top: 12px;
+      right: 12px;
+      padding: 5px 10px;
+      font-size: 13px;
+      border-radius: 6px;
+    }
+
+    .avatar-lg {
+      width: 90px;
+      height: 90px;
+      border-width: 3px;
+    }
+
+    .avatar-container {
+      margin: 4px auto 16px;
+    }
+
+    .image-overlay {
+      width: 32px;
+      height: 32px;
+      font-size: 14px;
+    }
+
+    .form {
+      gap: 14px;
+    }
+
+    .row label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .field {
+      padding: 10px 12px;
+      font-size: 13px;
+      border-radius: 8px;
+    }
+
+    .gender label {
+      font-size: 13px;
+    }
+
+    .divider {
+      margin: 10px 0;
+    }
+
+    .verify-to-edit-btn,
+    .send-otp-btn,
+    .verify-otp-btn {
+      padding: 8px 12px;
+      font-size: 13px;
+      min-width: 100px;
+    }
+
+    .form-buttons {
+      margin-top: 16px;
+      gap: 10px;
+    }
+
+    /* OTP Modal Very Small */
+    .modal-content {
+      padding: 20px 14px;
+      margin: 10% auto;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+    }
+
+    .modal-message {
+      font-size: 13px;
+    }
+
+    .otp-input {
+      width: 36px;
+      height: 38px;
+      font-size: 15px;
+      margin: 0 2px;
+      border-radius: 6px;
+    }
+
+    .modal-btn {
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    .resend-timer {
+      font-size: 12px;
+    }
+
+    /* Crop Modal Very Small */
+    .crop-container {
+      padding: 12px;
+    }
+
+    .crop-title {
+      font-size: 1rem;
+    }
+
+    .crop-image-wrapper {
+      height: 250px;
+      margin-bottom: 14px;
+    }
+
+    .crop-btn {
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+
+    /* View Mode Very Small */
+    .view-mode .row {
+      margin-bottom: 12px;
+    }
+
+    .view-mode .field-text {
+      padding: 8px 0;
+      font-size: 13px;
+      min-width: 100%;
+    }
+  }

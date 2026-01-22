@@ -294,8 +294,8 @@
             .nav-menu {
                 position: fixed;
                 top: 0;
-                right: -100%;
-                width: 320px;
+                left: 0;
+                width: 100%;
                 height: 100vh;
                 background: rgba(10, 10, 10, 0.98);
                 backdrop-filter: blur(20px);
@@ -303,13 +303,24 @@
                 justify-content: center;
                 align-items: center;
                 gap: 2rem;
-                transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-                border-left: 1px solid rgba(212, 175, 55, 0.3);
-                box-shadow: -20px 0 60px rgba(0, 0, 0, 0.8);
+                
+                transform: scale(0);
+                opacity: 0;
+                transform-origin: 50% 50px;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                pointer-events: none;
+                
+                right: auto;
+                border-left: none;
+                border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                z-index: 999;
             }
 
             .nav-menu.active {
-                right: 0;
+                transform: scale(1);
+                opacity: 1;
+                pointer-events: auto;
             }
 
             .hamburger {
@@ -330,17 +341,125 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding-top: 70px;
+            }
+
+            .nav {
+                padding: 0.8rem 1rem;
+            }
+
+            .logo img {
+                height: 32px;
+            }
+
             .nav-icons {
-                gap: 1rem;
+                gap: 0.8rem;
             }
 
             .nav-icons a,
             .nav-icons .relative {
-                font-size: 1.1rem;
+                font-size: 1.05rem;
+            }
+
+            .profile-dropdown .profile-icon img {
+                width: 32px !important;
+                height: 32px !important;
+            }
+
+            .cart-count {
+                width: 16px;
+                height: 16px;
+                font-size: 0.6rem;
+                top: -6px;
+                right: -8px;
             }
 
             .nav-menu {
-                width: 280px;
+                gap: 1.2rem;
+            }
+
+            .nav-menu a {
+                font-size: 1.1rem;
+                letter-spacing: 1.5px;
+            }
+
+            .hamburger {
+                padding: 8px;
+            }
+
+            .hamburger span {
+                width: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding-top: 60px;
+            }
+
+            .nav {
+                padding: 0.6rem 0.8rem;
+            }
+
+            .logo img {
+                height: 28px;
+            }
+
+            .nav-icons {
+                gap: 0.6rem;
+            }
+
+            .nav-icons a,
+            .nav-icons .relative {
+                font-size: 0.95rem;
+            }
+
+            .profile-dropdown .profile-icon img {
+                width: 28px !important;
+                height: 28px !important;
+            }
+
+            .cart-count {
+                width: 14px;
+                height: 14px;
+                font-size: 0.55rem;
+                top: -5px;
+                right: -6px;
+            }
+
+            .nav-menu {
+                gap: 1rem;
+            }
+
+            .nav-menu a {
+                font-size: 1rem;
+                letter-spacing: 1px;
+            }
+
+            .hamburger {
+                padding: 6px;
+            }
+
+            .hamburger span {
+                width: 22px;
+                height: 1.5px;
+                gap: 5px;
+            }
+
+            /* Profile Dropdown Mobile Adjustments */
+            .profile-dropdown ul {
+                min-width: 160px;
+                top: calc(100% + 10px);
+            }
+
+            .profile-dropdown ul li a {
+                padding: 0.8rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .profile-dropdown ul li a:hover {
+                padding-left: 1.5rem;
             }
         }
 
@@ -374,7 +493,9 @@
             
             <!-- Logo -->
             <div class="logo">
-                <img src="/images/logo/DiteLogo.png" alt="Dité Logo" />
+                <a href="/">
+                    <img src="/images/logo/DiteLogo.png" alt="Dité Logo" />
+                </a>
             </div>
 
             <!-- Hamburger Menu Button -->
@@ -395,9 +516,14 @@
             <div class="nav-icons">
                 
                 <!-- Wishlist Icon -->
-                <a href="/wishlist">
-                    <i class="fas fa-heart"></i>
-                </a>
+                <div class="relative">
+                    <a href="/wishlist">
+                        <i class="fas fa-heart"></i>
+                    </a>
+                    <% if (locals.wishlistLength > 0) { %>
+                        <span class="cart-count"><%= wishlistLength %></span>
+                    <% } %>
+                </div>
 
                 <!-- Profile Dropdown or Login -->
                 <% if (typeof currentUser !== 'undefined' && currentUser) { %>
@@ -425,7 +551,7 @@
                     <a href="/cart">
                         <i class="fas fa-shopping-bag"></i>
                     </a>
-<% if (locals.cartLength > 0) { %>
+                    <% if (locals.cartLength > 0) { %>
                         <span class="cart-count"><%= cartLength %></span>
                     <% } %>
                 </div>

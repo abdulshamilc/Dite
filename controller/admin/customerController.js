@@ -52,18 +52,26 @@ const getcustomers = async (req, res) => {
     });
 
     // Finding Totel Orders
-    const totelOrdersCount = await User.aggregate([
+    const totelOrdersResult = await User.aggregate([
       {
         $group: { _id: null, totelOrders: { $sum: "$totalOrders" } },
       },
     ]);
+    // Provide default value if aggregation returns empty array
+    const totelOrdersCount = totelOrdersResult.length > 0 
+      ? totelOrdersResult 
+      : [{ totelOrders: 0 }];
 
     // Finding Totel Spend
-    const totelSpentCount = await User.aggregate([
+    const totelSpentResult = await User.aggregate([
       {
         $group: { _id: null, totelSpent: { $sum: "$totalSpent" } },
       },
     ]);
+    // Provide default value if aggregation returns empty array
+    const totelSpentCount = totelSpentResult.length > 0 
+      ? totelSpentResult 
+      : [{ totelSpent: 0 }];
     // Finding Totel customers (Absolute total for stats)
     const totalCustomersStats = await User.countDocuments();
 
@@ -150,6 +158,7 @@ const customerDetails = async (req, res) => {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
   }
 };
+
 
 export {
     getcustomers,

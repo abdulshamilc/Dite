@@ -282,15 +282,41 @@ const getDashboard = async (req, res) => {
     });
     
     // Least Selling Products (Optional, reusing top products logic but sort asc)
-    const leastSellingProducts = await Order.aggregate([
+    // Least Selling Products (Modified to include 0 sales)
+    // 1. Get all active products
+    const allProductsKey = await Product.find({ isListed: true, isDeleted: false }).select("name images");
+    
+    // 2. Get sales counts for all products
+    const productSales = await Order.aggregate([
+      { $match: { ...matchStage, orderStatus: { $ne: 'Cancelled' } } },
       { $unwind: "$items" },
-      { $group: { _id: "$items.productId", totalSold: { $sum: "$items.quantity" } } },
-      { $sort: { totalSold: 1 } },
-      { $limit: 5 },
-      { $lookup: { from: "products", localField: "_id", foreignField: "_id", as: "product" } },
-      { $unwind: "$product" },
-      { $project: { name: "$product.name", totalSold: 1 } }
+      { $group: { 
+          _id: "$items.productId", 
+          totalSold: { $sum: "$items.quantity" },
+          totalRevenue: { $sum: { $multiply: ["$items.quantity", "$items.discoundedPrice"] } }
+        } 
+      }
     ]);
+
+    // 3. Map sales to products
+    const salesMap = new Map();
+    productSales.forEach(item => {
+        salesMap.set(item._id.toString(), { sold: item.totalSold, revenue: item.totalRevenue });
+    });
+
+    const productsWithSales = allProductsKey.map(p => {
+        const data = salesMap.get(p._id.toString()) || { sold: 0, revenue: 0 };
+        return {
+            name: p.name,
+            image: p.images[0], // pass image for better UI if needed
+            totalSold: data.sold,
+            totalRevenue: data.revenue
+        };
+    });
+
+    // 4. Sort Ascending and limit
+    productsWithSales.sort((a, b) => a.totalSold - b.totalSold);
+    const leastSellingProducts = productsWithSales.slice(0, 5);
 
     res.render("admin/dashboard/dashboard", {
       totalOrders,

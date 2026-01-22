@@ -105,3 +105,145 @@ button:hover {
   color: green;
   margin-top: 10px;
 }
+
+/* ========== RESPONSIVE STYLES ========== */
+
+/* Tablet (max-width: 768px) */
+@media (max-width: 768px) {
+  body {
+    padding: 20px;
+    min-height: 100vh;
+    height: auto;
+  }
+
+  .login-container {
+    max-width: 100%;
+    padding: 0 20px;
+  }
+
+  .logo img {
+    max-width: 280px;
+    margin: 0 auto 25px;
+  }
+
+  form {
+    gap: 16px;
+  }
+
+  input {
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  button {
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  .forgot {
+    font-size: 12px;
+  }
+}
+
+/* Mobile Phone (max-width: 480px) */
+@media (max-width: 480px) {
+  body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .login-container {
+    width: 100%;
+    max-width: 100%;
+    padding: 0 12px;
+  }
+
+  .logo img {
+    max-width: 220px;
+    margin-bottom: 20px;
+  }
+
+  form {
+    gap: 14px;
+  }
+
+  input {
+    padding: 12px 14px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    border-radius: 8px;
+  }
+
+  .password-container {
+    width: 100%;
+  }
+
+  .toggle-password {
+    right: 12px;
+    font-size: 16px;
+  }
+
+  .forgot {
+    font-size: 12px;
+    margin-top: -8px;
+  }
+
+  button {
+    padding: 14px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+
+  button:hover {
+    transform: none; /* Disable scale on mobile */
+  }
+
+  #errorMsg,
+  #successMsg {
+    font-size: 14px;
+    margin-top: 8px;
+    padding: 0 4px;
+    word-wrap: break-word;
+  }
+}
+
+/* Very Small Phone (max-width: 360px) */
+@media (max-width: 360px) {
+  body {
+    padding: 12px;
+  }
+
+  .login-container {
+    padding: 0 8px;
+  }
+
+  .logo img {
+    max-width: 180px;
+    margin-bottom: 16px;
+  }
+
+  form {
+    gap: 12px;
+  }
+
+  input {
+    padding: 10px 12px;
+    font-size: 15px;
+  }
+
+  button {
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  .forgot {
+    font-size: 11px;
+  }
+
+  #errorMsg,
+  #successMsg {
+    font-size: 13px;
+  }
+}

@@ -471,7 +471,11 @@
 
         /* Responsive Design */
         @media (max-width: 1024px) {
-            .collections-grid,
+            .collections-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2rem;
+            }
+
             .trending-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 2rem;
@@ -484,37 +488,216 @@
 
             .story-text,
             .story-image {
-                transform: none;
+                transform: none !important;
+            }
+
+            .story-content-reverse .story-text,
+            .story-content-reverse .story-image {
+                order: initial;
             }
         }
 
         @media (max-width: 768px) {
+            .container {
+                padding: 0 1.5rem;
+            }
+
             .carousel {
                 height: 60vh;
             }
 
-            .collections-grid,
-            .trending-grid {
-                grid-template-columns: 1fr;
-                gap: 2rem;
+            .carousel::before {
+                font-size: clamp(2rem, 6vw, 3rem);
+                letter-spacing: 4px;
             }
 
-            .collection-item {
-                height: 400px;
+            .carousel-dots {
+                bottom: 20px;
+                gap: 10px;
+            }
+
+            .dot {
+                width: 10px;
+                height: 10px;
+            }
+
+            .dot.active {
+                width: 30px;
+            }
+
+            .section-title {
+                font-size: clamp(1.8rem, 6vw, 2.5rem);
+                letter-spacing: 2px;
+                margin-bottom: 2.5rem;
+            }
+
+            .section-title::after {
+                width: 60px;
+                bottom: -10px;
             }
 
             .collections,
             .story,
+            .brand-story,
             .trending {
-                padding: 5rem 0;
+                padding: 4rem 0;
+            }
+
+            .collections-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                margin-top: 2rem;
+            }
+
+            .collection-item {
+                height: 350px;
+            }
+
+            .collection-overlay {
+                padding: 2rem 1.5rem;
+            }
+
+            .collection-overlay h3 {
+                font-size: 1.8rem;
+                letter-spacing: 2px;
+            }
+
+            .story-content {
+                gap: 2rem;
+            }
+
+            .story-text h2 {
+                font-size: clamp(1.8rem, 6vw, 2.5rem);
+                letter-spacing: 2px;
+                margin-bottom: 1.5rem;
+            }
+
+            .story-text p {
+                font-size: 1rem;
+                line-height: 1.8;
+                margin-bottom: 1rem;
             }
 
             .story-image img {
-                height: 400px;
+                height: 350px;
+            }
+
+            .story-image::before {
+                top: -10px;
+                right: -10px;
+            }
+
+            .story-image:hover::before {
+                top: -15px;
+                right: -15px;
+            }
+
+            .story-content-reverse .story-image::before {
+                left: -10px;
+            }
+
+            .story-content-reverse .story-image:hover::before {
+                left: -15px;
+            }
+
+            /* MOBILE OPTIMIZATION FOR TRENDING SECTION */
+            .trending-grid {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                margin-top: 2rem;
+            }
+
+            .trending-item {
+                max-width: 100%;
             }
 
             .trending-item img {
+                height: 280px;
+            }
+
+            .trending-info {
+                padding: 1.5rem;
+            }
+
+            .trending-info h4 {
+                font-size: 1.4rem;
+                letter-spacing: 1.5px;
+            }
+
+            .trending-info p {
+                font-size: 0.95rem;
+            }
+
+            .trending-item:hover {
+                transform: translateY(-8px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .carousel {
+                height: 50vh;
+            }
+
+            .carousel::before {
+                font-size: clamp(1.5rem, 5vw, 2rem);
+                letter-spacing: 2px;
+                padding: 0 1rem;
+            }
+
+            .section-title {
+                font-size: clamp(1.5rem, 5vw, 2rem);
+                letter-spacing: 1.5px;
+            }
+
+            .collections,
+            .story,
+            .brand-story,
+            .trending {
+                padding: 3rem 0;
+            }
+
+            .collection-item {
                 height: 300px;
+                border-radius: 15px;
+            }
+
+            .collection-overlay {
+                padding: 1.5rem 1rem;
+            }
+
+            .collection-overlay h3 {
+                font-size: 1.5rem;
+                letter-spacing: 1.5px;
+            }
+
+            .story-image img {
+                height: 300px;
+                border-radius: 15px;
+            }
+
+            .trending-item {
+                border-radius: 15px;
+            }
+
+            .trending-item img {
+                height: 250px;
+            }
+
+            .trending-info {
+                padding: 1.25rem;
+            }
+
+            .trending-info h4 {
+                font-size: 1.2rem;
+                letter-spacing: 1px;
+            }
+
+            .trending-info p {
+                font-size: 0.9rem;
             }
         }
     </style>

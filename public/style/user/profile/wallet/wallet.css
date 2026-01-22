@@ -371,3 +371,312 @@
   .payment-overlay.show {
     display: flex;
   }
+
+  /* ========== RESPONSIVE STYLES ========== */
+
+  /* Tablet (max-width: 960px) */
+  @media (max-width: 960px) {
+    body {
+      padding-top: 100px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 100%;
+      padding: 1.5rem;
+      margin: 0 auto;
+    }
+
+    .page-title {
+      font-size: 1.75rem;
+      margin: 20px 0;
+      text-align: center;
+    }
+
+    .layout {
+      flex-direction: column;
+      gap: 16px;
+      width: 100%;
+      align-items: center;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 100%;
+      padding: 24px 20px;
+      margin: 0 auto;
+      min-height: auto;
+    }
+
+    .balance-section {
+      padding: 24px;
+      min-height: 160px;
+    }
+
+    .balance-amount {
+      font-size: 2.5rem;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .action-btn {
+      width: 100%;
+      max-width: 200px;
+    }
+
+    .quick-actions {
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .transaction-item {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  }
+
+  /* Mobile Phone (max-width: 768px) */
+  @media (max-width: 768px) {
+    body {
+      padding-top: 85px;
+    }
+
+    .container {
+      width: 100%;
+      padding: 1rem;
+      margin: 0 auto;
+    }
+
+    .page-title {
+      font-size: 1.5rem;
+      margin: 15px 0;
+      text-align: center;
+    }
+
+    .layout {
+      width: 100%;
+      padding: 0;
+    }
+
+    .card {
+      width: 100%;
+      border-radius: 12px;
+      padding: 20px 16px;
+      min-height: auto;
+    }
+
+    .balance-section {
+      padding: 20px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      min-height: 140px;
+    }
+
+    .balance-amount {
+      font-size: 2rem;
+    }
+
+    .balance-label {
+      font-size: 1rem;
+    }
+
+    .action-buttons {
+      gap: 10px;
+    }
+
+    .action-btn {
+      padding: 10px 16px;
+      font-size: 14px;
+      min-width: 120px;
+    }
+
+    .transaction-history {
+      margin-top: 20px;
+    }
+
+    .transactions-list {
+      max-height: 300px;
+    }
+
+    .transaction-item {
+      padding: 12px;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .transaction-desc {
+      margin-right: 0;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+
+    .transaction-amount {
+      margin-left: 0;
+      align-self: flex-end;
+    }
+
+    .quick-actions {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    .quick-action-card {
+      padding: 16px;
+    }
+
+    .quick-action-icon {
+      font-size: 1.5rem;
+    }
+
+    /* Modal Mobile */
+    .add-money-content {
+      margin: 5% auto;
+      padding: 24px 18px;
+      width: 95%;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+    }
+
+    .amount-field {
+      font-size: 16px;
+      padding: 12px 14px;
+    }
+
+    .modal-buttons {
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-btn {
+      width: 100%;
+    }
+
+    /* Message Container Mobile */
+    .message-container {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      max-width: none;
+    }
+
+    .message {
+      font-size: 14px;
+      padding: 10px 14px;
+    }
+  }
+
+  /* Small Phone (max-width: 480px) */
+  @media (max-width: 480px) {
+    body {
+      padding-top: 70px;
+    }
+
+    .container {
+      padding: 0.75rem 0.5rem;
+    }
+
+    .page-title {
+      font-size: 1.25rem;
+      margin: 12px 0;
+    }
+
+    .card {
+      padding: 16px 12px;
+      border-radius: 10px;
+    }
+
+    .balance-section {
+      padding: 16px 12px;
+      border-radius: 10px;
+      min-height: 120px;
+    }
+
+    .balance-amount {
+      font-size: 1.75rem;
+    }
+
+    .balance-currency {
+      font-size: 1rem;
+    }
+
+    .balance-label {
+      font-size: 0.9rem;
+      margin-top: 6px;
+    }
+
+    .action-btn {
+      padding: 8px 12px;
+      font-size: 13px;
+      min-width: 100px;
+    }
+
+    .transaction-header {
+      font-size: 14px;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .transactions-list {
+      max-height: 250px;
+    }
+
+    .transaction-item {
+      padding: 10px;
+    }
+
+    .transaction-desc {
+      font-size: 13px;
+    }
+
+    .transaction-amount {
+      font-size: 14px;
+    }
+
+    .transaction-date {
+      font-size: 12px;
+    }
+
+    .quick-action-card {
+      padding: 12px;
+    }
+
+    .quick-action-icon {
+      font-size: 1.25rem;
+      margin-bottom: 6px;
+    }
+
+    .quick-action-title {
+      font-size: 14px;
+    }
+
+    .quick-action-desc {
+      font-size: 12px;
+    }
+
+    /* Modal Very Small */
+    .add-money-content {
+      padding: 20px 14px;
+      margin: 10% auto;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      margin-bottom: 16px;
+    }
+
+    .amount-field {
+      font-size: 15px;
+      padding: 10px 12px;
+    }
+
+    .modal-btn {
+      padding: 10px;
+      font-size: 14px;
+    }
+  }

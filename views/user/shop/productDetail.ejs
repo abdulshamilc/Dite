@@ -305,23 +305,23 @@
         </div>
 
         <!-- Suggestions -->
-        <section class="border-t border-gray-800 py-16">
-          <div class="max-w-7xl mx-auto px-6">
-            <h2 class="text-3xl font-bold text-center mb-12">Suggestions</h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <section class="border-t border-gray-800 py-20">
+          <div class="w-full px-4 sm:px-8 md:px-12">
+            <h2 class="text-3xl md:text-4xl font-bold text-center mb-16">Suggestions</h2>
+            <div class="grid grid-cols-3 gap-3 sm:gap-5 md:gap-8">
               <% if (suggestions && suggestions.length > 0) { %>
                 <% suggestions.forEach(item => { %>
                   <a href="/shop/<%= item._id %>">
                   <div class="group cursor-pointer">
-                    <div class="aspect-[3/4] gradient-bg rounded-lg overflow-hidden mb-4">
+                    <div class="aspect-[2/3] gradient-bg rounded-xl overflow-hidden mb-4 md:mb-6">
                       <img
                         src="<%= item.images && item.images.length > 0 ? item.images[0] : '/images/placeholder.png' %>"
                         alt="<%= item.name %>"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    <h3 class="text-lg font-medium mb-2"><%= item.name %></h3>
-                    <p class="text-yellow-500 font-bold">
+                    <h3 class="text-sm sm:text-base md:text-xl font-medium mb-1 md:mb-3 line-clamp-2"><%= item.name %></h3>
+                    <p class="text-yellow-500 font-bold text-sm sm:text-base md:text-lg">
                       ₹<%= item.variants && item.variants.length > 0 && item.variants[0].discountedPrice ? item.variants[0].discountedPrice.toFixed(2) : 'N/A' %>
                     </p>
                   </div>

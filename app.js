@@ -35,7 +35,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Env config
-dotenv.config();
+// Only load dotenv if not in production/Docker
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 
 //DB Connection
 connectDB();

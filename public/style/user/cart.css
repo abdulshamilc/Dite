@@ -468,22 +468,44 @@
           width: 100%;
           position: static;
         }
+
+        .cart-container {
+          padding: 1.5rem;
+          margin: 2rem auto 1rem;
+        }
       }
 
       @media (max-width: 768px) {
         .cart-container {
           padding: 1rem;
+          margin: 1rem auto;
+        }
+
+        .cart-title {
+          font-size: 1.5rem;
+          margin-bottom: 1.5rem;
+        }
+
+        .cart-content {
+          gap: 1.5rem;
+        }
+
+        .cart-items {
+          padding: 1rem;
         }
 
         .cart-item {
           flex-direction: column;
-          align-items: stretch; /* Full width alignment on mobile */
+          align-items: stretch;
+          padding: 1rem;
+          gap: 1rem;
+          margin-bottom: 1rem;
         }
 
         .item-image {
           width: 100%;
-          height: 200px;
-          align-self: center; /* Center image on mobile */
+          height: 180px;
+          align-self: center;
         }
 
         .item-header {
@@ -492,8 +514,13 @@
           gap: 0.5rem;
         }
 
+        .item-name {
+          font-size: 0.95rem;
+        }
+
         .item-price {
           text-align: right;
+          font-size: 1rem;
         }
 
         .item-controls {
@@ -511,15 +538,190 @@
           align-self: center;
         }
 
+        /* Order Summary Mobile */
+        .order-summary {
+          padding: 1.25rem;
+        }
+
+        .summary-title {
+          font-size: 1.1rem;
+          margin-bottom: 1rem;
+        }
+
+        .summary-item {
+          font-size: 0.85rem;
+        }
+
+        .total-amount {
+          font-size: 1.5rem;
+        }
+
+        .checkout-btn {
+          padding: 0.875rem;
+          font-size: 0.95rem;
+        }
+
+        .promo-section {
+          flex-direction: column;
+        }
+
+        .promo-input {
+          width: 100%;
+        }
+
+        .apply-btn {
+          width: 100%;
+        }
+
         .toast-container {
           top: 10px;
           right: 10px;
+          left: 10px;
           gap: 8px;
         }
 
         .toast {
-          max-width: 250px;
+          max-width: none;
           padding: 10px 14px;
           font-size: 0.85rem;
+        }
+      }
+
+      /* Small Phone (max-width: 480px) */
+      @media (max-width: 480px) {
+        .cart-container {
+          padding: 0.75rem;
+          margin: 0.5rem auto;
+        }
+
+        .cart-title {
+          font-size: 1.25rem;
+          letter-spacing: 1px;
+          margin-bottom: 1rem;
+        }
+
+        .cart-content {
+          gap: 1rem;
+        }
+
+        .cart-items {
+          padding: 0.75rem;
+          border-radius: 6px;
+        }
+
+        .cart-item {
+          padding: 0.75rem;
+          gap: 0.75rem;
+          margin-bottom: 0.75rem;
+          border-radius: 6px;
+        }
+
+        .item-image {
+          height: 150px;
+          border-radius: 4px;
+        }
+
+        .item-name {
+          font-size: 0.9rem;
+        }
+
+        .item-size {
+          font-size: 0.8rem;
+        }
+
+        .item-price {
+          font-size: 0.95rem;
+        }
+
+        .item-controls {
+          gap: 0.5rem;
+        }
+
+        .remove-btn {
+          width: 26px;
+          height: 26px;
+        }
+
+        .quantity-controls {
+          padding: 0.2rem 0.4rem;
+          gap: 0.5rem;
+        }
+
+        .quantity-btn {
+          font-size: 0.9rem;
+          padding: 0.2rem 0.4rem;
+          min-width: 26px;
+        }
+
+        .quantity {
+          font-size: 0.85rem;
+          min-width: 24px;
+        }
+
+        .stock-status {
+          font-size: 0.8rem;
+        }
+
+        .delivery-info {
+          font-size: 0.7rem;
+        }
+
+        .free-delivery {
+          font-size: 0.8rem;
+          padding: 0.2rem 0.5rem;
+        }
+
+        /* Order Summary Very Small */
+        .order-summary {
+          padding: 1rem;
+          border-radius: 6px;
+        }
+
+        .summary-title {
+          font-size: 1rem;
+          margin-bottom: 0.75rem;
+        }
+
+        .summary-item {
+          font-size: 0.8rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .summary-divider {
+          margin: 0.75rem 0;
+        }
+
+        .subtotal {
+          font-size: 0.9rem;
+          margin-bottom: 1rem;
+        }
+
+        .promo-input {
+          padding: 0.4rem;
+          font-size: 0.8rem;
+        }
+
+        .apply-btn {
+          padding: 0.4rem 0.75rem;
+          font-size: 0.8rem;
+        }
+
+        .total-section {
+          padding: 0.75rem;
+          margin-bottom: 1rem;
+        }
+
+        .total-label {
+          font-size: 0.8rem;
+        }
+
+        .total-amount {
+          font-size: 1.35rem;
+        }
+
+        .checkout-btn {
+          padding: 0.75rem;
+          font-size: 0.9rem;
+          letter-spacing: 0.5px;
         }
       }

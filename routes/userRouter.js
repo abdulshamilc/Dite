@@ -115,7 +115,7 @@ import {
 
 import { addReview } from "../controller/user/reviewController.js";
 
-import getCartCount from "../middlewares/cartMiddleware.js";
+import getHeaderData from "../middlewares/headerMiddleware.js";
 
 import { isAuthenticatedUser } from "../middlewares/authMiddleware.js";
 
@@ -123,7 +123,7 @@ import isBlocked from "../middlewares/checkBlokedMiddleware.js";
 
 const router = express.Router();
 
-router.use(getCartCount);
+router.use(getHeaderData);
 
 // Google auth
 router.get(

@@ -1,5 +1,145 @@
+<style>
+  /* Admin Sidebar Responsive Styles */
+  .admin-sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(3px);
+    z-index: 40;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+  }
+
+  .admin-sidebar-overlay.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @media (max-width: 1024px) {
+    .admin-sidebar-overlay {
+      display: block;
+      top: 60px; /* Below header */
+    }
+
+    .admin-sidebar {
+      position: fixed !important;
+      top: 60px !important; /* Below header */
+      left: 0 !important;
+      width: 250px !important;
+      height: calc(100vh - 60px) !important;
+      z-index: 45;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 4px 0 15px rgba(0, 0, 0, 0.4);
+      padding-top: 10px;
+      overflow-y: auto;
+    }
+
+    .admin-sidebar.active {
+      transform: translateX(0);
+    }
+
+    .admin-sidebar-close {
+      display: none !important; /* Hide close button since sidebar is below header */
+    }
+  }
+
+  @media (max-width: 768px) {
+    .admin-sidebar-overlay {
+      top: 56px;
+    }
+
+    .admin-sidebar {
+      top: 56px !important;
+      width: 220px !important;
+      height: calc(100vh - 56px) !important;
+    }
+
+    .admin-sidebar nav {
+      padding: 8px !important;
+    }
+
+    .admin-sidebar nav .space-y-3 {
+      gap: 4px !important;
+    }
+
+    .admin-sidebar nav a {
+      padding: 10px 12px !important;
+      font-size: 13px;
+      border-radius: 6px;
+    }
+
+    .admin-sidebar nav a i {
+      width: 18px;
+      height: 18px;
+      margin-right: 8px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .admin-sidebar-overlay {
+      top: 50px;
+    }
+
+    .admin-sidebar {
+      top: 50px !important;
+      width: 200px !important;
+      height: calc(100vh - 50px) !important;
+    }
+
+    .admin-sidebar nav {
+      padding: 6px !important;
+    }
+
+    .admin-sidebar nav a {
+      padding: 8px 10px !important;
+      font-size: 12px;
+      border-radius: 5px;
+    }
+
+    .admin-sidebar nav a i {
+      width: 16px;
+      height: 16px;
+      margin-right: 6px;
+    }
+  }
+
+  .admin-sidebar-close {
+    display: none;
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-size: 18px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .admin-sidebar-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+</style>
+
+<!-- Sidebar Overlay -->
+<div class="admin-sidebar-overlay" id="adminSidebarOverlay" onclick="toggleAdminSidebar()"></div>
+
 <!-- Sidebar -->
-<aside class="w-64 bg-black sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
+<aside id="adminSidebar" class="admin-sidebar w-64 bg-black sticky top-20 h-[calc(100vh-5rem)] overflow-y-auto">
+  <!-- Close button for mobile -->
+  <button class="admin-sidebar-close" id="adminSidebarClose" onclick="toggleAdminSidebar()">&times;</button>
+
   <nav class="space-y-3 p-5">
     <a
       href="/admin/dashboard"
@@ -78,6 +218,50 @@
 </aside>
 
 <script>
+  // Admin Sidebar Toggle Function
+  function toggleAdminSidebar() {
+    const sidebar = document.getElementById('adminSidebar');
+    const overlay = document.getElementById('adminSidebarOverlay');
+    const hamburger = document.getElementById('adminHamburger');
+
+    if (sidebar && overlay) {
+      sidebar.classList.toggle('active');
+      overlay.classList.toggle('active');
+      
+      if (hamburger) {
+        hamburger.classList.toggle('active');
+      }
+
+      // Toggle body scroll
+      if (sidebar.classList.contains('active')) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    }
+  }
+
+  // Close sidebar when clicking on a menu item (mobile only)
+  document.addEventListener('DOMContentLoaded', function() {
+    const navBtns = document.querySelectorAll('.admin-sidebar .nav-btn, .admin-sidebar .logout-btn');
+    
+    navBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        if (window.innerWidth <= 1024) {
+          const sidebar = document.getElementById('adminSidebar');
+          const overlay = document.getElementById('adminSidebarOverlay');
+          const hamburger = document.getElementById('adminHamburger');
+          
+          if (sidebar) sidebar.classList.remove('active');
+          if (overlay) overlay.classList.remove('active');
+          if (hamburger) hamburger.classList.remove('active');
+          document.body.style.overflow = '';
+        }
+      });
+    });
+  });
+
+  // Active state highlighting
   document.addEventListener("DOMContentLoaded", function () {
     const navBtns = document.querySelectorAll(".nav-btn");
     const currentPath = window.location.pathname;
@@ -85,8 +269,6 @@
     navBtns.forEach((btn) => {
       const btnPath = new URL(btn.href, window.location.origin).pathname;
       
-      // Check for exact match or if the current path starts with the button path (excluding dashboard to avoid false positives)
-      // Special case: exact match for dashboard, startswith for others
       let isActive = false;
       if (btnPath === '/admin/dashboard') {
          isActive = currentPath === btnPath;

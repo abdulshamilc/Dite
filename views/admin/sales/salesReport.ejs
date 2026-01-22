@@ -268,11 +268,11 @@
           <label class="block text-sm font-medium text-gray-300 mb-2">Select Format:</label>
           <div class="flex space-x-4">
             <label class="flex items-center">
-              <input type="radio" name="exportFormat" value="excel" checked class="mr-2">
+              <input type="radio" id="formatExcel" name="exportFormat" value="excel" checked class="mr-2">
               <span class="text-gray-300">Excel</span>
             </label>
             <label class="flex items-center">
-              <input type="radio" name="exportFormat" value="pdf" class="mr-2">
+              <input type="radio" id="formatPdf" name="exportFormat" value="pdf" class="mr-2">
               <span class="text-gray-300">PDF</span>
             </label>
           </div>
@@ -525,8 +525,24 @@
       const confirmBtn = document.getElementById('confirmExport');
       const customRange = document.getElementById('customDateRange');
       const periodRadios = document.querySelectorAll('input[name="periodType"]');
+      const excelRadio = document.getElementById('formatExcel');
+      const pdfRadio = document.getElementById('formatPdf');
+
+      // Update button text dynamicallly
+      function updateButtonText() {
+        if (pdfRadio.checked) {
+          confirmBtn.textContent = 'Download PDF';
+        } else {
+          confirmBtn.textContent = 'Download Excel'; 
+        }
+      }
+
+      excelRadio.addEventListener('change', updateButtonText);
+      pdfRadio.addEventListener('change', updateButtonText);
+
       exportBtn.addEventListener('click', () => {
         modal.classList.remove('hidden');
+        updateButtonText(); // Ensure correct text on open
       });
       cancelBtn.addEventListener('click', () => {
         modal.classList.add('hidden');
@@ -543,7 +559,10 @@
       });
       confirmBtn.addEventListener('click', async () => {
         const selectedType = document.querySelector('input[name="periodType"]:checked')?.value;
-        const selectedFormat = document.querySelector('input[name="exportFormat"]:checked')?.value || 'excel';
+        // Robust selection check
+        const isPdf = document.getElementById('formatPdf').checked;
+        const selectedFormat = isPdf ? 'pdf' : 'excel';
+        
         if (!selectedType) {
           Swal.fire({
             title: 'Error',
@@ -601,6 +620,12 @@
         try {
           const endpoint = selectedFormat === 'pdf' ? '/admin/sales-report/export-pdf' : '/admin/sales-report/export';
           const extension = selectedFormat === 'pdf' ? 'pdf' : 'xlsx';
+
+          // Show loading state
+          const originalText = confirmBtn.textContent;
+          confirmBtn.textContent = 'Generating...';
+          confirmBtn.disabled = true;
+
           const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
@@ -608,6 +633,7 @@
             },
             body: JSON.stringify({ startDate, endDate }),
           });
+          
           if (response.ok) {
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
@@ -620,9 +646,11 @@
             document.body.removeChild(a);
             modal.classList.add('hidden');
           } else {
-            Swal.fire({
+            console.error('Export response not OK:', response.status, response.statusText);
+            const errorText = await response.text();
+             Swal.fire({
               title: 'Error',
-              text: 'Export failed. Please try again.',
+              text: 'Export failed. Server returned error: ' + (errorText || response.statusText),
               icon: 'error',
               confirmButtonText: 'OK'
             });
@@ -635,6 +663,9 @@
             icon: 'error',
             confirmButtonText: 'OK'
           });
+        } finally {
+            confirmBtn.textContent = originalText;
+            confirmBtn.disabled = false;
         }
       });
     </script>
