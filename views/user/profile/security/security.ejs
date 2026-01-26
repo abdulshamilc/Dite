@@ -102,7 +102,6 @@
               <div class="item-description">Permanently delete your account and all associated data</div>
             </div>
             <button class="btn btn-danger" onclick="window.location.href='/security/delete-account-confirm'">Delete Account</button>
-          </div>
         </div>
       </main>
     </section>
@@ -144,18 +143,22 @@
       </div>
       <div class="form-group">
         <label>Scan this QR code with your authenticator app:</label>
-        <div style="background: #f0f0f0; padding: 20px; border-radius: 8px; text-align: center; margin: 12px 0;">
-          <div style="font-size: 12px; color: #666;">QR Code Placeholder</div>
-          <div style="font-size: 48px; margin: 20px 0;">📱</div>
+        <div id="qrCodeContainer" style="background: #f0f0f0; padding: 20px; border-radius: 8px; text-align: center; margin: 12px 0;">
+          <div id="qrCodeLoading" style="font-size: 14px; color: #666;">
+            <div style="font-size: 32px; margin-bottom: 10px;">⏳</div>
+            Loading QR Code...
+          </div>
+          <img id="qrCodeImage" style="display: none; max-width: 200px; margin: 0 auto;" alt="2FA QR Code">
         </div>
       </div>
       <div class="form-group">
         <label for="twoFACode">Enter the 6-digit code from your app:</label>
-        <input type="text" id="twoFACode" name="twoFACode" maxlength="6" placeholder="000000">
+        <input type="text" id="twoFACode" name="twoFACode" maxlength="6" placeholder="000000" style="text-align: center; letter-spacing: 8px; font-size: 18px;">
+        <div id="enable2FAError" class="error-message" style="display: none;"></div>
       </div>
       <div class="modal-buttons">
         <button type="button" class="btn btn-secondary" onclick="closeEnable2FAModal()">Cancel</button>
-        <button type="button" class="btn" onclick="verifyTwoFA()">Verify & Enable</button>
+        <button type="button" class="btn" id="enable2FABtn" onclick="verifyTwoFA()">Verify & Enable</button>
       </div>
     </div>
   </div>
@@ -169,11 +172,12 @@
       </div>
       <div class="form-group">
         <label for="disable2FACode">Enter the 6-digit code from your app to confirm:</label>
-        <input type="text" id="disable2FACode" name="disable2FACode" maxlength="6" placeholder="000000">
+        <input type="text" id="disable2FACode" name="disable2FACode" maxlength="6" placeholder="000000" style="text-align: center; letter-spacing: 8px; font-size: 18px;">
+        <div id="disable2FAError" class="error-message" style="display: none;"></div>
       </div>
       <div class="modal-buttons">
         <button type="button" class="btn btn-secondary" onclick="closeDisable2FAModal()">Cancel</button>
-        <button type="button" class="btn btn-danger" onclick="verifyDisable2FA()">Disable 2FA</button>
+        <button type="button" class="btn btn-danger" id="disable2FABtn" onclick="verifyDisable2FA()">Disable 2FA</button>
       </div>
     </div>
   </div>
@@ -297,41 +301,159 @@
     });
 
     // Enable 2FA Modal
-    function openEnable2FAModal() {
-      document.getElementById('enable2FAModal').classList.add('active');
+    async function openEnable2FAModal() {
+      const modal = document.getElementById('enable2FAModal');
+      modal.classList.add('active');
+      
+      // Reset state
+      document.getElementById('qrCodeLoading').style.display = 'block';
+      document.getElementById('qrCodeImage').style.display = 'none';
+      document.getElementById('twoFACode').value = '';
+      document.getElementById('enable2FAError').style.display = 'none';
+      
+      // Fetch QR code from server
+      try {
+        const response = await fetch('/security/2fa/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          // Show QR code
+          const qrImage = document.getElementById('qrCodeImage');
+          qrImage.src = data.qrCode;
+          qrImage.style.display = 'block';
+          document.getElementById('qrCodeLoading').style.display = 'none';
+        } else {
+          showNotification('error', data.message || 'Failed to generate QR code');
+          closeEnable2FAModal();
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showNotification('error', 'An error occurred. Please try again.');
+        closeEnable2FAModal();
+      }
     }
+    
     function closeEnable2FAModal() {
       document.getElementById('enable2FAModal').classList.remove('active');
       document.getElementById('twoFACode').value = '';
+      document.getElementById('enable2FAError').style.display = 'none';
     }
-    function verifyTwoFA() {
-      const code = document.getElementById('twoFACode').value;
-      if (code.length !== 6) {
-        showNotification('error', 'Please enter a valid 6-digit code!');
+    
+    async function verifyTwoFA() {
+      const code = document.getElementById('twoFACode').value.trim();
+      const errorDiv = document.getElementById('enable2FAError');
+      const btn = document.getElementById('enable2FABtn');
+      
+      // Validate
+      if (!code) {
+        errorDiv.textContent = 'Please enter the code from your authenticator app.';
+        errorDiv.style.display = 'block';
         return;
       }
-      console.log('Verifying 2FA code...'); // Replace with actual API call
-      showNotification('success', 'Two-factor authentication enabled successfully!');
-      closeEnable2FAModal();
+      
+      if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+        errorDiv.textContent = 'Please enter a valid 6-digit code.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      
+      errorDiv.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      
+      try {
+        const response = await fetch('/security/2fa/enable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showNotification('success', data.message || 'Two-factor authentication enabled successfully!');
+          closeEnable2FAModal();
+          // Reload page to update status
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          errorDiv.textContent = data.message || 'Invalid code. Please try again.';
+          errorDiv.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Verify & Enable';
+      }
     }
 
     // Disable 2FA Modal
     function openDisable2FAModal() {
       document.getElementById('disable2FAModal').classList.add('active');
+      document.getElementById('disable2FACode').value = '';
+      document.getElementById('disable2FAError').style.display = 'none';
     }
+    
     function closeDisable2FAModal() {
       document.getElementById('disable2FAModal').classList.remove('active');
       document.getElementById('disable2FACode').value = '';
+      document.getElementById('disable2FAError').style.display = 'none';
     }
-    function verifyDisable2FA() {
-      const code = document.getElementById('disable2FACode').value;
-      if (code.length !== 6) {
-        showNotification('error', 'Please enter a valid 6-digit code!');
+    
+    async function verifyDisable2FA() {
+      const code = document.getElementById('disable2FACode').value.trim();
+      const errorDiv = document.getElementById('disable2FAError');
+      const btn = document.getElementById('disable2FABtn');
+      
+      // Validate
+      if (!code) {
+        errorDiv.textContent = 'Please enter the code from your authenticator app.';
+        errorDiv.style.display = 'block';
         return;
       }
-      console.log('Verifying disable 2FA code...'); // Replace with actual API call
-      showNotification('success', 'Two-factor authentication disabled successfully!');
-      closeDisable2FAModal();
+      
+      if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+        errorDiv.textContent = 'Please enter a valid 6-digit code.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      
+      errorDiv.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Disabling...';
+      
+      try {
+        const response = await fetch('/security/2fa/disable', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showNotification('success', data.message || 'Two-factor authentication disabled successfully!');
+          closeDisable2FAModal();
+          // Reload page to update status
+          setTimeout(() => window.location.reload(), 1500);
+        } else {
+          errorDiv.textContent = data.message || 'Invalid code. Please try again.';
+          errorDiv.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Disable 2FA';
+      }
     }
 
     // Close modals when clicking outside

@@ -39,6 +39,14 @@ const adminSchema = new mongoose.Schema(
     },
     verify:{
       
+    },
+    twoFactorAuth:{
+      type:Boolean,
+      default:false,
+    },
+    twoFactorSecret: {
+      type: String,
+      default: null,
     }
   },
   {

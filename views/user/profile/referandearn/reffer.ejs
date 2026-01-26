@@ -32,6 +32,12 @@
               <button class="share-btn" onclick="shareReferral()">Share</button>
             </div>
           </div>
+          <% if (referrer && referrer.name) { %>
+          <div class="referred-by-section" style="margin-top: 20px; padding: 12px 16px; background: rgba(255,255,255,0.08); border-radius: 8px; text-align: center;">
+            <span style="color: rgba(255,255,255,0.6); font-size: 0.75rem; text-transform: lowercase; letter-spacing: 0.5px;">referred by</span>
+            <p style="color: #d3a35b; font-size: 0.85rem; margin-top: 4px; text-transform: lowercase; font-weight: 500;"><%= referrer.name.toLowerCase() %></p>
+          </div>
+          <% } %>
         </div>
         <div class="stats-section">
           <div class="referral-stats">

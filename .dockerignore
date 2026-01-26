@@ -1,0 +1,6 @@
+#  Thease File has to Ignored to go the docker it has crederntials and als big files 
+
+node_modules
+npm-debug.log
+.env
+.git

@@ -43,6 +43,10 @@
       color: #d4af37;
     }
 
+    .nav-menu a.active {
+      color: #d4af37;
+    }
+
     .nav-icons {
       display: flex;
       gap: 20px;
@@ -162,17 +166,36 @@
   const profileIcon = document.querySelector('.profile-icon');
   const group = profileIcon.parentElement;
 
-  // Add click event listener to toggle the dropdown
-  profileIcon.addEventListener('click', (e) => {
-    e.preventDefault(); // Prevent default anchor behavior
-    group.classList.toggle('active');
-  });
+  if (profileIcon) {
+    // Add click event listener to toggle the dropdown
+    profileIcon.addEventListener('click', (e) => {
+      e.preventDefault(); // Prevent default anchor behavior
+      group.classList.toggle('active');
+    });
 
-  // Close dropdown when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!group.contains(e.target)) {
-      group.classList.remove('active');
-    }
-  });
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!group.contains(e.target)) {
+        group.classList.remove('active');
+      }
+    });
+  }
 </script>
 <% } %>
+
+<script>
+  // Active Link Highlighting
+  document.addEventListener('DOMContentLoaded', () => {
+      const currentPath = window.location.pathname;
+      const navLinks = document.querySelectorAll('.nav-menu a');
+      
+      navLinks.forEach(link => {
+          const href = link.getAttribute('href');
+          if (href === '/') {
+              if (currentPath === '/') link.classList.add('active');
+          } else {
+              if (currentPath.startsWith(href)) link.classList.add('active');
+          }
+      });
+  });
+</script>

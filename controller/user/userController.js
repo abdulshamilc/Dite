@@ -321,6 +321,25 @@ const login = async (req, res) => {
     });
   }
 
+  if (user.isDeleted) {
+    return res.render("user/authentications/login", {
+      errors: { message: "This account has been deleted." },
+    });
+  }
+
+  // Check if 2FA is enabled
+  if (user.twoFactorAuth && user.twoFactorSecret) {
+    // Store pending login info in session
+    req.session.pending2FALogin = {
+      email: email,
+      userId: user._id,
+      returnTo: req.session.returnTo || "/",
+    };
+    delete req.session.returnTo;
+    
+    return res.redirect("/login/verify-2fa");
+  }
+
   //Log
   const ip =
     req.headers["x-forwarded-for"]?.split(",")[0] ||
@@ -613,6 +632,144 @@ const getFaq = (req, res) => {
   res.render("user/faq");
 };
 
+// Get 2FA Verification Page (during login)
+const get2FAVerify = (req, res) => {
+  if (!req.session.pending2FALogin) {
+    return res.redirect("/login");
+  }
+  res.render("user/authentications/verify2FA", {
+    email: req.session.pending2FALogin.email,
+  });
+};
+
+// Post 2FA Verification (during login)
+const post2FAVerify = async (req, res) => {
+  try {
+    const pendingLogin = req.session.pending2FALogin;
+    
+    if (!pendingLogin) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: "No pending login found. Please login again.",
+      });
+    }
+
+    const { code } = req.body;
+
+    if (!code || code.length !== 6 || !/^\d{6}$/.test(code)) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: "Please enter a valid 6-digit code.",
+      });
+    }
+
+    const user = await User.findById(pendingLogin.userId);
+    if (!user || !user.twoFactorSecret) {
+      delete req.session.pending2FALogin;
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid session. Please login again.",
+      });
+    }
+
+    const speakeasy = await import("speakeasy");
+    
+    const verified = speakeasy.default.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token: code,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid code. Please try again.",
+      });
+    }
+
+    // 2FA verified - complete login
+    const ip =
+      req.headers["x-forwarded-for"]?.split(",")[0] ||
+      req.socket.remoteAddress ||
+      req.ip;
+
+    const geo = geoip.lookup(ip);
+    const location = geo ? `${geo.city || geo.region || geo.country}` : "Unknown";
+
+    const parser = new UAParser.UAParser(req.headers["user-agent"]);
+    const uaResult = parser.getResult();
+    const device = `${uaResult.device.type || "Desktop"} - ${
+      uaResult.os.name || ""
+    } ${uaResult.os.version || ""}`.trim();
+
+    // Create log
+    await UserLog.create({
+      userId: user._id,
+      ipAddress: ip,
+      browser: req.headers["user-agent"],
+      device: device,
+      location: location,
+    });
+
+    // Set session and clear pending login
+    req.session.user = pendingLogin.email;
+    const returnTo = pendingLogin.returnTo || "/";
+    delete req.session.pending2FALogin;
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Verification successful!",
+      redirectUrl: returnTo,
+    });
+  } catch (error) {
+    console.error("2FA verify error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: ERROR_MESSAGES.INTERNAL_ERROR,
+    });
+  }
+};
+
+// Verify Referral Code
+const verifyReferralCode = async (req, res) => {
+  try {
+    const { referralCode } = req.body;
+
+    if (!referralCode || referralCode.trim() === "") {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({
+        success: false,
+        message: "Referral code is required.",
+      });
+    }
+
+    // Find user with this referral code
+    const referrer = await User.findOne({ 
+      referralCode: referralCode.trim().toUpperCase(),
+      isDeleted: { $ne: true },
+      isBlocked: { $ne: true },
+    });
+
+    if (!referrer) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        message: "Invalid referral code.",
+      });
+    }
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      referrerName: referrer.name.toLowerCase(),
+    });
+  } catch (error) {
+    console.error("Verify referral code error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: ERROR_MESSAGES.INTERNAL_ERROR,
+    });
+  }
+};
+
 export {
   notLogginedHome,
   getSignup,
@@ -637,4 +794,7 @@ export {
   getPrivacy,
   getTerms,
   getFaq,
+  get2FAVerify,
+  post2FAVerify,
+  verifyReferralCode,
 };

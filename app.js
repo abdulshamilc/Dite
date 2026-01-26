@@ -1,5 +1,7 @@
+// Load environment variables FIRST - this auto-executes dotenv.config()
+import 'dotenv/config';
+
 import express from "express";
-import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import adminRouter from "./routes/adminRouter.js";
 import userRouter from "./routes/userRouter.js";
@@ -33,12 +35,6 @@ helmetConfig(app)
 // Setting Paths
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Env config
-// Only load dotenv if not in production/Docker
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config();
-}
 
 //DB Connection
 connectDB();
@@ -101,7 +97,7 @@ passport.deserializeUser((user, done) => done(null, user));
 passport.use(new GoogleStrategy({
     clientID:process.env.googleClientID,
     clientSecret:process.env.googleClientSecret ,
-    callbackURL: 'http://localhost:3007/auth/google/callback'
+    callbackURL: process.env.GOOGLE_CALLBACK_URL
   },
   async (accessToken, refreshToken, profile, done) => {
     try {

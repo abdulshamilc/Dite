@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deleted Users - Admin</title>
+    <link rel="stylesheet" href="/style/admin/customers.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../../partials/admin/admin-header") %>
+
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <div class="mb-6">
+          <div class="flex justify-between items-center mb-4">
+            <div class="flex items-center gap-4">
+              <a href="/admin/customers" class="text-brand hover:underline flex items-center gap-2">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                Back to Customers
+              </a>
+              <h1 class="text-2xl font-bold text-red-400">Deleted Users</h1>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="count-box" style="border-left: 4px solid #ef4444;">
+              <p class="text-gray-400">Total Deleted Users</p>
+              <p class="text-xl font-bold text-red-400"><%= totalDeletedUsers %></p>
+            </div>
+            <div class="count-box">
+              <p class="text-gray-400">Total Orders Made</p>
+              <p class="text-xl font-bold"><%= totalOrders %></p>
+            </div>
+            <div class="count-box">
+              <p class="text-gray-400">Total Spent</p>
+              <p class="text-xl font-bold">Rs.<%= totalSpent %></p>
+            </div>
+          </div>
+          
+          <div class="flex justify-between mb-4">
+            <span>All Deleted Users</span>
+            <div class="flex space-x-4">
+              <!-- Sort By -->
+              <div class="flex items-center space-x-2">
+                <select id="sortFilter" class="bg-gray-800 p-2 rounded text-white" onchange="applyFilters()">
+                  <option value="newest" <%= sort === 'newest' ? 'selected' : '' %>>Newest Deleted</option>
+                  <option value="oldest" <%= sort === 'oldest' ? 'selected' : '' %>>Oldest Deleted</option>
+                  <option value="a_z" <%= sort === 'a_z' ? 'selected' : '' %>>Name A-Z</option>
+                  <option value="z_a" <%= sort === 'z_a' ? 'selected' : '' %>>Name Z-A</option>
+                </select>
+              </div>
+
+              <!-- Search bar -->
+              <div class="flex space-x-2">
+                 <input
+                  type="text"
+                  id="searchInput"
+                  value="<%= search %>"
+                  placeholder="Search Name/Email..."
+                  class="bg-gray-800 p-2 rounded text-white placeholder-gray-500"
+                  onkeypress="if(event.key === 'Enter') applyFilters()"
+                />
+                <button onclick="applyFilters()" class="bg-brand text-white px-3 rounded hover:bg-yellow-700 transition">
+                  <i data-lucide="search" class="w-4 h-4"></i>
+                </button>
+                 <% if(search || sort !== 'newest') { %>
+                  <a href="/admin/customers/deleted" class="flex items-center justify-center bg-gray-700 text-white px-3 rounded hover:bg-gray-600 transition" title="Clear Filters">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </a>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border-collapse">
+            <thead>
+              <tr class="bg-gray-800">
+                <th class="px-4 py-2 text-left">NAME</th>
+                <th class="px-4 py-2 text-left">EMAIL</th>
+                <th class="px-4 py-2 text-left">TOTAL ORDERS</th>
+                <th class="px-4 py-2 text-left">TOTAL SPENT</th>
+                <th class="px-4 py-2 text-left">DELETED ON</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (deletedUsers.length === 0) { %>
+                <tr>
+                  <td colspan="5" class="px-4 py-8 text-center text-gray-400">
+                    <div class="flex flex-col items-center gap-2">
+                      <i data-lucide="user-check" class="w-12 h-12 text-gray-600"></i>
+                      <p>No deleted users found</p>
+                    </div>
+                  </td>
+                </tr>
+              <% } else { %>
+                <% deletedUsers.forEach(user => { %>
+                <tr class="border-b border-gray-700 hover:bg-gray-900 cursor-pointer" onclick="window.location.href='/admin/customers/deleted/<%= user._id %>'">
+                  <td class="px-4 py-2 flex items-center gap-3">
+                    <% if (user.image) { %>
+                      <img src="<%= user.image %>" alt="Profile" class="w-8 h-8 rounded-full object-cover">
+                    <% } else { %>
+                      <div class="w-8 h-8 rounded-full bg-gray-700 flex items-center justify-center text-xs">
+                        <%= user.name ? user.name.charAt(0).toUpperCase() : 'U' %>
+                      </div>
+                    <% } %>
+                    <%= user.name %>
+                  </td>
+                  <td class="px-4 py-2"><%= user.email %></td>
+                  <td class="px-4 py-2"><%= user.totalOrders || 0 %></td>
+                  <td class="px-4 py-2">Rs.<%= user.totalSpent || 0 %></td>
+                  <td class="px-4 py-2">
+                    <span class="text-red-400">
+                      <%= user.deletedAt ? new Date(user.deletedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A' %>
+                    </span>
+                  </td>
+                </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <!-- Pagination and Page Limit -->
+    <div class="flex justify-between items-center mt-4 px-6">
+      <!-- Pagination Controls (Centered) -->
+      <div class="flex-1 flex justify-center items-center space-x-4">
+        <% if (totalPages > 1) { %>
+          <% if (currentPage > 1) { %>
+            <a
+              href="/admin/customers/deleted?page=<%= currentPage - 1 %>&limit=<%= limit %>&search=<%= search %>&sort=<%= sort %>"
+              class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+            >
+              <i data-lucide="chevron-left" class="w-5 h-5"></i>
+            </a>
+          <% } %>
+          <span class="text-gray-400">
+            <%= currentPage %> / <%= totalPages %>
+          </span>
+          <% if (currentPage < totalPages) { %>
+            <a
+              href="/admin/customers/deleted?page=<%= currentPage + 1 %>&limit=<%= limit %>&search=<%= search %>&sort=<%= sort %>"
+              class="px-3 py-1 rounded bg-gray-800 text-white hover:bg-gray-700"
+            >
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          <% } %>
+        <% } %>
+      </div>
+
+      <!-- Page Limit Dropdown (Right) -->
+      <div class="flex items-center space-x-2">
+        <label for="pageLimit" class="text-gray-400">Show</label>
+        <select
+          id="pageLimit"
+          class="bg-white p-2 rounded text-black"
+          onchange="changePageLimit(this.value)"
+        >
+          <option value="5" <%= limit == 5 ? 'selected' : '' %>>5</option>
+          <option value="10" <%= limit == 10 ? 'selected' : '' %>>10</option>
+          <option value="20" <%= limit == 20 ? 'selected' : '' %>>20</option>
+          <option value="50" <%= limit == 50 ? 'selected' : '' %>>50</option>
+        </select>
+        <span class="text-gray-400">per page</span>
+      </div>
+    </div>
+
+    <script>
+      lucide.createIcons();
+
+      // Handle page limit change
+      function changePageLimit(limit) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('limit', limit);
+        url.searchParams.set('page', 1);
+        window.location.href = url.toString();
+      }
+
+      // Apply Filters (Search, Sort)
+      function applyFilters() {
+        const search = document.getElementById('searchInput').value.trim();
+        const sort = document.getElementById('sortFilter').value;
+        
+        const url = new URL(window.location.href);
+        
+        if (search) url.searchParams.set('search', search);
+        else url.searchParams.delete('search');
+
+        if (sort && sort !== 'newest') url.searchParams.set('sort', sort);
+        else url.searchParams.delete('sort');
+
+        url.searchParams.set('page', 1);
+        window.location.href = url.toString();
+      }
+    </script>
+  </body>
+</html>

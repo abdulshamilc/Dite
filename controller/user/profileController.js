@@ -1335,7 +1335,7 @@ const getReferrals = async (req, res) => {
       await user.save();
     }
 
-    // Fetch details of referred users
+    // Fetch details of referred users (users who used THIS user's referral code)
     const referredUsers = await User.find({ email: { $in: user.redeemedUsers || [] } })
       .select("name email createdAt")
       .lean();
@@ -1343,15 +1343,248 @@ const getReferrals = async (req, res) => {
     // Sort by date desc
     referredUsers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+    // Fetch the referrer (the user who referred THIS user, if any)
+    let referrer = null;
+    if (user.referredBy) {
+      referrer = await User.findOne({ referralCode: user.referredBy })
+        .select("name email")
+        .lean();
+    }
+
     res.render("user/profile/referandearn/reffer", {
       user,
       referredUsers,
       referredCount: referredUsers.length,
+      referrer, // The user who referred the current user
       currentPath: req.path,
     });
   } catch (error) {
     console.error("Error fetching referrals:", error);
     res.status(500).redirect("/profile");
+  }
+};
+
+// Verify delete password and send OTP
+const verifyDeletePassword = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS 
+      });
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.USER_NOT_FOUND 
+      });
+    }
+
+    const { password } = req.body;
+
+    if (!password) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Password is required." 
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Password must be at least 8 characters long." 
+      });
+    }
+
+    // Verify password
+    const bcrypt = await import("bcryptjs");
+    const isMatch = await bcrypt.compare(password, user.password);
+    
+    if (!isMatch) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Incorrect password. Please try again." 
+      });
+    }
+
+    // Delete any existing OTPs for this email
+    await UserOtpVerification.deleteMany({ email: userEmail, action: "Delete Account" });
+
+    // Generate and send OTP
+    const { generateOTP } = await import("../../utils/genarateOtp.js");
+    await generateOTP(
+      userEmail,
+      "Account Deletion Verification",
+      "Your OTP code for deleting your Dité account is",
+      "Delete Account"
+    );
+
+    // Store delete account confirmation in session
+    req.session.deleteAccountPending = true;
+
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      message: "OTP sent to your email." 
+    });
+  } catch (error) {
+    console.error("Verify delete password error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      message: ERROR_MESSAGES.INTERNAL_ERROR 
+    });
+  }
+};
+
+// Resend delete account OTP
+const resendDeleteOtp = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS 
+      });
+    }
+
+    // Check if delete account process is pending
+    if (!req.session.deleteAccountPending) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Please verify your password first." 
+      });
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.USER_NOT_FOUND 
+      });
+    }
+
+    // Delete any existing OTPs for this email
+    await UserOtpVerification.deleteMany({ email: userEmail, action: "Delete Account" });
+
+    // Generate and send new OTP
+    const { generateOTP } = await import("../../utils/genarateOtp.js");
+    await generateOTP(
+      userEmail,
+      "Account Deletion Verification",
+      "Your OTP code for deleting your Dité account is",
+      "Delete Account"
+    );
+
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      message: "New OTP sent to your email." 
+    });
+  } catch (error) {
+    console.error("Resend delete OTP error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      message: ERROR_MESSAGES.INTERNAL_ERROR 
+    });
+  }
+};
+
+// Confirm delete account
+const confirmDeleteAccount = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS 
+      });
+    }
+
+    // Check if delete account process is pending
+    if (!req.session.deleteAccountPending) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Please complete the verification process first." 
+      });
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.USER_NOT_FOUND 
+      });
+    }
+
+    const { otp } = req.body;
+
+    // Validate OTP format
+    if (!otp) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "OTP is required." 
+      });
+    }
+
+    if (otp.length !== 6) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "OTP must be 6 digits." 
+      });
+    }
+
+    if (!/^\d{6}$/.test(otp)) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "OTP must contain only numbers." 
+      });
+    }
+
+    // Find OTP record within 5 minutes
+    const otpRecord = await UserOtpVerification.findOne({
+      email: userEmail,
+      action: "Delete Account",
+      createdAt: { $gte: new Date(Date.now() - 5 * 60 * 1000) },
+    }).sort({ createdAt: -1 });
+
+    if (!otpRecord) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "OTP has expired. Please request a new one." 
+      });
+    }
+
+    if (Number(otp) !== otpRecord.otp) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Invalid OTP. Please try again." 
+      });
+    }
+
+    // Delete OTP records
+    await UserOtpVerification.deleteMany({ email: userEmail });
+
+    // Soft delete - mark user as deleted instead of removing
+    user.isDeleted = true;
+    user.deletedAt = new Date();
+    await user.save();
+
+    // Clear session
+    delete req.session.user;
+    delete req.session.deleteAccountPending;
+    
+    return res.status(HTTP_STATUS.OK).json({ 
+      success: true, 
+      message: "Account deleted successfully.",
+      redirectUrl: "/" 
+    });
+  } catch (error) {
+    console.error("Confirm delete account error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      message: ERROR_MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
@@ -1363,6 +1596,198 @@ const userlogOut = (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).send(ERROR_MESSAGES.INTERNAL_ERROR);
+  }
+};
+
+// Generate 2FA Secret and QR Code
+const generate2FASecret = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS 
+      });
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.USER_NOT_FOUND 
+      });
+    }
+
+    const speakeasy = await import("speakeasy");
+    const QRCode = await import("qrcode");
+
+    // Generate secret
+    const secret = speakeasy.default.generateSecret({
+      name: `Dité (${user.email})`,
+      issuer: "Dité",
+      length: 20,
+    });
+
+    // Store temp secret in session for verification
+    req.session.temp2FASecret = secret.base32;
+
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.default.toDataURL(secret.otpauth_url);
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      qrCode: qrCodeDataUrl,
+    });
+  } catch (error) {
+    console.error("Generate 2FA error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      message: ERROR_MESSAGES.INTERNAL_ERROR 
+    });
+  }
+};
+
+// Enable 2FA after verification
+const enable2FA = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS 
+      });
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.USER_NOT_FOUND 
+      });
+    }
+
+    const { code } = req.body;
+    const tempSecret = req.session.temp2FASecret;
+
+    if (!tempSecret) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Please generate a QR code first." 
+      });
+    }
+
+    if (!code || code.length !== 6) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Please enter a valid 6-digit code." 
+      });
+    }
+
+    const speakeasy = await import("speakeasy");
+
+    // Verify code
+    const verified = speakeasy.default.totp.verify({
+      secret: tempSecret,
+      encoding: "base32",
+      token: code,
+      window: 1, // Allow 1 step before/after for clock drift
+    });
+
+    if (!verified) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Invalid code. Please try again." 
+      });
+    }
+
+    // Save secret and enable 2FA
+    user.twoFactorSecret = tempSecret;
+    user.twoFactorAuth = true;
+    await user.save();
+
+    // Clear temp secret from session
+    delete req.session.temp2FASecret;
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Two-factor authentication enabled successfully!",
+    });
+  } catch (error) {
+    console.error("Enable 2FA error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      message: ERROR_MESSAGES.INTERNAL_ERROR 
+    });
+  }
+};
+
+// Disable 2FA
+const disable2FA = async (req, res) => {
+  try {
+    const userEmail = req.session.user;
+    if (!userEmail) {
+      return res.status(HTTP_STATUS.UNAUTHORIZED).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.UNAUTHORIZED_ACCESS 
+      });
+    }
+
+    const user = await User.findOne({ email: userEmail });
+    if (!user) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ 
+        success: false, 
+        message: ERROR_MESSAGES.USER_NOT_FOUND 
+      });
+    }
+
+    if (!user.twoFactorAuth || !user.twoFactorSecret) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "2FA is not enabled on this account." 
+      });
+    }
+
+    const { code } = req.body;
+
+    if (!code || code.length !== 6) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Please enter a valid 6-digit code." 
+      });
+    }
+
+    const speakeasy = await import("speakeasy");
+
+    // Verify code
+    const verified = speakeasy.default.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token: code,
+      window: 1,
+    });
+
+    if (!verified) {
+      return res.status(HTTP_STATUS.BAD_REQUEST).json({ 
+        success: false, 
+        message: "Invalid code. Please try again." 
+      });
+    }
+
+    // Disable 2FA
+    user.twoFactorSecret = null;
+    user.twoFactorAuth = false;
+    await user.save();
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      message: "Two-factor authentication disabled successfully!",
+    });
+  } catch (error) {
+    console.error("Disable 2FA error:", error);
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({ 
+      success: false, 
+      message: ERROR_MESSAGES.INTERNAL_ERROR 
+    });
   }
 };
 
@@ -1394,5 +1819,11 @@ export {
   getReferrals,
   getSecurity,
   getDeleteAcount,
+  verifyDeletePassword,
+  resendDeleteOtp,
+  confirmDeleteAccount,
+  generate2FASecret,
+  enable2FA,
+  disable2FA,
   userlogOut,
 };

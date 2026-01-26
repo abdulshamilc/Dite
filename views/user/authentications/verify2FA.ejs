@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>2FA Verification - Dité</title>
+  <link rel="stylesheet" href="/style/user/signupOtpVerification.css">
+  <style>
+    .twofa-icon {
+      font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .email-display {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 20px;
+    }
+    .error-message {
+      color: #e74c3c;
+      font-size: 14px;
+      margin-top: 10px;
+      display: none;
+    }
+    .confirm-btn:disabled {
+      background: #666;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div class="otp-container">
+    <div class="otp-form">
+      <div class="logo">
+        <img src="/images/logo/DiteLogo.png" alt="Dité Logo">
+      </div>
+      
+      <div class="twofa-icon">🔐</div>
+      <h2 class="otp-title">Two-Factor Authentication</h2>
+      <p class="otp-instruction">Enter the 6-digit code from your authenticator app</p>
+      <p class="email-display"><%= email %></p>
+
+      <!-- OTP Inputs -->
+      <div class="otp-input-group">
+        <input type="text" class="otp-input" maxlength="1" name="code1" pattern="[0-9]" inputmode="numeric">
+        <input type="text" class="otp-input" maxlength="1" name="code2" pattern="[0-9]" inputmode="numeric">
+        <input type="text" class="otp-input" maxlength="1" name="code3" pattern="[0-9]" inputmode="numeric">
+        <input type="text" class="otp-input" maxlength="1" name="code4" pattern="[0-9]" inputmode="numeric">
+        <input type="text" class="otp-input" maxlength="1" name="code5" pattern="[0-9]" inputmode="numeric">
+        <input type="text" class="otp-input" maxlength="1" name="code6" pattern="[0-9]" inputmode="numeric">
+      </div>
+
+      <div id="errorMessage" class="error-message"></div>
+
+      <button type="button" class="confirm-btn" id="verifyBtn" onclick="verify2FA()">Verify</button>
+
+      <div class="back-link-container">
+        <a href="/login" class="back-link">← Back to Login</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Auto-focus functionality for OTP inputs
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs[0].focus();
+
+    otpInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const value = e.target.value;
+        if (value.length === 1 && /\d/.test(value)) {
+          if (index < otpInputs.length - 1) {
+            otpInputs[index + 1].focus();
+          }
+        } else {
+          e.target.value = '';
+        }
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+          otpInputs[index - 1].focus();
+        }
+        // Allow Enter to submit
+        if (e.key === 'Enter') {
+          verify2FA();
+        }
+      });
+
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const digits = paste.replace(/\D/g, '').slice(0, otpInputs.length - index);
+        let currentIndex = index;
+        digits.split('').forEach((digit) => {
+          if (currentIndex < otpInputs.length) {
+            otpInputs[currentIndex].value = digit;
+            currentIndex++;
+          }
+        });
+        if (currentIndex < otpInputs.length) {
+          otpInputs[currentIndex].focus();
+        } else {
+          otpInputs[otpInputs.length - 1].focus();
+        }
+      });
+    });
+
+    async function verify2FA() {
+      const errorDiv = document.getElementById('errorMessage');
+      const btn = document.getElementById('verifyBtn');
+      
+      // Collect code from inputs
+      let code = '';
+      otpInputs.forEach(input => {
+        code += input.value;
+      });
+
+      // Validate
+      if (code.length !== 6 || !/^\d{6}$/.test(code)) {
+        errorDiv.textContent = 'Please enter a valid 6-digit code.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+
+      errorDiv.style.display = 'none';
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+
+      try {
+        const response = await fetch('/login/verify-2fa', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          btn.textContent = 'Success!';
+          window.location.href = data.redirectUrl || '/';
+        } else {
+          errorDiv.textContent = data.message || 'Invalid code. Please try again.';
+          errorDiv.style.display = 'block';
+          btn.disabled = false;
+          btn.textContent = 'Verify';
+          // Clear inputs
+          otpInputs.forEach(input => input.value = '');
+          otpInputs[0].focus();
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        errorDiv.textContent = 'An error occurred. Please try again.';
+        errorDiv.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Verify';
+      }
+    }
+  </script>
+</body>
+</html>

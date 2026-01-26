@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SignUp - Dité</title>
   <link rel="stylesheet" href="/style/user/signup.css">
+  <style>
+    .referrer-name {
+      color: #27ae60;
+      font-size: 12px;
+      margin-top: 4px;
+      text-transform: lowercase;
+    }
+    .referral-loading {
+      color: #888;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+    .referral-invalid {
+      color: #e74c3c;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>
 
 </head>
 <body>
@@ -36,6 +54,7 @@
         <div class="form-group">
           <input type="text" class="form-input" placeholder="Referral Code (Optional)" name="referralCode" id="referralCode" value="<%= oldData?.referralCode || '' %>">
           <span class="error" id="referralError"><%= errors?.referral || '' %></span>
+          <div id="referrerInfo"></div>
         </div>
         <button type="submit" class="signup-btn" id="signupBtn">Create account</button>
       </form>
@@ -61,19 +80,67 @@
     document.addEventListener('DOMContentLoaded', function() {
       const form = document.getElementById('signupForm');
       const inputs = form.querySelectorAll('.form-input');
+      const referralInput = document.getElementById('referralCode');
+      const referrerInfoDiv = document.getElementById('referrerInfo');
+      let referralTimeout;
+      
       inputs.forEach(input => input.addEventListener('input', clearError));
+      
       function clearError(e) {
         e.target.classList.remove('error');
         const errorId = e.target.id + 'Error';
         const errorEl = document.getElementById(errorId);
         if (errorEl) errorEl.textContent = '';
       }
+      
       function showError(input, msg) {
         input.classList.add('error');
         const errorId = input.id + 'Error';
         const errorEl = document.getElementById(errorId);
         if (errorEl) errorEl.textContent = msg;
       }
+      
+      // Real-time referral code verification
+      referralInput.addEventListener('input', function() {
+        clearTimeout(referralTimeout);
+        const code = referralInput.value.trim();
+        
+        // Clear previous info
+        referrerInfoDiv.innerHTML = '';
+        document.getElementById('referralError').textContent = '';
+        
+        if (!code) return;
+        
+        // Show loading after short delay to avoid too many requests
+        referralTimeout = setTimeout(async () => {
+          referrerInfoDiv.innerHTML = '<span class="referral-loading">Verifying...</span>';
+          
+          try {
+            const response = await fetch('/signup/verify-referral', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ referralCode: code }),
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+              referrerInfoDiv.innerHTML = '<span class="referrer-name">referred by ' + data.referrerName + '</span>';
+            } else {
+              referrerInfoDiv.innerHTML = '<span class="referral-invalid">Invalid referral code</span>';
+            }
+          } catch (error) {
+            console.error('Error:', error);
+            referrerInfoDiv.innerHTML = '';
+          }
+        }, 500);
+      });
+      
+      // Check on page load if there's already a referral code
+      if (referralInput.value.trim()) {
+        referralInput.dispatchEvent(new Event('input'));
+      }
+      
       form.addEventListener('submit', function(e) {
         let valid = true;
         // Name

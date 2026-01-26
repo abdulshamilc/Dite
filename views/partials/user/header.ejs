@@ -115,6 +115,10 @@
             width: 100%;
         }
 
+        .nav-menu a.active {
+            color: #d4af37;
+        }
+
         /* Navigation Icons */
         .nav-icons {
             display: flex;
@@ -618,6 +622,21 @@
                 mobileOverlay.classList.remove('active');
                 document.body.style.overflow = '';
             }
+        });
+
+        // Active Link Highlighting
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentPath = window.location.pathname;
+            const navLinks = document.querySelectorAll('.nav-menu a');
+            
+            navLinks.forEach(link => {
+                const href = link.getAttribute('href');
+                if (href === '/') {
+                    if (currentPath === '/') link.classList.add('active');
+                } else {
+                    if (currentPath.startsWith(href)) link.classList.add('active');
+                }
+            });
         });
     </script>
 </body>

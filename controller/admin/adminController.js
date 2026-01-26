@@ -19,7 +19,6 @@ const getLogin = (req, res) => {
   } else res.render("admin/auth/login", { errors: {}, oldData: {} });
 };
 
-// Login
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -37,6 +36,20 @@ const login = async (req, res) => {
     const validatePassword = await bcrypt.compare(password, admin.password);
     if (!validatePassword)
       return res.status(HTTP_STATUS.BAD_REQUEST).json({ message: ERROR_MESSAGES.INVALID_PASSWORD });
+
+    // Check 2FA
+    if (admin.twoFactorAuth && admin.twoFactorSecret) {
+      req.session.pendingAdmin2FA = {
+        adminId: admin._id,
+        returnTo: req.session.returnToAdmin || "/admin/dashboard"
+      };
+      delete req.session.returnToAdmin;
+
+      return res.json({
+         success: true,
+         redirect: "/admin/verify-2fa"
+      });
+    }
 
     // Saving admin On session
     req.session.admin = {
@@ -65,6 +78,59 @@ const login = async (req, res) => {
     return res
       .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
       .json({ message: ERROR_MESSAGES.INTERNAL_ERROR });
+  }
+};
+
+
+// Get 2FA verification page
+const get2FAVerify = (req, res) => {
+  if (!req.session.pendingAdmin2FA) {
+    return res.redirect("/admin");
+  }
+  res.render("admin/auth/verify2FA");
+};
+
+// Post 2FA verification
+const post2FAVerify = async (req, res) => {
+  try {
+    const { code } = req.body;
+    const pending = req.session.pendingAdmin2FA;
+
+    if (!pending) {
+      return res.status(400).json({ success: false, message: "Session expired. Please login again." });
+    }
+
+    const admin = await Admin.findById(pending.adminId);
+    if (!admin) return res.status(400).json({ success: false, message: "Admin not found." });
+
+    const speakeasy = await import("speakeasy");
+    const verified = speakeasy.default.totp.verify({
+      secret: admin.twoFactorSecret,
+      encoding: 'base32',
+      token: code
+    });
+
+    if (verified) {
+      // Login Success
+      req.session.admin = {
+        id: admin._id,
+        email: admin.email,
+        role: admin.role,
+      };
+      const returnTo = pending.returnTo;
+      delete req.session.pendingAdmin2FA;
+
+      return res.json({
+        success: true,
+        redirect: returnTo
+      });
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid OTP code." });
+    }
+
+  } catch (error) {
+    console.error("2FA Error", error);
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 // Get forgot password
@@ -289,5 +355,7 @@ export {
     getResetPasword,
     postResetPassword,
 
-    logOut
+    logOut,
+    get2FAVerify,
+    post2FAVerify
 }

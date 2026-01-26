@@ -26,6 +26,9 @@ import {
   getPrivacy,
   getTerms,
   getFaq,
+  get2FAVerify,
+  post2FAVerify,
+  verifyReferralCode,
 } from "../controller/user/userController.js";
 
 import {
@@ -54,6 +57,12 @@ import {
 
   getSecurity,
   getDeleteAcount,
+  verifyDeletePassword,
+  resendDeleteOtp,
+  confirmDeleteAccount,
+  generate2FASecret,
+  enable2FA,
+  disable2FA,
   userlogOut,
   getReferrals,
 } from "../controller/user/profileController.js";
@@ -144,7 +153,9 @@ router.get(
 router.get("/", notLogginedHome);
 router.get("/signup", getSignup);
 
+
 router.post("/signup", signup);
+router.post("/signup/verify-referral", verifyReferralCode);
 
 router.get("/set-password", getSetPassword);
 router.post("/set-password", postSetPassword);
@@ -155,6 +166,10 @@ router.post("/signup/verify-otp", postSignupOtpVerify);
 
 router.get("/login", getLogin);
 router.post("/login", login);
+
+// 2FA Verification during login
+router.get("/login/verify-2fa", get2FAVerify);
+router.post("/login/verify-2fa", post2FAVerify);
 
 router.get("/forgot-password", getForgotPassword);
 router.post("/forgot-password", forgetPassword);
@@ -261,6 +276,44 @@ router.get(
   isAuthenticatedUser,
   isBlocked,
   getDeleteAcount
+);
+router.post(
+  "/security/delete-account/verify-password",
+  isAuthenticatedUser,
+  isBlocked,
+  verifyDeletePassword
+);
+router.post(
+  "/security/delete-account/resend-otp",
+  isAuthenticatedUser,
+  isBlocked,
+  resendDeleteOtp
+);
+router.post(
+  "/security/delete-account/confirm",
+  isAuthenticatedUser,
+  isBlocked,
+  confirmDeleteAccount
+);
+
+// 2FA Routes
+router.post(
+  "/security/2fa/generate",
+  isAuthenticatedUser,
+  isBlocked,
+  generate2FASecret
+);
+router.post(
+  "/security/2fa/enable",
+  isAuthenticatedUser,
+  isBlocked,
+  enable2FA
+);
+router.post(
+  "/security/2fa/disable",
+  isAuthenticatedUser,
+  isBlocked,
+  disable2FA
 );
 
 router.get("/orders", isAuthenticatedUser, isBlocked, getOrders);

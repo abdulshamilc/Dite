@@ -14,10 +14,13 @@ import {
     PostOtpVerification,
     getResetPasword,
     postResetPassword,
-    logOut
+    logOut,
+    get2FAVerify,
+    post2FAVerify
 } from '../controller/admin/adminController.js';
 
 import { getDashboard } from '../controller/admin/dashboardController.js';
+import { getProfile, changePassword, endSession, generate2FA, enable2FA, disable2FA } from '../controller/admin/adminProfileController.js';
 
 import {
     getOrders,
@@ -46,7 +49,9 @@ import {
 import {
     getcustomers,
     blockUser,
-    customerDetails
+    customerDetails,
+    getDeletedUsers,
+    getDeletedUserDetails
 } from '../controller/admin/customerController.js';
 
 import {
@@ -95,6 +100,10 @@ const router = express.Router() ;
 router.get('/',getLogin) ;
 router.post('/',login) ;
 
+// 2FA Verification during login
+router.get('/verify-2fa', get2FAVerify);
+router.post('/verify-2fa', post2FAVerify);
+
 router.get('/forgot-password',getForgotPassword) ;
 
 router.post('/forgot-password',forgetPassword) ;
@@ -107,6 +116,14 @@ router.post('/reset-password/:token',postResetPassword)
 
 // Dashboard
 router.get('/dashboard',isAuthenticatedAdmin,getDashboard) 
+
+// Profile
+router.get('/profile', isAuthenticatedAdmin, getProfile);
+router.post('/profile/change-password', isAuthenticatedAdmin, changePassword); 
+router.post('/profile/end-session', isAuthenticatedAdmin, endSession);
+router.post('/profile/2fa/generate', isAuthenticatedAdmin, generate2FA);
+router.post('/profile/2fa/enable', isAuthenticatedAdmin, enable2FA);
+router.post('/profile/2fa/disable', isAuthenticatedAdmin, disable2FA); 
 
 // Orders
 router.get('/orders',isAuthenticatedAdmin,pagination,getOrders) 
@@ -132,6 +149,8 @@ router.post('/sales-report/export-pdf',isAuthenticatedAdmin,exportSalesPdf)
 
 // Customers
 router.get('/customers',isAuthenticatedAdmin,pagination,getcustomers) 
+router.get('/customers/deleted',isAuthenticatedAdmin,pagination,getDeletedUsers)
+router.get('/customers/deleted/:id',isAuthenticatedAdmin,getDeletedUserDetails)
 router.post('/customers/block/:id',isAuthenticatedAdmin,blockUser)
 router.get('/customers/:id',isAuthenticatedAdmin,customerDetails)
 

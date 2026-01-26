@@ -47,10 +47,10 @@
           </div>
 
           <form id="deleteTermsForm">
-            <div class="form-group">
-              <label>
-                <input type="checkbox" id="acceptTerms" name="acceptTerms" required>
-                I have read and agree to the terms and conditions for account deletion.
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="acceptTerms" name="acceptTerms">
+                <span>I have read and agree to the terms and conditions for account deletion.</span>
               </label>
             </div>
             <div id="termsError" class="error-message"></div>
@@ -62,6 +62,58 @@
         </div>
       </main>
     </section>
+  </div>
+
+  <!-- Password Verification Modal -->
+  <div class="modal" id="passwordModal">
+    <div class="modal-content">
+      <h3 class="modal-title">🔐 Verify Your Password</h3>
+      <p class="modal-description">Please enter your current password to confirm your identity.</p>
+      
+      <div class="form-group">
+        <label for="deletePassword">Current Password</label>
+        <div class="password-input-wrapper">
+          <input type="password" id="deletePassword" placeholder="Enter your current password">
+          <button type="button" class="toggle-password" onclick="togglePasswordVisibility('deletePassword', this)">👁️</button>
+        </div>
+        <div id="deletePasswordError" class="error-message"></div>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-secondary" onclick="closePasswordModal()">Cancel</button>
+        <button type="button" class="btn" id="verifyPasswordBtn" onclick="verifyDeletePassword()">Verify Password</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- OTP Verification Modal -->
+  <div class="modal" id="otpModal">
+    <div class="modal-content">
+      <h3 class="modal-title">📧 Verify OTP</h3>
+      <p class="modal-description">A 6-digit OTP has been sent to your email address. Please enter it below to confirm account deletion.</p>
+      
+      <div class="otp-container">
+        <input type="text" class="otp-input" id="deleteOtp1" maxlength="1" data-index="1">
+        <input type="text" class="otp-input" id="deleteOtp2" maxlength="1" data-index="2">
+        <input type="text" class="otp-input" id="deleteOtp3" maxlength="1" data-index="3">
+        <input type="text" class="otp-input" id="deleteOtp4" maxlength="1" data-index="4">
+        <input type="text" class="otp-input" id="deleteOtp5" maxlength="1" data-index="5">
+        <input type="text" class="otp-input" id="deleteOtp6" maxlength="1" data-index="6">
+      </div>
+      <div id="deleteOtpError" class="error-message otp-error"></div>
+      
+      <div class="resend-otp-section">
+        <span id="resendOtpText">Didn't receive the code?</span>
+        <button type="button" class="resend-otp-btn" id="resendOtpBtn" disabled onclick="resendDeleteOtp()">
+          Resend OTP <span id="resendCountdown"></span>
+        </button>
+      </div>
+      
+      <div class="modal-buttons">
+        <button type="button" class="btn btn-secondary" onclick="backToPasswordModal()">Back</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDeleteAccount()">Delete My Account</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -85,56 +137,316 @@
       }, duration);
     }
 
-    // Terms Checkbox Handler
+    // Error display helpers
+    function showError(elementId, message) {
+      const errorDiv = document.getElementById(elementId);
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+
+    function hideError(elementId) {
+      const errorDiv = document.getElementById(elementId);
+      errorDiv.textContent = '';
+      errorDiv.style.display = 'none';
+    }
+
+    // Toggle password visibility
+    function togglePasswordVisibility(inputId, button) {
+      const input = document.getElementById(inputId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        button.textContent = '👁️';
+      }
+    }
+
+    // Terms Checkbox Handler - JS validation instead of HTML
     document.getElementById('acceptTerms').addEventListener('change', function() {
       const submitBtn = document.getElementById('submitTermsBtn');
       submitBtn.disabled = !this.checked;
+      if (this.checked) {
+        hideError('termsError');
+      }
     });
 
-    // Form Submit Handler
-    document.getElementById('deleteTermsForm').addEventListener('submit', async function(event) {
+    // Form Submit Handler - Opens password modal
+    document.getElementById('deleteTermsForm').addEventListener('submit', function(event) {
       event.preventDefault();
       const acceptTerms = document.getElementById('acceptTerms').checked;
-      const submitBtn = document.getElementById('submitTermsBtn');
-      const errorDiv = document.getElementById('termsError');
 
-      // Clear previous errors
-      errorDiv.style.display = 'none';
-
+      // JS validation - no HTML validation
       if (!acceptTerms) {
-        errorDiv.textContent = 'You must accept the terms and conditions to proceed.';
-        errorDiv.style.display = 'block';
+        showError('termsError', 'You must accept the terms and conditions to proceed.');
         return;
       }
 
-      // Disable button during submission
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Processing...';
+      hideError('termsError');
+      openPasswordModal();
+    });
 
+    // Password Modal Functions
+    function openPasswordModal() {
+      document.getElementById('deletePassword').value = '';
+      hideError('deletePasswordError');
+      document.getElementById('passwordModal').classList.add('active');
+      document.getElementById('deletePassword').focus();
+    }
+
+    function closePasswordModal() {
+      document.getElementById('passwordModal').classList.remove('active');
+      document.getElementById('deletePassword').value = '';
+      hideError('deletePasswordError');
+    }
+
+    // Verify Delete Password
+    async function verifyDeletePassword() {
+      const password = document.getElementById('deletePassword').value.trim();
+      const verifyBtn = document.getElementById('verifyPasswordBtn');
+      
+      // Frontend JS validation
+      if (!password) {
+        showError('deletePasswordError', 'Password is required.');
+        return;
+      }
+      
+      if (password.length < 8) {
+        showError('deletePasswordError', 'Password must be at least 8 characters long.');
+        return;
+      }
+      
+      hideError('deletePasswordError');
+      
+      // Disable button and show loading
+      verifyBtn.disabled = true;
+      verifyBtn.textContent = 'Verifying...';
+      
       try {
-        // Optional: Send to server for logging acceptance
-        const response = await fetch('/delete-account-verify', { 
+        const response = await fetch('/security/delete-account/verify-password', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ acceptedTerms: true }),
+          body: JSON.stringify({ password }),
         });
-
-        if (response.ok) {
-          // Redirect to verification process page
-          window.location.href = '/delete-account-verify';
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showNotification('success', 'Password verified! OTP sent to your email.');
+          closePasswordModal();
+          openOtpModal();
         } else {
-          const data = await response.json();
-          showNotification('error', data.message || 'Failed to proceed. Please try again.');
+          showError('deletePasswordError', data.message || 'Incorrect password. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showError('deletePasswordError', 'An error occurred. Please try again.');
+      } finally {
+        verifyBtn.disabled = false;
+        verifyBtn.textContent = 'Verify Password';
+      }
+    }
+
+    // OTP Modal Functions
+    let resendCountdownInterval = null;
+    let resendCountdownValue = 60;
+
+    function openOtpModal() {
+      // Clear OTP inputs
+      for (let i = 1; i <= 6; i++) {
+        document.getElementById(`deleteOtp${i}`).value = '';
+      }
+      hideError('deleteOtpError');
+      document.getElementById('otpModal').classList.add('active');
+      document.getElementById('deleteOtp1').focus();
+      startResendCountdown();
+    }
+
+    function closeOtpModal() {
+      document.getElementById('otpModal').classList.remove('active');
+      clearInterval(resendCountdownInterval);
+      resendCountdownValue = 60;
+    }
+
+    function backToPasswordModal() {
+      closeOtpModal();
+      openPasswordModal();
+    }
+
+    // OTP input handling
+    const otpInputs = document.querySelectorAll('.otp-input');
+    otpInputs.forEach((input, index) => {
+      // Only allow numbers - JS validation
+      input.addEventListener('input', function(e) {
+        // Remove non-numeric characters
+        this.value = this.value.replace(/[^0-9]/g, '');
+        
+        if (this.value.length === 1 && index < otpInputs.length - 1) {
+          otpInputs[index + 1].focus();
+        }
+        hideError('deleteOtpError');
+      });
+      
+      // Handle backspace
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && !this.value && index > 0) {
+          otpInputs[index - 1].focus();
+        }
+      });
+      
+      // Handle paste
+      input.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const pastedData = e.clipboardData.getData('text').replace(/[^0-9]/g, '').slice(0, 6);
+        pastedData.split('').forEach((char, i) => {
+          if (otpInputs[i]) {
+            otpInputs[i].value = char;
+          }
+        });
+        if (pastedData.length > 0) {
+          otpInputs[Math.min(pastedData.length, 5)].focus();
+        }
+      });
+    });
+
+    // Get OTP value from all inputs
+    function getOtpValue() {
+      let otp = '';
+      for (let i = 1; i <= 6; i++) {
+        otp += document.getElementById(`deleteOtp${i}`).value;
+      }
+      return otp;
+    }
+
+    // Resend OTP countdown
+    function startResendCountdown() {
+      resendCountdownValue = 60;
+      const resendBtn = document.getElementById('resendOtpBtn');
+      const countdownSpan = document.getElementById('resendCountdown');
+      
+      resendBtn.disabled = true;
+      countdownSpan.textContent = `(${resendCountdownValue}s)`;
+      
+      resendCountdownInterval = setInterval(() => {
+        resendCountdownValue--;
+        countdownSpan.textContent = `(${resendCountdownValue}s)`;
+        
+        if (resendCountdownValue <= 0) {
+          clearInterval(resendCountdownInterval);
+          resendBtn.disabled = false;
+          countdownSpan.textContent = '';
+        }
+      }, 1000);
+    }
+
+    // Resend Delete OTP
+    async function resendDeleteOtp() {
+      const resendBtn = document.getElementById('resendOtpBtn');
+      
+      resendBtn.disabled = true;
+      resendBtn.textContent = 'Sending...';
+      
+      try {
+        const response = await fetch('/security/delete-account/resend-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showNotification('success', 'New OTP sent to your email.');
+          
+          // Clear OTP inputs
+          for (let i = 1; i <= 6; i++) {
+            document.getElementById(`deleteOtp${i}`).value = '';
+          }
+          document.getElementById('deleteOtp1').focus();
+          
+          startResendCountdown();
+        } else {
+          showNotification('error', data.message || 'Failed to resend OTP. Please try again.');
+          resendBtn.disabled = false;
         }
       } catch (error) {
         console.error('Error:', error);
         showNotification('error', 'An error occurred. Please try again.');
+        resendBtn.disabled = false;
       } finally {
-        // Re-enable button
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Proceed to Verification';
+        resendBtn.innerHTML = 'Resend OTP <span id="resendCountdown"></span>';
+      }
+    }
+
+    // Confirm Delete Account
+    async function confirmDeleteAccount() {
+      const otp = getOtpValue();
+      const confirmBtn = document.getElementById('confirmDeleteBtn');
+      
+      // Frontend JS validation
+      if (!otp) {
+        showError('deleteOtpError', 'Please enter the OTP.');
+        return;
+      }
+      
+      if (otp.length !== 6) {
+        showError('deleteOtpError', 'Please enter all 6 digits of the OTP.');
+        return;
+      }
+      
+      if (!/^\d{6}$/.test(otp)) {
+        showError('deleteOtpError', 'OTP must contain only numbers.');
+        return;
+      }
+      
+      hideError('deleteOtpError');
+      
+      // Disable button and show loading
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting Account...';
+      
+      try {
+        const response = await fetch('/security/delete-account/confirm', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ otp }),
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+          showNotification('success', 'Account deleted successfully. Redirecting...');
+          setTimeout(() => {
+            window.location.href = data.redirectUrl || '/';
+          }, 2000);
+        } else {
+          showError('deleteOtpError', data.message || 'Invalid OTP. Please try again.');
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = 'Delete My Account';
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showError('deleteOtpError', 'An error occurred. Please try again.');
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Delete My Account';
+      }
+    }
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(event) {
+      // Don't close modals by clicking outside for security
+    });
+
+    // Handle Enter key in password field
+    document.getElementById('deletePassword').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        verifyDeletePassword();
       }
     });
   </script>

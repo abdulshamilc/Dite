@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema(
       default:false,
       required:true
     },
+    twoFactorSecret: {
+      type: String,
+      default: null,
+    },
     referralCode: {
       type: String,
       unique: true,
@@ -58,6 +62,10 @@ const userSchema = new mongoose.Schema(
     isDeleted: {
       type: Boolean,
       default: false,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }

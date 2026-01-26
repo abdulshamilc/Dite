@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deleted User Details - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <link rel="stylesheet" href="/style/admin/customers/customerDetails.css">
+  </head>
+  <body class="min-h-screen bg-black text-white">
+    <!-- Header Partial -->
+    <%- include("../../partials/admin/admin-header") %>
+    <div class="flex">
+      <!-- Sidebar Partial -->
+      <%- include("../../partials/admin/admin-sidebar") %>
+      <!-- Page Content -->
+      <main class="flex-1 p-6">
+        <div class="max-w-6xl mx-auto w-full">
+          <!-- Header -->
+          <div class="mb-8">
+            <a href="/admin/customers/deleted" class="text-sm text-brand hover:underline mb-4 inline-block flex items-center gap-2">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              Back to Deleted Users
+            </a>
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h1 class="text-3xl font-bold mb-2 text-red-400">Deleted User Details</h1>
+                <p class="text-gray-400">Original User ID: <span class="text-brand font-semibold">#<%= deletedUser._id %></span></p>
+              </div>
+              <div class="flex items-center gap-4 ml-4">
+                <span class="px-4 py-2 rounded-full text-sm font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+                  Account Deleted
+                </span>
+              </div>
+            </div>
+          </div>
+          <!-- Main Grid -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-8">
+            <!-- User Summary -->
+            <div class="lg:col-span-2">
+              <div class="card p-6 mb-6">
+                <h2 class="text-xl font-bold mb-4 text-red-400">User Summary</h2>
+                
+                <!-- Profile Picture -->
+                <div class="flex justify-center mb-4">
+                  <% if (deletedUser.image) { %>
+                    <img src="<%= deletedUser.image %>" alt="Profile Picture" class="w-32 h-32 rounded-full object-cover border-4 border-red-500/30 shadow-lg opacity-75">
+                  <% } else { %>
+                     <div class="w-32 h-32 rounded-full bg-gray-700 flex items-center justify-center border-4 border-red-500/30 shadow-lg">
+                        <i data-lucide="user-x" class="w-16 h-16 text-red-400"></i>
+                     </div>
+                  <% } %>
+                </div>
+
+                <!-- User Name Heading -->
+                <div class="text-center text-2xl font-bold text-gray-300 mb-6"><%= deletedUser.name %></div>
+                
+                <!-- Basic Details -->
+                <div class="space-y-4 mb-6 pb-6 border-b border-gray-700">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Basic Information</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <p class="text-gray-400 mb-1">Email:</p>
+                      <p class="font-semibold"><%= deletedUser.email %></p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-1">Phone:</p>
+                      <p class="font-semibold"><%= deletedUser.phone || 'N/A' %></p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-1">Gender:</p>
+                      <p class="font-semibold"><%= deletedUser.gender || 'N/A' %></p>
+                    </div>
+                    <div>
+                      <p class="text-gray-400 mb-1">Referral Code:</p>
+                      <p class="font-semibold"><%= deletedUser.referralCode || 'N/A' %></p>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Stats Info -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 pt-4">
+                  <div class="customer-stats">
+                    <h3><%= deletedUser.totalOrders || 0 %></h3>
+                    <p>Total Orders</p>
+                  </div>
+                  <div class="customer-stats" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+                    <h3>Rs <%= deletedUser.totalSpent || 0 %></h3>
+                    <p>Total Spent</p>
+                  </div>
+                  <div class="customer-stats" style="background: linear-gradient(135deg, #ef4444, #b91c1c);">
+                    <h3><%= deletedUser.redeemedUsers ? deletedUser.redeemedUsers.length : 0 %></h3>
+                    <p>Referred Users</p>
+                  </div>
+                </div>
+
+                <!-- Recent Orders -->
+                <% if (orders && orders.length > 0) { %>
+                <div class="space-y-4 pt-4 border-t border-gray-700">
+                  <h3 class="text-lg font-semibold text-gray-300 mb-3">Recent Orders (Before Deletion)</h3>
+                  <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm">
+                      <thead>
+                        <tr class="bg-gray-800">
+                          <th class="px-3 py-2 text-left">Order ID</th>
+                          <th class="px-3 py-2 text-left">Status</th>
+                          <th class="px-3 py-2 text-left">Total</th>
+                          <th class="px-3 py-2 text-left">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% orders.forEach(order => { %>
+                        <tr class="border-b border-gray-700">
+                          <td class="px-3 py-2"><%= order.orderID || order._id %></td>
+                          <td class="px-3 py-2">
+                            <span class="px-2 py-1 rounded text-xs 
+                              <% if (order.orderStatus === 'Delivered') { %>bg-green-500/20 text-green-400
+                              <% } else if (order.orderStatus === 'Cancelled') { %>bg-red-500/20 text-red-400
+                              <% } else { %>bg-yellow-500/20 text-yellow-400<% } %>">
+                              <%= order.orderStatus %>
+                            </span>
+                          </td>
+                          <td class="px-3 py-2">Rs.<%= order.totalAmount %></td>
+                          <td class="px-3 py-2"><%= new Date(order.createdAt).toLocaleDateString() %></td>
+                        </tr>
+                        <% }) %>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <% } %>
+              </div>
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="space-y-6">
+              <!-- Deletion Info -->
+              <div class="card p-6" style="border: 1px solid rgba(239, 68, 68, 0.3);">
+                <h3 class="font-bold mb-4 text-red-400">Deletion Information</h3>
+                <div class="text-sm space-y-3 text-gray-300">
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Deleted On:</span>
+                    <span class="text-red-400 font-semibold">
+                      <%= deletedUser.deletedAt ? new Date(deletedUser.deletedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A' %>
+                    </span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Deletion Time:</span>
+                    <span>
+                      <%= deletedUser.deletedAt ? new Date(deletedUser.deletedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Account Timeline -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">Account Timeline</h3>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Account Created:</span>
+                    <span><%= new Date(deletedUser.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Last Updated:</span>
+                    <span><%= new Date(deletedUser.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Account Deleted:</span>
+                    <span class="text-red-400">
+                      <%= deletedUser.deletedAt ? new Date(deletedUser.deletedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A' %>
+                    </span>
+                  </div>
+                  <div class="pt-3 border-t border-gray-700 mt-3">
+                    <div class="flex justify-between">
+                      <span class="text-gray-400">Account Age:</span>
+                      <% 
+                        const created = new Date(deletedUser.createdAt);
+                        const deleted = deletedUser.deletedAt ? new Date(deletedUser.deletedAt) : new Date();
+                        const days = Math.floor((deleted - created) / (1000 * 60 * 60 * 24));
+                      %>
+                      <span><%= days %> days</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- User Stats -->
+              <div class="card p-6">
+                <h3 class="font-bold mb-4 text-brand">User Statistics</h3>
+                <div class="text-sm space-y-2 text-gray-300">
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Total Orders:</span>
+                    <span><%= deletedUser.totalOrders || 0 %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Total Spent:</span>
+                    <span>Rs <%= deletedUser.totalSpent || 0 %></span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Referred Users:</span>
+                    <span><%= deletedUser.redeemedUsers ? deletedUser.redeemedUsers.length : 0 %></span>
+                  </div>
+                  <% if (deletedUser.referredBy) { %>
+                  <div class="flex justify-between">
+                    <span class="text-gray-400">Referred By:</span>
+                    <span><%= deletedUser.referredBy %></span>
+                  </div>
+                  <% } %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      lucide.createIcons();
+    </script>
+  </body>
+</html>
