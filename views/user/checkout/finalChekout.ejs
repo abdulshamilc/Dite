@@ -941,10 +941,14 @@
               <% coupons.forEach(coupon => { %>
                 <div class="coupon-card" onclick="selectCoupon('<%= coupon.code %>')">
                   <div class="coupon-header">
-                    <div class="coupon-code"><%= coupon.code %></div>
+                    <div class="coupon-name" style="font-size: 1.2rem; color: #d4af37; font-weight: 700; letter-spacing: 0.5px;"><%= coupon.name %></div>
                     <div class="coupon-offer">
                        <%= coupon.discountType === 'percentage' ? coupon.discountValue + '% OFF' : 'Rs. ' + coupon.discountValue + ' OFF' %>
                     </div>
+                  </div>
+                  <div style="font-size: 0.85rem; color: #a1a1aa; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                      <span>Code:</span>
+                      <span class="coupon-code-small" style="font-family: monospace; background: rgba(212, 175, 55, 0.15); color: #e4d5b7; padding: 2px 6px; border-radius: 4px; letter-spacing: 1px;"><%= coupon.code %></span>
                   </div>
                   <div class="coupon-desc">
                      <%= coupon.description || 'Save on your order' %>

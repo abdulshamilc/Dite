@@ -219,6 +219,50 @@
          }
       });
 
+      // Real-time validation for Flat Discount vs Min Cart Value
+      function validateFlatDiscountRealtime() {
+        const discountType = document.getElementById('discountType');
+        const discountValueInput = document.getElementById('discountValue');
+        const minCartInput = document.getElementById('minCartValue');
+        
+        // Find or create error container for minCart
+        let minCartError = document.getElementById('minCartValueError');
+        if (!minCartError) {
+             minCartError = document.createElement('div');
+             minCartError.id = 'minCartValueError';
+             minCartError.className = 'error-message';
+             minCartError.style.color = '#ef4444';
+             minCartError.style.fontSize = '0.875rem';
+             minCartError.style.marginTop = '0.25rem';
+             minCartError.style.display = 'none';
+             minCartInput.parentNode.appendChild(minCartError);
+        }
+        
+        if (!discountType || !discountValueInput || !minCartInput) return;
+
+        const discountVal = parseFloat(discountValueInput.value) || 0;
+        const minCartVal = parseFloat(minCartInput.value) || 0;
+        
+        if (discountType.value === 'flat') {
+             if (minCartVal <= discountVal) {
+                 minCartError.textContent = "For Flat Discount, Min Cart Value must be greater than Discount Value.";
+                 minCartError.style.display = 'block';
+                 minCartInput.classList.add('error');
+             } else {
+                 minCartError.style.display = 'none';
+                 minCartInput.classList.remove('error');
+             }
+        } else {
+            // For percentage, hide this specific error
+            minCartError.style.display = 'none';
+            minCartInput.classList.remove('error');
+        }
+      }
+
+      document.getElementById('discountValue').addEventListener('input', validateFlatDiscountRealtime);
+      document.getElementById('minCartValue').addEventListener('input', validateFlatDiscountRealtime);
+      document.getElementById('discountType').addEventListener('change', validateFlatDiscountRealtime);
+
       // Form Validation
       document.getElementById('editCouponForm').addEventListener('submit', function(e) {
         let hasError = false;
@@ -256,6 +300,19 @@
                 icon: 'warning',
                 title: 'Invalid Date Range',
                 text: 'End Date must be after Start Date.',
+                confirmButtonColor: '#d33'
+            });
+            hasError = true;
+        }
+
+        // Logic check for flat discount on submit
+        const type = document.getElementById('discountType').value;
+        const minCart = parseFloat(document.getElementById('minCartValue').value) || 0;
+        if(type === 'flat' && minCart <= discountVal) {
+             Swal.fire({
+                icon: 'warning',
+                title: 'Invalid Pricing',
+                text: 'For Flat Discount, Min Cart Value must be greater than Discount Value.',
                 confirmButtonColor: '#d33'
             });
             hasError = true;

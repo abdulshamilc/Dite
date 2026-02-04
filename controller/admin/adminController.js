@@ -47,6 +47,7 @@ const login = async (req, res) => {
 
       return res.json({
          success: true,
+         message: SUCCESS_MESSAGES.TWO_FA_REQUIRED,
          redirect: "/admin/verify-2fa"
       });
     }

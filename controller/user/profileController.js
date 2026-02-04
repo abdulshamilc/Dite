@@ -52,13 +52,14 @@ const postProfile = async (req, res) => {
       imageUrl = req.file.secure_url || req.file.url;
     }
     
-    // Phone Validation
-    if(phone){
-      const phoneRegex = /^(?!.*(\d)\1{5,})(?!0+$)[+]?[0-9]{6,15}$/;
-      
-      if (!phoneRegex.test(phone)) {
-        return res.json({ success: false, message: ERROR_MESSAGES.INVALID_PHONE });
+    // Phone Validation - required, Indian phone number format
+    if (!phone || phone.trim() === '') {
+      return res.json({ success: false, message: "Phone number is required" });
     }
+    // Indian phone number: optional +91/91/0 prefix, starts with 6-9, followed by 9 digits
+    const indianPhoneRegex = /^(?:\+91|91|0)?[6-9]\d{9}$/;
+    if (!indianPhoneRegex.test(phone)) {
+      return res.json({ success: false, message: "Please enter a valid Indian phone number" });
     }
 
     const isChanged =

@@ -342,7 +342,7 @@
               <!-- Status Update -->
               <div class="card p-6">
                 <h3 class="font-bold mb-4 text-brand">Update Status</h3>
-                <% const isOrderFinished = ['Cancelled', 'Returned'].includes(order.orderStatus); %>
+                <% const isOrderFinished = ['Cancelled', 'Returned', 'Delivered'].includes(order.orderStatus); %>
                 <form id="statusUpdateForm" method="POST" action="/admin/orders/<%= order._id %>/status" class="space-y-4">
                   <select id="statusSelect" name="status" class="bg-gray-800 p-2 rounded w-full text-white <%= isOrderFinished ? 'opacity-50 cursor-not-allowed' : '' %>" required <%= isOrderFinished ? 'disabled' : '' %>>
                     <option value="">Select Status</option>

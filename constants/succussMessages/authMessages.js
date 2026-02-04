@@ -4,4 +4,6 @@ export const AUTH_SUCCESS = {
   OTP_SENT: "OTP sent successfully to your email",
   PASSWORD_RESET_SUCCESS: "Password reset successful. You can now log in.",
   PASSWORD_UPDATED: "Password updated successfully!",
+  TWO_FA_REQUIRED: "2FA verification required",
 };
+

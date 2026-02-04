@@ -42,13 +42,18 @@
         <span class="error" id="userError"><%= errors?.userExist || '' %></span>
         <!-- Name -->
         <div class="form-group">
-          <input type="text" class="form-input" placeholder="Name" name="name" id="name" value="<%= oldData?.name || '' %>" >
+          <input type="text" class="form-input" placeholder="Name" name="name" id="name" value="<%= oldData?.name || '' %>" minlength="3" maxlength="27">
           <span class="error" id="nameError"><%= errors?.name || '' %></span>
         </div>
         <!-- Email -->
         <div class="form-group">
           <input type="text" class="form-input" placeholder="Email" name="email" id="email" value="<%= oldData?.email || '' %>" >
           <span class="error" id="emailError"><%= errors?.email || '' %></span>
+        </div>
+        <!-- Phone Number -->
+        <div class="form-group">
+          <input type="tel" class="form-input" placeholder="Phone Number" name="phone" id="phone" value="<%= oldData?.phone || '' %>" maxlength="13">
+          <span class="error" id="phoneError"><%= errors?.phone || '' %></span>
         </div>
         <!-- Referral Code -->
         <div class="form-group">
@@ -143,15 +148,35 @@
       
       form.addEventListener('submit', function(e) {
         let valid = true;
-        // Name
-        if (document.getElementById('name').value.trim().length < 2) {
-          showError(document.getElementById('name'), 'Name must be at least 2 characters.');
+        // Name - min 3, max 27 characters
+        const nameValue = document.getElementById('name').value.trim();
+        if (!nameValue) {
+          showError(document.getElementById('name'), 'Name is required');
+          valid = false;
+        } else if (nameValue.length < 3) {
+          showError(document.getElementById('name'), 'Name must be at least 3 characters');
+          valid = false;
+        } else if (nameValue.length > 27) {
+          showError(document.getElementById('name'), 'Name must not exceed 27 characters');
           valid = false;
         }
         // Email
         const email = document.getElementById('email').value.trim();
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          showError(document.getElementById('email'), 'Valid email required.');
+        if (!email) {
+          showError(document.getElementById('email'), 'Email is required');
+          valid = false;
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          showError(document.getElementById('email'), 'Please enter a valid email address');
+          valid = false;
+        }
+        // Phone - Indian phone number validation
+        const phone = document.getElementById('phone').value.trim();
+        const indianPhoneRegex = /^(?:\+91|91|0)?[6-9]\d{9}$/;
+        if (!phone) {
+          showError(document.getElementById('phone'), 'Phone number is required');
+          valid = false;
+        } else if (!indianPhoneRegex.test(phone)) {
+          showError(document.getElementById('phone'), 'Please enter a valid Indian phone number');
           valid = false;
         }
         // Referral optional

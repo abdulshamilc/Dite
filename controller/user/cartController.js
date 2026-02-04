@@ -75,9 +75,14 @@ const getCart = async (req, res) => {
              cartUpdated = true;
            }
         }
-        // Update price if changed (optional but good practice)
-        if(item.basePrice !== variant.basePrice || item.discountedPrice !== variant.discountedPrice) {
+        // Update BASE price if changed - but DON'T update discountedPrice from DB
+        // discountedPrice should only be manual discount, offers calculated at runtime
+        if(item.basePrice !== variant.basePrice) {
             item.basePrice = variant.basePrice;
+            cartUpdated = true;
+        }
+        // Also sync discountedPrice from DB (manual discount only)
+        if(item.discountedPrice !== variant.discountedPrice) {
             item.discountedPrice = variant.discountedPrice;
             cartUpdated = true;
         }
@@ -88,22 +93,14 @@ const getCart = async (req, res) => {
       await cart.save();
     }
 
-    const subtotal = cart.items.reduce(
-      (acc, item) => {
-         // Only sum available items? Usually cart shows total of all, but checkout validation prevents purchase.
-         // Let's keep logic simple: Sum all, but view will visually indicate OOS.
-         return acc + item.discountedPrice * item.quantity;
-      },
-      0
-    );
-    const total = subtotal; // Total is same as subtotal (sum of discounted prices)
-
-    // Fetch active offers logic
+    // Fetch active offers FIRST before calculating totals
     const offersMap = {};
+    const effectivePricesMap = {}; // Store calculated effective prices for display
     const currentDate = new Date();
+    
     if (cart.items.length > 0) {
       const productIds = cart.items.map(item => item.productId ? item.productId._id : null).filter(id => id);
-      const categoryIds = cart.items.map(item => item.productId ? item.productId.category : null).filter(id => id); // Assuming category is ObjectId field
+      const categoryIds = cart.items.map(item => item.productId ? item.productId.category : null).filter(id => id);
 
       const offers = await Offer.find({
         $or: [
@@ -118,34 +115,64 @@ const getCart = async (req, res) => {
 
       cart.items.forEach(item => {
         const product = item.productId;
+        if (!product) return;
+        
         // Find all offers applicable to this item
         const applicableOffers = offers.filter(offer => 
           (offer.targetModel === 'Product' && offer.targetId.toString() === product._id.toString()) ||
           (offer.targetModel === 'Categories' && offer.targetId.toString() === product.category.toString())
         );
 
-        // Find the "best" offer (one giving max discount)
+        // Calculate best offer price from basePrice
+        let bestOfferPrice = item.basePrice;
         let bestOffer = null;
         let maxDiscountAmount = 0;
 
         applicableOffers.forEach(offer => {
+            let offerPrice = item.basePrice;
             let discount = 0;
+            
             if (offer.discountType === 'flat') {
+                offerPrice = item.basePrice - offer.discountValue;
                 discount = offer.discountValue;
             } else {
                 discount = (item.basePrice * offer.discountValue) / 100;
+                offerPrice = item.basePrice - discount;
             }
+            
+            // Ensure price doesn't go below 1
+            offerPrice = Math.max(1, offerPrice);
+            
             if (discount > maxDiscountAmount) {
                 maxDiscountAmount = discount;
                 bestOffer = offer;
+                bestOfferPrice = Math.round(offerPrice);
             }
         });
 
         if (bestOffer) {
             offersMap[item._id] = bestOffer;
         }
+        
+        // Effective price = minimum of manual discountedPrice and offer price
+        const manualPrice = item.discountedPrice && item.discountedPrice < item.basePrice 
+          ? item.discountedPrice 
+          : item.basePrice;
+        
+        // Store effective price for this item (used for display and calculations)
+        effectivePricesMap[item._id] = Math.min(manualPrice, bestOfferPrice);
       });
     }
+
+    // Calculate subtotal using EFFECTIVE prices (includes runtime offer calculations)
+    const subtotal = cart.items.reduce(
+      (acc, item) => {
+         const effectivePrice = effectivePricesMap[item._id] || item.discountedPrice || item.basePrice;
+         return acc + effectivePrice * item.quantity;
+      },
+      0
+    );
+    const total = subtotal;
 
     res.render("user/cart/cart", {
       cart: cart,
@@ -153,7 +180,8 @@ const getCart = async (req, res) => {
       total: total,
       success: success,
       error: error,
-      offersMap: offersMap, // Pass the map to the view
+      offersMap: offersMap,
+      effectivePricesMap: effectivePricesMap, // Pass effective prices to view
     });
   } catch (error) {
     console.error(error);

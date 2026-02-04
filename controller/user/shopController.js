@@ -27,16 +27,25 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
       filter = "ALL", // stock, sale, new
     } = req.query;
 
+    // Get active category IDs to filter products
+    const activeCategories = await Categories.find({ isActive: true, isDeleted: false }).select('_id');
+    const activeCategoryIds = activeCategories.map(cat => cat._id);
+
+    // Include category filter in base query
+    const categoryFilteredBaseQuery = {
+      ...baseQuery,
+      category: { $in: activeCategoryIds }
+    };
 
     const [brandStats, uniqueConcentrations, priceStats] = await Promise.all([
       Products.aggregate([
-        { $match: { ...baseQuery, isDeleted: false, isListed: true, brand: { $ne: null, $exists: true } } }, 
+        { $match: { ...categoryFilteredBaseQuery, isDeleted: false, isListed: true, brand: { $ne: null, $exists: true } } }, 
         { $group: { _id: { $toLower: "$brand" }, count: { $sum: 1 }, originalBrand: { $first: "$brand" } } },
         { $sort: { count: -1 } },
       ]),
-      Products.distinct("concentration", { ...baseQuery, isDeleted: false, isListed: true }),
+      Products.distinct("concentration", { ...categoryFilteredBaseQuery, isDeleted: false, isListed: true }),
       Products.aggregate([
-        { $match: { ...baseQuery, isDeleted: false, isListed: true } },
+        { $match: { ...categoryFilteredBaseQuery, isDeleted: false, isListed: true } },
         { $unwind: "$variants" },
         {
           $group: {
@@ -63,8 +72,8 @@ const getCategoryShopHelper = async (req, res, baseQuery, pageTitle) => {
     const selectedConcentrations = concentrationsQuery ? concentrationsQuery.split(",").map((c) => c.trim().toLowerCase()).filter(Boolean) : [];
     const effectiveSort = sort || "newest";
 
-    // Build Query
-    let query = { ...baseQuery, isDeleted: false, isListed: true };
+    // Build Query with category filter included
+    let query = { ...categoryFilteredBaseQuery, isDeleted: false, isListed: true };
 
     // Search
     if (search.trim()) {
@@ -237,19 +246,38 @@ const getShop = async (req, res) => {
       maxPrice: maxPriceQuery,
       brands,
       concentrations: concentrationsQuery,
+      categories: categoriesQuery,
     } = req.query;
 
     const pageTitle = "Shop";
 
+    // Get active categories (full objects for display in filter)
+    const activeCategories = await Categories.find({ isActive: true, isDeleted: false });
+    const activeCategoryIds = activeCategories.map(cat => cat._id);
+
+    // Parse selected categories from query
+    const selectedCategories = categoriesQuery 
+      ? categoriesQuery.split(",").map((c) => c.trim()).filter(Boolean) 
+      : [];
+
+    // Determine which category IDs to filter by
+    let filterCategoryIds = activeCategoryIds;
+    if (selectedCategories.length > 0) {
+      // Filter to only selected categories that are active
+      filterCategoryIds = activeCategories
+        .filter(cat => selectedCategories.includes(cat._id.toString()))
+        .map(cat => cat._id);
+    }
+
     const [brandStats, uniqueConcentrations, priceStats] = await Promise.all([
       Products.aggregate([
-        { $match: { isDeleted: false, isListed: true, brand: { $ne: null, $exists: true } } },
+        { $match: { isDeleted: false, isListed: true, category: { $in: filterCategoryIds }, brand: { $ne: null, $exists: true } } },
         { $group: { _id: { $toLower: "$brand" }, count: { $sum: 1 }, originalBrand: { $first: "$brand" } } },
         { $sort: { count: -1 } },
       ]),
-      Products.distinct("concentration", { isDeleted: false, isListed: true }),
+      Products.distinct("concentration", { isDeleted: false, isListed: true, category: { $in: filterCategoryIds } }),
       Products.aggregate([
-        { $match: { isDeleted: false, isListed: true } },
+        { $match: { isDeleted: false, isListed: true, category: { $in: filterCategoryIds } } },
         { $unwind: "$variants" },
         {
           $group: {
@@ -280,6 +308,7 @@ const getShop = async (req, res) => {
     let query = {
       isDeleted: false,
       isListed: true,
+      category: { $in: filterCategoryIds },
     };
 
     let searchMatch = null;
@@ -443,6 +472,8 @@ const getShop = async (req, res) => {
       concentrations: uniqueConcentrations,
       selectedBrands,
       selectedConcentrations,
+      categories: activeCategories,
+      selectedCategories,
       pageTitle,
     });
   } catch (error) {
@@ -461,6 +492,8 @@ const getShop = async (req, res) => {
       concentrations: [],
       selectedBrands: [],
       selectedConcentrations: [],
+      categories: [],
+      selectedCategories: [],
       search: "",
       gender: "ALL",
       sort: "",
@@ -529,8 +562,13 @@ const productDetail = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(404).render("pageNotFound");
     }
-    const product = await Products.findById(id);
-    if (!product || product.isDeleted) {
+    const product = await Products.findById(id).populate('category');
+    if (!product || product.isDeleted || !product.isListed) {
+      return res.status(404).render("pageNotFound");
+    }
+
+    // Check if the product's category is deleted or inactive
+    if (product.category && (product.category.isDeleted || !product.category.isActive)) {
       return res.status(404).render("pageNotFound");
     }
 
@@ -560,35 +598,35 @@ const productDetail = async (req, res) => {
     
     const activeOffers = [...productOffers, ...categoryOffers];
 
-    // Real-time price correction check
-    let productModified = false;
-    if (product.variants && product.variants.length > 0) {
+    // Calculate display prices at RUNTIME - DO NOT SAVE TO DB
+    // Create a copy of variants with calculated offer prices for display only
+    if (product.variants && product.variants.length > 0 && activeOffers.length > 0) {
         product.variants.forEach(variant => {
-            let bestPrice = variant.basePrice;
+            // Calculate offer prices from basePrice
+            const offerPrices = activeOffers.map((offer) => {
+                let discounted = variant.basePrice;
+                if (offer.discountType === "flat") {
+                  discounted = variant.basePrice - offer.discountValue;
+                } else {
+                  discounted = variant.basePrice - (variant.basePrice * offer.discountValue) / 100;
+                }
+                // Ensure price doesn't go below 1
+                return Math.max(1, discounted);
+            });
             
-            if (activeOffers.length > 0) {
-                 const prices = activeOffers.map((offer) => {
-                    let discounted = variant.basePrice;
-                    if (offer.discountType === "flat") {
-                      discounted = variant.basePrice - offer.discountValue;
-                    } else {
-                      discounted = variant.basePrice - (variant.basePrice * offer.discountValue) / 100;
-                    }
-                    return Math.max(0, discounted);
-                  });
-                  bestPrice = Math.min(variant.basePrice, ...prices);
-            }
+            // Best offer price (lowest from offers)
+            const bestOfferPrice = Math.round(Math.min(...offerPrices));
             
-            const roundedBestPrice = Math.round(bestPrice);
-            if (variant.discountedPrice !== roundedBestPrice) {
-                variant.discountedPrice = roundedBestPrice;
-                productModified = true;
-            }
+            // Current discountedPrice (use basePrice if not set or higher than basePrice)
+            const currentDiscount = variant.discountedPrice && variant.discountedPrice < variant.basePrice 
+              ? variant.discountedPrice 
+              : variant.basePrice;
+            
+            // Display price is the minimum of manual discount and offer price
+            // This modifies the object in memory for display, but we DO NOT save
+            variant.discountedPrice = Math.min(currentDiscount, bestOfferPrice);
         });
-        
-        if (productModified) {
-            await product.save();
-        }
+        // NO product.save() - prices calculated for display only
     }
 
 
@@ -657,6 +695,17 @@ const productDetail = async (req, res) => {
         }
     };
 
+    let isInWishlist = false;
+    if (req.session.user) {
+        const user = await User.findOne({ email: req.session.user });
+        if (user) {
+            const wishlistDoc = await Wishlist.findOne({ userId: user._id });
+            if (wishlistDoc) {
+                isInWishlist = wishlistDoc.items.some(item => item.productId.toString() === product._id.toString());
+            }
+        }
+    }
+
     res.render("user/shop/productDetail", {
       product,
       suggestions,
@@ -665,6 +714,7 @@ const productDetail = async (req, res) => {
       reviews,
       reviewStats,
       error: req.query.error || null,
+      isInWishlist,
     });
   } catch (error) {
     console.error(error);
@@ -683,7 +733,15 @@ const getCollections = async (req, res) => {
       isActive: true,
       isDeleted: false,
     });
-    const products = await Products.find({ isDeleted: false, isListed: true });
+    
+    // Get only products from active, non-deleted categories
+    const activeCategoryIds = categories.map(cat => cat._id);
+    const products = await Products.find({ 
+      isDeleted: false, 
+      isListed: true,
+      category: { $in: activeCategoryIds }
+    }).populate('category');
+    
     res.render("user/shop/collection", { products, categories });
   } catch (error) {
     console.error(error);
@@ -744,10 +802,16 @@ const getCatogoryShop = async (req, res) => {
 // Get product API
 const getProductAPI = async (req, res) => {
   try {
-    const product = await Products.findById(req.params.id);
+    const product = await Products.findById(req.params.id).populate('category');
     if (!product || product.isDeleted || !product.isListed) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE });
     }
+    
+    // Check if the product's category is deleted or inactive
+    if (product.category && (product.category.isDeleted || !product.category.isActive)) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({ success: false, message: ERROR_MESSAGES.PRODUCT_UNAVAILABLE });
+    }
+    
     res.json({ success: true, product });
   } catch (error) {
     console.error('Error fetching product:', error);

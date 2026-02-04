@@ -177,9 +177,27 @@ const DeactivateCategory = async (req, res) => {
 const deleteCategory = async (req, res) => {
   try {
     const categorie = await Categories.findOne({ _id: req.params.id });
+    
 
     categorie.isDeleted = !categorie.isDeleted;
     await categorie.save();
+
+    // If category is deleted, unlist all products but save their state.
+    // If restored, restore their previous state.
+    if (categorie.isDeleted) {
+        // Validation: Store 'isListed' into 'wasListed', then set 'isListed' to false.
+        await Products.updateMany(
+            { category: categorie._id }, 
+            [ { $set: { wasListed: "$isListed", isListed: false } } ]
+        );
+    } else {
+        // Restore: Set 'isListed' to 'wasListed' (if exists), otherwise keep current. Reset 'wasListed' to null.
+        await Products.updateMany(
+            { category: categorie._id }, 
+            [ { $set: { isListed: { $ifNull: ["$wasListed", "$isListed"] }, wasListed: null } } ]
+        );
+    }
+
     req.session.successMessage = SUCCESS_MESSAGES.CATEGORY_DELETED;
     res.redirect("/admin/categories");
   } catch (error) {

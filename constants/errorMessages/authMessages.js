@@ -13,7 +13,8 @@ export const AUTH_ERRORS = {
   OTP_INCORRECT: "OTP is Incorrect",
   EMAIL_REQUIRED: "Email is required",
   PASSWORD_REQUIRED: "Password is required",
-  INVALID_EMAIL: "Invalid Email",
+  INVALID_EMAIL: "No account found with this email",
+  INVALID_PASSWORD: "Password is incorrect",
   PASSWORD_SAME: "New password cannot be the same as the old password.",
   CURRENT_PASSWORD_INCORRECT: "Current password is incorrect",
   NEW_PASSWORD_DIFFERENT: "New password must be different from current password",
@@ -27,3 +28,4 @@ export const AUTH_ERRORS = {
   INVALID_ACTION: "Invalid action",
   NO_CHANGES: "No changes made",
 };
+

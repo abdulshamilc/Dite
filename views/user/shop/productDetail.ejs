@@ -122,11 +122,11 @@
   <% if (product.variants.length > 0) { %>
     <% if (product.variants[0].stock > 0 ) { %>
       <span class="text-yellow-500">
-        ₹<%= product.variants[0].discountedPrice ? product.variants[0].discountedPrice.toFixed(2) : 'N/A' %>
+        ₹<%= typeof product.variants[0].discountedPrice !== 'undefined' && product.variants[0].discountedPrice !== null ? product.variants[0].discountedPrice.toFixed(2) : 'N/A' %>
       </span>
       <% if (product.variants[0].discountedPrice < product.variants[0].basePrice) { %>
         <span class="line-through text-gray-500 ml-2">
-          ₹<%= product.variants[0].basePrice ? product.variants[0].basePrice.toFixed(2) : 'N/A' %>
+          ₹<%= typeof product.variants[0].basePrice !== 'undefined' && product.variants[0].basePrice !== null ? product.variants[0].basePrice.toFixed(2) : 'N/A' %>
         </span>
       <% } %>
     <% } else { %>
@@ -163,12 +163,23 @@
                   </button>
                   <input type="hidden" id="selectedVariantSize" value="<%= product.variants[0].mlSize %>">
 
+                <% if (typeof isInWishlist !== 'undefined' && isInWishlist) { %>
                 <button
+                  id="wishlistBtn"
+                  onclick="removeFromWishlist('<%= product._id %>')"
+                  class="w-full border border-red-500 text-red-500 hover:bg-red-500/10 bg-transparent py-3 px-4 rounded-md transition-colors"
+                >
+                  REMOVE FROM WISHLIST
+                </button>
+                <% } else { %>
+                <button
+                  id="wishlistBtn"
                   onclick="addToWishlist('<%= product._id %>')"
                   class="w-full border border-gray-600 text-white hover:bg-gray-800 bg-transparent py-3 px-4 rounded-md transition-colors"
                 >
                   ADD TO WISHLIST
                 </button>
+                <% } %>
               </div>
 
               <!-- Tabs: Description, Notes, Reviews -->
@@ -322,7 +333,7 @@
                     </div>
                     <h3 class="text-sm sm:text-base md:text-xl font-medium mb-1 md:mb-3 line-clamp-2"><%= item.name %></h3>
                     <p class="text-yellow-500 font-bold text-sm sm:text-base md:text-lg">
-                      ₹<%= item.variants && item.variants.length > 0 && item.variants[0].discountedPrice ? item.variants[0].discountedPrice.toFixed(2) : 'N/A' %>
+                      ₹<%= item.variants && item.variants.length > 0 && typeof item.variants[0].discountedPrice !== 'undefined' && item.variants[0].discountedPrice !== null ? item.variants[0].discountedPrice.toFixed(2) : 'N/A' %>
                     </p>
                   </div>
                   </a>
@@ -398,9 +409,9 @@
            addButton.classList.remove('bg-yellow-500', 'hover:bg-yellow-600', 'text-black');
            addButton.classList.add('bg-gray-600', 'cursor-not-allowed');
         } else {
-           let html = `<span class="text-yellow-500">₹${discountedPrice ? discountedPrice.toFixed(2) : 'N/A'}</span>`;
+           let html = `<span class="text-yellow-500">₹${typeof discountedPrice !== 'undefined' && discountedPrice !== null ? discountedPrice.toFixed(2) : 'N/A'}</span>`;
            if (discountedPrice < basePrice) {
-             html += `<span class="line-through text-gray-500 ml-2">₹${basePrice ? basePrice.toFixed(2) : 'N/A'}</span>`;
+             html += `<span class="line-through text-gray-500 ml-2">₹${typeof basePrice !== 'undefined' && basePrice !== null ? basePrice.toFixed(2) : 'N/A'}</span>`;
            }
            priceSection.innerHTML = html;
            
@@ -695,7 +706,10 @@
               showConfirmButton: false,
               timer: 1500,
               background: '#1a1a1a', 
-              color: '#ffffff'
+              color: '#ffffff',
+              didClose: () => {
+                  location.reload();
+              }
             });
           } else {
             if (data.redirect) {
@@ -735,6 +749,90 @@
                 });
              }
           }
+        });
+      }
+      
+      function removeFromWishlist(productId) {
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "Do you really want to remove this product from your wishlist?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#eab308',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Yes, remove it!',
+            cancelButtonText: 'No, keep it',
+            background: '#1a1a1a',
+            color: '#ffffff'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/wishlist/remove/${productId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => {
+                    if (response.redirected && response.url.includes('/login')) {
+                        showLoginPrompt();
+                        throw new Error('Login required');
+                    }
+                    if (response.status === 401) {
+                        showLoginPrompt();
+                        throw new Error('Login required');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Removed!',
+                            text: data.message || 'Product removed from wishlist',
+                            showConfirmButton: false,
+                            timer: 1500,
+                            background: '#1a1a1a', 
+                            color: '#ffffff',
+                            didClose: () => {
+                               location.reload(); 
+                            }
+                        });
+                    } else {
+                         if (data.redirect) {
+                            if (data.redirect.includes('login')) {
+                                showLoginPrompt();
+                            } else {
+                                window.location.href = data.redirect;
+                            }
+                         } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Oops...',
+                                text: data.message || 'Could not remove from wishlist',
+                                background: '#1a1a1a', 
+                                color: '#ffffff'
+                            });
+                         }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    if (error.message !== 'Login required') {
+                        if (error.name === 'SyntaxError') {
+                           showLoginPrompt();
+                       } else {
+                          Swal.fire({
+                              icon: 'error',
+                              title: 'Oops...',
+                              text: 'Something went wrong!',
+                              background: '#1a1a1a',
+                              color: '#ffffff'
+                          });
+                       }
+                    }
+                });
+            }
         });
       }
 

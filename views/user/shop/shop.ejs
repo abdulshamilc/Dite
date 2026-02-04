@@ -189,6 +189,18 @@
               </div>
             </div>
           </div>
+          <!-- Categories -->
+          <% if (categories && categories.length > 0) { %>
+          <div class="filter-group">
+            <h3>Categories</h3>
+            <% categories.forEach(cat => { %>
+              <label class="checkbox-label">
+                <input type="checkbox" value="<%= cat._id.toString() %>" <%= selectedCategories.includes(cat._id.toString()) ? 'checked' : '' %>>
+                <%= cat.name %>
+              </label>
+            <% }); %>
+          </div>
+          <% } %>
           <!-- Brands -->
           <div class="filter-group">
             <h3>Brands</h3>
@@ -342,11 +354,11 @@
 
       function hasModalFilters() {
         const params = new URLSearchParams(window.location.search);
-        return params.has('minPrice') || params.has('maxPrice') || params.has('brands') || params.has('concentrations');
+        return params.has('minPrice') || params.has('maxPrice') || params.has('brands') || params.has('concentrations') || params.has('categories');
       }
 
       function clearModalFilters() {
-        const clearParams = { minPrice: '', maxPrice: '', brands: '', concentrations: '' };
+        const clearParams = { minPrice: '', maxPrice: '', brands: '', concentrations: '', categories: '' };
         window.location.search = buildQuery(clearParams);
       }
 
@@ -394,12 +406,15 @@
         const checkboxes = document.querySelectorAll('.filter-group input[type="checkbox"]:checked');
         let selectedBrands = [];
         let selectedConcs = [];
+        let selectedCats = [];
         checkboxes.forEach(cb => {
           const group = cb.closest('.filter-group').querySelector('h3').textContent;
           if (group === 'Brands') {
             selectedBrands.push(cb.value);
           } else if (group === 'Concentration') {
             selectedConcs.push(cb.value);
+          } else if (group === 'Categories') {
+            selectedCats.push(cb.value);
           }
         });
 
@@ -412,6 +427,9 @@
         if (selectedConcs.length > 0) {
           newParams.concentrations = selectedConcs.join(',');
         }
+        if (selectedCats.length > 0) {
+          newParams.categories = selectedCats.join(',');
+        }
 
         window.location.search = buildQuery(newParams);
         closeFilterModal();
@@ -423,10 +441,11 @@
         document.querySelectorAll('.filter-group input[type="checkbox"]').forEach(cb => {
           cb.checked = false;
         });
-        document.getElementById('moreBrands').classList.add('brands-hidden');
+        const moreBrandsEl = document.getElementById('moreBrands');
+        if (moreBrandsEl) moreBrandsEl.classList.add('brands-hidden');
         const showMoreBtn = document.querySelector('.show-more-btn');
         if (showMoreBtn) showMoreBtn.textContent = 'Show More';
-        const clearParams = { minPrice: '', maxPrice: '', brands: '', concentrations: '' };
+        const clearParams = { minPrice: '', maxPrice: '', brands: '', concentrations: '', categories: '' };
         window.location.search = buildQuery(clearParams);
         closeFilterModal();
       }

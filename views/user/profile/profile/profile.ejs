@@ -88,7 +88,7 @@
 
           <div class="row">
             <label for="phone">Phone:</label>
-            <input class="field" id="phone" name="phone" type="text" value="<%= user.phone || '' %>" />
+            <input class="field" id="phone" name="phone" type="tel" value="<%= user.phone || '' %>" maxlength="13" />
           </div>
 
           <div class="row form-buttons">
@@ -408,10 +408,15 @@
         }
       }
 
-      // Phone number validation: if provided, must be more than 5 digits
+      // Phone number validation: required, Indian phone number format
       const phone = document.getElementById('phone').value.trim();
-      if (phone && phone.length <= 5) {
-        showMessage('Enter Valid Phone Number ...', 'error');
+      if (!phone) {
+        showMessage('Phone number is required', 'error');
+        return false;
+      }
+      const indianPhoneRegex = /^(?:\+91|91|0)?[6-9]\d{9}$/;
+      if (!indianPhoneRegex.test(phone)) {
+        showMessage('Please enter a valid Indian phone number', 'error');
         return false;
       }
       

@@ -37,7 +37,7 @@ const signup = async (req, res) => {
       });
     }
 
-    const { name, email, referralCode } = req.body;
+    const { name, email, phone, referralCode } = req.body;
 
     // check if the user exist
     const existingUser = await User.findOne({ email });
@@ -55,7 +55,7 @@ const signup = async (req, res) => {
     }
 
     // Store in session and move to Step 2
-    req.session.signupStep1 = { name, email, referralCode };
+    req.session.signupStep1 = { name, email, phone, referralCode };
     res.redirect("/set-password");
   } catch (error) {
     console.error(error);
@@ -87,7 +87,7 @@ const postSetPassword = async (req, res) => {
     }
 
     const { password } = req.body;
-    const { name, email, referralCode } = req.session.signupStep1;
+    const { name, email, phone, referralCode } = req.session.signupStep1;
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -96,6 +96,7 @@ const postSetPassword = async (req, res) => {
     const newUser = {
       name,
       email,
+      phone,
       password: hashedPassword,
       referralCode, // Assuming schema handles this if passed to User constructor
     };
@@ -311,7 +312,7 @@ const login = async (req, res) => {
   const validatePassword = await bcrypt.compare(password, user.password);
   if (!validatePassword) {
     return res.render("user/authentications/login", {
-      errors: { message: ERROR_MESSAGES.PASSWORD_MISMATCH },
+      errors: { message: ERROR_MESSAGES.INVALID_PASSWORD },
     });
   }
 

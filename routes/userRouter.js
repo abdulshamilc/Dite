@@ -391,8 +391,8 @@ router.post(
 router.post("/checkout/placeOrder", isAuthenticatedUser, isBlocked, placeOrder);
 router.post("/checkout/apply-coupon", isAuthenticatedUser, isBlocked, applyCoupon);
 
-router.get(
-  "/checkout/payment/:id",
+router.post(
+  "/checkout/payment",
   isAuthenticatedUser,
   isBlocked,
   getPaymentpage

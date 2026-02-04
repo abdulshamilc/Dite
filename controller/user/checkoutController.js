@@ -99,11 +99,11 @@ const getCheckout = async (req, res) => {
                const manualPrice = variant.discountedPrice || variant.basePrice;
                price = Math.min(price, manualPrice);
           }
-          
+          // Calculate effective price for display (NOT saved to cart)
           item.discountedPrice = price;
           subtotal += price * item.quantity;
       }
-      await cart.save();
+      // REMOVED: await cart.save(); - prices calculated at runtime, not persisted
       total = subtotal + 40; // Add fixed delivery charge
   }
 
@@ -203,7 +203,7 @@ const addNewAddress = async (req, res) => {
 const getPaymentpage = async (req, res) => {
   try {
     const userEmail = req.session.user;
-    const addressId = req.params.id;
+    const addressId = req.body.addressId;
 
     if (!userEmail) return res.redirect("/login");
 
@@ -285,10 +285,11 @@ const getPaymentpage = async (req, res) => {
                 const manualPrice = variant.discountedPrice || variant.basePrice;
                 price = Math.min(price, manualPrice);
             }
+            // Calculate effective price for display (NOT saved to cart)
             item.discountedPrice = price;
             subtotal += price * item.quantity;
         }
-        await cart.save();
+        // REMOVED: await cart.save(); - prices calculated at runtime, not persisted
     }
 
     // Fetch available coupons matched with minCartValue

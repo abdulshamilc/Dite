@@ -702,6 +702,50 @@
       document.getElementById('addCouponModal').addEventListener('click', function(e) {
         if (e.target === this) closeAddCouponModal();
       });
+
+      // Real-time validation for Flat Discount vs Min Cart Value
+      function validateFlatDiscountRealtime() {
+        const discountType = document.querySelector('input[name="discountType"]:checked');
+        const discountValueInput = document.getElementById('discountValue');
+        const minCartInput = document.getElementById('minCartValue');
+        const minCartError = document.getElementById('minCartValueError');
+        
+        if (!discountType || !discountValueInput || !minCartInput) return;
+
+        const discountVal = parseFloat(discountValueInput.value) || 0;
+        const minCartVal = parseFloat(minCartInput.value) || 0;
+
+        // Reset if empty or invalid basic numbers first handled by default logic, 
+        // but here we focus on the comparison rule
+        
+        if (discountType.value === 'flat') {
+             if (minCartVal <= discountVal) {
+                 minCartError.textContent = "For Flat Discount, Min Cart Value must be greater than Discount Value.";
+                 minCartError.style.display = 'block';
+                 minCartInput.classList.add('error');
+             } else {
+                 // Revert to default error message if comparison passes but value is negative
+                 if (minCartVal < 0) {
+                     minCartError.textContent = "Min cart value must be 0 or greater.";
+                     minCartError.style.display = 'block';
+                     minCartInput.classList.add('error');
+                 } else {
+                     minCartError.style.display = 'none';
+                     minCartInput.classList.remove('error');
+                 }
+             }
+        } else {
+            // For percentage, just ensure we don't leave the "greater than" error hanging
+            if (minCartError.textContent && minCartError.textContent.includes('greater than Discount Value')) {
+                minCartError.style.display = 'none';
+                minCartInput.classList.remove('error');
+            }
+        }
+      }
+
+      document.getElementById('discountValue').addEventListener('input', validateFlatDiscountRealtime);
+      document.getElementById('minCartValue').addEventListener('input', validateFlatDiscountRealtime);
+      document.querySelectorAll('input[name="discountType"]').forEach(r => r.addEventListener('change', validateFlatDiscountRealtime));
     </script>
   </body>
 </html>

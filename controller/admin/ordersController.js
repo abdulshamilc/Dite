@@ -115,6 +115,17 @@ const updateOrderStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
+    const currentOrder = await Orders.findById(id);
+    if (!currentOrder) {
+      req.session.error = ERROR_MESSAGES.ORDER_NOT_FOUND;
+      return res.redirect("/admin/orders");
+    }
+
+    if (['Delivered', 'Cancelled', 'Returned'].includes(currentOrder.orderStatus)) {
+      req.session.error = `Order is already ${currentOrder.orderStatus}. Status cannot be changed.`;
+      return res.redirect(`/admin/orders/view/${id}`);
+    }
+
     // Validate status against schema enum
     const validStatuses = [
       "Placed",
@@ -126,7 +137,7 @@ const updateOrderStatus = async (req, res) => {
     ];
     if (!validStatuses.includes(status)) {
       req.session.error = ERROR_MESSAGES.INVALID_ORDER_STATUS;
-      return res.redirect(`/admin/orders/${id}`);
+      return res.redirect(`/admin/orders/view/${id}`);
     }
 
     // Find and update order

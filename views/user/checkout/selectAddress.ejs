@@ -977,7 +977,18 @@
           });
         }
         const addressId = selectedAddress.value;
-        window.location.href = `/checkout/payment/${addressId}`;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/checkout/payment';
+        
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'addressId';
+        input.value = addressId;
+        
+        form.appendChild(input);
+        document.body.appendChild(form);
+        form.submit();
       }
 
       document.addEventListener("DOMContentLoaded", function () {

@@ -141,6 +141,11 @@ const createCoupon = async (req, res) => {
       return res.redirect("/admin/coupons");
     }
 
+    if (discountType === "flat" && minCartNum <= discountNum) {
+      req.session.error = "For flat discount, minimum cart value must be greater than discount value.";
+      return res.redirect("/admin/coupons");
+    }
+
     let maxDiscountNum;
     if (discountType === "percentage") {
       maxDiscountNum = parseInt(maxDiscountAmount) || 0;
@@ -455,6 +460,11 @@ const postEditCoupon = async (req, res) => {
     coupon.usageLimit = parseInt(usageLimit);
     const start = new Date(startDate);
     const end = new Date(endDate);
+
+    if (discountType === "flat" && coupon.minCartValue <= coupon.discountValue) {
+      req.session.error = "For flat discount, minimum cart value must be greater than discount value.";
+      return res.redirect(`/admin/coupons/edit/${id}`);
+    }
 
     if (end <= start) {
       req.session.error = ERROR_MESSAGES.END_DATE_INVALID;
